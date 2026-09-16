@@ -1,0 +1,36 @@
+# A02 duomenų aibės trumpas aprašymas
+
+## Bendra informacija
+Duomenys aprašo realius apvaliai šlifuotus deimantus. Viena eilutė atitinka vieną deimantą. Baziniuose duomenyse registruoti deimanto masės, geometrinių matmenų, proporcijų ir kainos rodikliai. Mokomajame variante papildomai pateikti keli iš šių matavimų apskaičiuoti skaitiniai deskriptoriai (pvz., tūrio, ploto ir santykių rodikliai), kad būtų galima išsamiau tirti požymių tarpusavio ryšius.
+
+**Objektų skaičius:** 4000  
+**Skaitinių požymių skaičius:** 19  
+**Klasės:** Ideal, Premium
+
+## Ką reiškia klasė?
+Klasė žymi deimanto pjūvio kokybę. Kategorijos išreiškia pjūvio kokybės lygį; aukštesnės kokybės pjūvis paprastai geriau atspindi šviesą. Šiame variante naudojamos klasės: Premium, Ideal.
+
+## Ką reiškia požymiai?
+Svarbiausios požymių grupės:
+- **Tiesioginiai matavimai:** `carat`, `depth`, `table`, `price`, `x`, `y`, `z`.
+- **Dydžio / ploto statistiniai požymiai:** `volume_xyz`, `area_xy`, `area_xz`, `area_yz`, `mean_dimension`.
+- **Santykiniai rodikliai:** `price_per_carat`, `length_width_ratio`, `depth_ratio`, `table_depth_ratio`, `carat_per_volume`, `price_per_volume`, `dimension_cv`.
+Išvestiniai požymiai nėra naujas fizinis matavimas – jie apskaičiuoti iš bazinių matmenų ar kainos.
+
+## Ką svarbu žinoti analizuojant?
+- Kiekviena eilutė yra vienas analizuojamas objektas.
+- `class` yra kategorinė žymė, o ne analizuojamas skaitinis požymis.
+- Tuščia reikšmė CSV faile reiškia praleistą reikšmę.
+- Duomenyse gali pasitaikyti neįprastų ar ekstremalių reikšmių. Jas reikia aptikti, vizualiai ir statistiškai įvertinti bei tik tada spręsti, ar jos yra klaida, reali variacija, ar kitas atvejis.
+- Požymių masteliai ir pasiskirstymai gali skirtis, todėl prieš bet kokią transformaciją reikia atlikti jų diagnostiką.
+- Ataskaitoje nebūtina atskirai rodyti kiekvieno požymio grafikų, tačiau visi požymiai turi būti patikrinti programiškai.
+
+## Duomenų kilmė
+Bazinė aibė: ggplot2 / Diamonds. https://ggplot2.tidyverse.org/reference/diamonds.html
+
+
+## Pirminis duomenų validavimas
+Prieš skaičiuojant aprašomąją statistiką patikrinkite visų stulpelių duomenų tipus,
+reikšmių formatą, matavimo vienetų nuoseklumą ir logiškai / fiziškai galimas reikšmių ribas.
+Faile gali būti reikšmių, kurių negalima tiesiogiai naudoti skaitinei analizei nepatikrinus
+jų semantinės prasmės ir formato.
