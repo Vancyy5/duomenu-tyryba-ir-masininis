@@ -26,6 +26,90 @@ summary(deimantai)
 deimantai$class <- as.factor(deimantai$class)
 str(deimantai$class)
 
+# -----------------------------
+# DUOMENŲ KOKYBĖS TIKRINIMAS
+# -----------------------------
+
+# 1. Trūkstamos reikšmės kiekviename stulpelyje
+colSums(is.na(deimantai))
+
+# Trūkstamų reikšmių procentas
+round(colMeans(is.na(deimantai)) * 100, 2)
+
+# Kiek eilučių turi bent vieną trūkstamą reikšmę
+sum(!complete.cases(deimantai))
+
+# Kiek procentų eilučių turi bent vieną trūkstamą reikšmę
+round(mean(!complete.cases(deimantai)) * 100, 2)
+
+
+# 2. Dublikatai
+sum(duplicated(deimantai))
+
+# Jei yra dublikatų - parodyti
+deimantai[duplicated(deimantai), ]
+
+
+# 3. Klasių balansas
+table(deimantai$class)
+
+# Procentais
+round(prop.table(table(deimantai$class)) * 100, 2)
+
+
+# 4. Nelogiškos reikšmės
+
+# carat negali būti neigiamas arba 0
+sum(deimantai$carat <= 0, na.rm = TRUE)
+
+# price negali būti neigiama arba 0
+sum(deimantai$price <= 0, na.rm = TRUE)
+
+# x, y, z matmenys turi būti teigiami
+sum(deimantai$x <= 0, na.rm = TRUE)
+sum(deimantai$y <= 0, na.rm = TRUE)
+sum(deimantai$z <= 0, na.rm = TRUE)
+
+# depth ir table taip pat turi būti teigiami
+sum(deimantai$depth <= 0, na.rm = TRUE)
+sum(deimantai$table <= 0, na.rm = TRUE)
+
+----------------------------------------
+  # Probleminės carat reikšmės
+  deimantai[
+    deimantai$carat <= 0 & !is.na(deimantai$carat),
+  ]
+
+# Probleminės y reikšmės
+deimantai[
+  deimantai$y <= 0 & !is.na(deimantai$y),
+]
+
+# Probleminės z reikšmės
+deimantai[
+  deimantai$z <= 0 & !is.na(deimantai$z),
+]
+
+# Visos eilutės, kur bent viena iš šių reikšmių nelogiška
+problemines <- deimantai[
+  (deimantai$carat <= 0 |
+     deimantai$y <= 0 |
+     deimantai$z <= 0),
+]
+
+problemines
+nrow(problemines)
+
+----------------------------
+  problemines <- deimantai[
+    which(
+      deimantai$carat <= 0 |
+        deimantai$y <= 0 |
+        deimantai$z <= 0
+    ),
+  ]
+
+nrow(problemines)
 
 
 
