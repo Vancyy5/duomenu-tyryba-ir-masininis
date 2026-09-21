@@ -43,6 +43,21 @@ sum(!complete.cases(deimantai))
 round(mean(!complete.cases(deimantai)) * 100, 2)
 
 
+#Trūkstamų reikšmių pasiskirtymas pagal klasę vienoje lentelėje
+
+# Požymiai, kuriuose yra trūkstamų reikšmių (pagal jūsų jau gautą lentelę)
+cols_with_na <- c("carat", "depth", "price", "volume_xyz",
+                  "carat_per_volume", "price_per_volume")
+
+# Kiekvienam požymiui apskaičiuojame trūkstamų reikšmių procentą pagal klasę
+na_by_class <- sapply(cols_with_na, function(col) {
+  tapply(is.na(deimantai[[col]]), deimantai$class, mean) * 100
+})
+
+# Sutvarkome, kad požymiai būtų eilutėse, klasės - stulpeliuose
+na_by_class <- round(t(na_by_class), 2)
+na_by_class
+
 # 2. Dublikatai
 sum(duplicated(deimantai))
 

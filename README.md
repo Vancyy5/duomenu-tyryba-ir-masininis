@@ -121,9 +121,20 @@ Bent vieną trūkstamą reikšmę turi:
 - **217 eilučių**
 - **5.42 % visų objektų**
 
+Trūkstamų reikšmių pasiskirtymas pagal klasę(procentais):
+
+| Požymis | Ideal | Premium |
+|---|---:|---:|
+| `carat` | 1.50 % | 1.50 % |
+| `depth` | 0.90 % | 1.10 % |
+| `price` | 1.50 % | 1.50 % |
+| `volume_xyz` | 1.60 % | 1.40 % |
+| `carat_per_volume` | 0.05 % | 0.10 % |
+| `price_per_volume` | 0.05 % | 0.10 % |
+
 ### Išvada
 
-Trūkstamų reikšmių kiekis nėra labai didelis, tačiau jos yra keliuose svarbiuose požymiuose. Toliau reikės nuspręsti, kokį jų apdorojimo būdą pasirinkti.
+Trūkstamų reikšmių kiekis nėra labai didelis, tačiau jos yra keliuose svarbiuose požymiuose. Toliau reikės nuspręsti, kokį jų apdorojimo būdą pasirinkti. Trūkstamų reikšmių pasiskirstymas tarp Ideal ir Premium klasių yra beveik vienodas, reikšmingų skirtumų nenustatyta.
 
 ---
 
