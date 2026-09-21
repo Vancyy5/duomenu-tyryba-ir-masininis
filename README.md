@@ -319,13 +319,69 @@ Tai rodo, kad `depth` turi bent vieną labai neįprastą reikšmę, kurią reik�
 
 ---
 
+## 10. Požymių pasiskirstymo ir išskirčių analizė
+
+Siekiant įvertinti skaitinių požymių pasiskirstymą ir nustatyti galimas išskirtines reikšmes, kiekvienam skaitiniam požymiui buvo sudaryta atskira histograma ir boxplot grafikas.
+
+### Histogramų sudarymas
+
+Histogramos leidžia įvertinti kiekvieno požymio pasiskirstymo formą, reikšmių koncentraciją ir galimas labai nutolusias reikšmes.
+
+Histogramos parodė, kad skirtingų požymių pasiskirstymai nėra vienodi. Kai kuriuose požymiuose matomos labiau nuo pagrindinės reikšmių dalies nutolusios reikšmės, kurios gali būti laikomos galimomis išskirtimis. Ypač tai pastebima `price`, `price_per_carat`, `price_per_volume`, `depth`, `volume_xyz`. 
+
+### Išskirčių nustatymas
+
+Išskirtys buvo nustatomos naudojant **1.5 × IQR taisyklę**.
+
+Apatinė ir viršutinė išskirčių ribos apskaičiuojamos:
+
+```text
+Apatinė riba = Q1 - 1.5 × IQR
+Viršutinė riba = Q3 + 1.5 × IQR
+```
+
+Reikšmės, esančios už šių ribų, laikomos statistinėmis išskirtimis.
+
+
+Funkcija pritaikyta visiems skaitiniams požymiams:
+
+Gauti rezultatai:
+
+| Požymis              | Išskirčių skaičius | Procentas |
+| -------------------- | -----------------: | --------: |
+| `price`              |                295 |    7.38 % |
+| `price_per_carat`    |                146 |    3.65 % |
+| `price_per_volume`   |                136 |    3.40 % |
+| `dimension_cv`       |                116 |    2.90 % |
+| `volume_xyz`         |                114 |    2.85 % |
+| `depth_ratio`        |                114 |    2.85 % |
+| `depth`              |                 98 |    2.45 % |
+| `carat`              |                 73 |    1.82 % |
+| `carat_per_volume`   |                 62 |    1.55 % |
+| `table_depth_ratio`  |                 34 |    0.85 % |
+| `y`                  |                 15 |    0.38 % |
+| `area_xy`            |                 10 |    0.25 % |
+| `area_xz`            |                  8 |    0.20 % |
+| `area_yz`            |                  7 |    0.18 % |
+| `z`                  |                  6 |    0.15 % |
+| `length_width_ratio` |                  4 |    0.10 % |
+| `x`                  |                  2 |    0.05 % |
+| `mean_dimension`     |                  2 |    0.05 % |
+| `table`              |                  1 |    0.03 % |
+
+Išvada:
+
+Pagal 1.5 × IQR taisyklę daugiausia statistinių išskirčių nustatyta `price` požymyje – **295 reikšmės (7.38 %)**. Taip pat santykinai daugiau išskirčių nustatyta `price_per_carat` (3.65 %), `price_per_volume` (3.40 %), `dimension_cv` (2.90 %), `volume_xyz` (2.85 %) ir `depth_ratio` (2.85 %) požymiuose.
+
+
+
 # Tolimesni analizės žingsniai
 
 Toliau planuojama:
 
-1. tirti požymių pasiskirstymus naudojant histogramas;
-2. aptikti galimas išskirtis naudojant boxplot diagramas;
-3. įvertinti išskirčių skaičių ir jų poveikį;
+1. tirti požymių pasiskirstymus naudojant histogramas; +
+2. aptikti galimas išskirtis naudojant boxplot diagramas;+
+3. įvertinti išskirčių skaičių ir jų poveikį; +-
 4. palyginti `Ideal` ir `Premium` klases;
 5. tirti ryšius tarp:
    - `carat` ir `price`;

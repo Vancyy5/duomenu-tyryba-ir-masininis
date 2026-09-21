@@ -126,5 +126,44 @@ nrow(problemines)
 
 nrow(problemines)
 
+# Požymių pasiskirstymų tyrimas (histogramos)
+
+numeric_cols <- names(deimantai)[sapply(deimantai, is.numeric)]
+
+# Kiekvienam skaitiniam požymiui sukuriama atskira histograma
+for (col in numeric_cols) {
+  hist(deimantai[[col]],
+       main = col,
+       xlab = col,
+       col = "lightblue",
+       border = "white")
+}
+
+# Iskirčių aptikimas (IQR)
+
+# Kiekvienam skaitiniam požymiui atskiras boxplot
+for (col in numeric_cols) {
+  boxplot(deimantai[[col]],
+          main = col,
+          ylab = col,
+          col = "lightgreen")
+}
+
+# Funkcija, kuri suskaičiuoja, kiek išskirčių turi vienas požymis pagal 1.5*IQR taisyklę
+count_outliers <- function(x) {
+  qnt <- quantile(x, probs = c(.25, .75), na.rm = TRUE)
+  H <- 1.5 * IQR(x, na.rm = TRUE)
+  apacia <- qnt[1] - H
+  virsus <- qnt[2] + H
+  sum(x < apacia | x > virsus, na.rm = TRUE)
+}
+
+# Pritaikome kiekvienam skaitiniam stulpeliui
+outlier_counts <- sapply(deimantai[numeric_cols], count_outliers)
+sort(outlier_counts, decreasing = TRUE)
+
+# procentais nuo visų 4000 objektų
+round(sort(outlier_counts, decreasing = TRUE) / nrow(deimantai) * 100, 2)
+
 
 
