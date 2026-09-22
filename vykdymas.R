@@ -1047,9 +1047,674 @@ rezultatai_isskirtys <-
 
 rezultatai_isskirtys
 
+# =========================================================
+# PAPILDOMAS BAZINIŲ POŽYMIŲ VALIDAVIMAS
+# Tikrinami depth ir price požymiai pagal originalią
+# ggplot2::diamonds bazę
+# =========================================================
+
+# Ši kodo dalis skirta vykdyti PO to, kai:
+# 1) jau paruoštas objektas originalas;
+# 2) carat ir y reikšmės jau atkurtos;
+# 3) išvestiniai požymiai jau perskaičiuoti.
+#
+# Tikslas:
+# - rasti depth ir price reikšmes, kurios išeina už originalios
+#   Ideal + Premium bazės ribų;
+# - surasti atitinkamus objektus originalioje bazėje;
+# - depth reikšmes atkurti tik tada, kai originalus atitikmuo
+#   yra vienareikšmis;
+# - price kol kas tik validuoti, bet nekeisti automatiškai.
+
 
 # =========================================================
-# 20. TOLIMESNI ŽINGSNIAI
+# 1. ORIGINALIOS BAZĖS RIBOS
+# =========================================================
+
+depth_min_original <- min(originalas$depth, na.rm = TRUE)
+depth_max_original <- max(originalas$depth, na.rm = TRUE)
+
+price_min_original <- min(originalas$price, na.rm = TRUE)
+price_max_original <- max(originalas$price, na.rm = TRUE)
+
+cat(
+  "Originalios bazės depth ribos:",
+  depth_min_original,
+  "-",
+  depth_max_original,
+  "\n"
+)
+
+cat(
+  "Originalios bazės price ribos:",
+  price_min_original,
+  "-",
+  price_max_original,
+  "\n"
+)
+
+
+# =========================================================
+# 2. ĮTARTINŲ depth REIKŠMIŲ PAIEŠKA
+# =========================================================
+
+itartinas_depth <- deimantai %>%
+  mutate(a02_id = row_number()) %>%
+  filter(
+    !is.na(depth) &
+      (
+        depth < depth_min_original |
+          depth > depth_max_original
+      )
+  )
+
+cat(
+  "Įtartinų depth reikšmių skaičius:",
+  nrow(itartinas_depth),
+  "\n"
+)
+
+itartinas_depth
+
+
+# =========================================================
+# 3. depth PALYGINIMAS SU ORIGINALIA BAZE
+# =========================================================
+
+depth_match <- itartinas_depth %>%
+  select(
+    a02_id,
+    carat,
+    table,
+    price,
+    x,
+    y,
+    z,
+    class,
+    depth_A02 = depth
+  ) %>%
+  left_join(
+    originalas %>%
+      select(
+        carat,
+        table,
+        price,
+        x,
+        y,
+        z,
+        class,
+        depth_original = depth
+      ),
+    by = c(
+      "carat",
+      "table",
+      "price",
+      "x",
+      "y",
+      "z",
+      "class"
+    )
+  )
+
+depth_match
+
+
+# =========================================================
+# 4. depth ATITIKMENŲ PATIKRA
+# =========================================================
+
+depth_match_suvestine <- depth_match %>%
+  group_by(a02_id) %>%
+  summarise(
+    depth_A02 = first(depth_A02),
+    kiek_atitikmenu = n(),
+    kiek_skirtingu_depth = n_distinct(depth_original),
+    originalios_reiksmes = paste(
+      unique(depth_original),
+      collapse = ", "
+    ),
+    .groups = "drop"
+  )
+
+depth_match_suvestine
+
+
+# =========================================================
+# 5. VIENAREIKŠMIŲ depth REIKŠMIŲ ATKŪRIMAS
+# =========================================================
+
+depth_match_unique <- depth_match %>%
+  filter(!is.na(depth_original)) %>%
+  group_by(a02_id) %>%
+  filter(n_distinct(depth_original) == 1) %>%
+  slice(1) %>%
+  ungroup()
+
+cat(
+  "Vienareikšmiškai atkuriamų depth reikšmių skaičius:",
+  nrow(depth_match_unique),
+  "\n"
+)
+
+depth_match_unique
+
+deimantai_pries_depth_atkurima <- deimantai
+
+for (i in seq_len(nrow(depth_match_unique))) {
+  deimantai$depth[
+    depth_match_unique$a02_id[i]
+  ] <- depth_match_unique$depth_original[i]
+}
+
+
+# =========================================================
+# 6. depth PATIKRA PO ATKŪRIMO
+# =========================================================
+
+summary(deimantai$depth)
+
+range(
+  deimantai$depth,
+  na.rm = TRUE
+)
+
+depth_liko_itartinu <- deimantai %>%
+  mutate(a02_id = row_number()) %>%
+  filter(
+    !is.na(depth) &
+      (
+        depth < depth_min_original |
+          depth > depth_max_original
+      )
+  )
+
+cat(
+  "Po atkūrimo likusių įtartinų depth reikšmių skaičius:",
+  nrow(depth_liko_itartinu),
+  "\n"
+)
+
+depth_liko_itartinu
+
+
+# =========================================================
+# 7. PO depth ATKŪRIMO PERSKAIČIUOJAME
+#    NUO depth PRIKLAUSANTĮ IŠVESTINĮ POŽYMĮ
+# =========================================================
+
+deimantai$table_depth_ratio <-
+  deimantai$table /
+  deimantai$depth
+
+
+# =========================================================
+# 8. ĮTARTINŲ price REIKŠMIŲ PAIEŠKA
+# =========================================================
+
+itartinas_price <- deimantai %>%
+  mutate(a02_id = row_number()) %>%
+  filter(
+    !is.na(price) &
+      (
+        price < price_min_original |
+          price > price_max_original
+      )
+  )
+
+cat(
+  "Įtartinų price reikšmių skaičius:",
+  nrow(itartinas_price),
+  "\n"
+)
+
+itartinas_price
+
+
+# =========================================================
+# 9. price PALYGINIMAS SU ORIGINALIA BAZE
+# =========================================================
+
+price_match <- itartinas_price %>%
+  select(
+    a02_id,
+    carat,
+    depth,
+    table,
+    x,
+    y,
+    z,
+    class,
+    price_A02 = price
+  ) %>%
+  left_join(
+    originalas %>%
+      select(
+        carat,
+        depth,
+        table,
+        x,
+        y,
+        z,
+        class,
+        price_original = price
+      ),
+    by = c(
+      "carat",
+      "depth",
+      "table",
+      "x",
+      "y",
+      "z",
+      "class"
+    )
+  )
+
+price_match
+
+
+# =========================================================
+# 10. price ATITIKMENŲ PATIKRA
+# =========================================================
+
+price_match_suvestine <- price_match %>%
+  group_by(a02_id) %>%
+  summarise(
+    price_A02 = first(price_A02),
+    kiek_atitikmenu = n(),
+    kiek_skirtingu_price = n_distinct(price_original),
+    originalios_reiksmes = paste(
+      unique(price_original),
+      collapse = ", "
+    ),
+    .groups = "drop"
+  )
+
+price_match_suvestine
+
+
+# =========================================================
+# 11. SVARBU: price KOL KAS AUTOMATIŠKAI NEKEIČIAME
+# =========================================================
+
+# Price reikšmes pirmiausia įvertiname pagal price_match
+# ir price_match_suvestine rezultatus.
+#
+# Jei bus patvirtinta, kad atitikmenys vienareikšmiai,
+# tik tada jas bus galima saugiai atkurti.
+
+
+# =========================================================
+# 12. GALUTINĖ ŠIOS DALIES SUVESTINĖ
+# =========================================================
+
+cat("\n")
+cat("===== VALIDAVIMO SUVESTINĖ =====\n")
+
+cat(
+  "Originalios depth ribos:",
+  depth_min_original,
+  "-",
+  depth_max_original,
+  "\n"
+)
+
+cat(
+  "Pradžioje įtartinų depth:",
+  nrow(itartinas_depth),
+  "\n"
+)
+
+cat(
+  "Vienareikšmiškai atkurtų depth:",
+  nrow(depth_match_unique),
+  "\n"
+)
+
+cat(
+  "Po atkūrimo likusių įtartinų depth:",
+  nrow(depth_liko_itartinu),
+  "\n"
+)
+
+cat(
+  "Originalios price ribos:",
+  price_min_original,
+  "-",
+  price_max_original,
+  "\n"
+)
+
+cat(
+  "Įtartinų price reikšmių:",
+  nrow(itartinas_price),
+  "\n"
+)
+
+cat("===============================\n")
+
+# =========================================================
+# PRICE REIKŠMIŲ ATKŪRIMAS
+# Atkuriamos tik vienareikšmės price reikšmės
+# =========================================================
+
+# kai jau turimi objektai:
+# - price_match
+# - price_match_suvestine
+# - deimantai
+#
+# Tikslas:
+# 1. atkurti tik tas price reikšmes, kurioms rastas vienas
+#    vienintelis originalus atitikmuo;
+# 2. atskirai išskirti dviprasmes eilutes;
+# 3. perskaičiuoti nuo price priklausančius išvestinius požymius;
+# 4. patikrinti rezultatą.
+
+
+# =========================================================
+# 1. VIENAREIKŠMIŲ price ATITIKMENŲ ATRINKIMAS
+# =========================================================
+
+price_match_unique <- price_match %>%
+  filter(
+    !is.na(price_original)
+  ) %>%
+  group_by(a02_id) %>%
+  filter(
+    n_distinct(price_original) == 1
+  ) %>%
+  slice(1) %>%
+  ungroup()
+
+cat(
+  "Vienareikšmiškai atkuriamų price reikšmių skaičius:",
+  nrow(price_match_unique),
+  "\n"
+)
+
+price_match_unique
+
+
+# =========================================================
+# 2. DVIPRASMIŲ price ATITIKMENŲ ATRINKIMAS
+# =========================================================
+
+price_match_nevienareiksmiai <- price_match %>%
+  group_by(a02_id) %>%
+  filter(
+    n_distinct(price_original) > 1
+  ) %>%
+  ungroup()
+
+price_match_nevienareiksmiai_suvestine <-
+  price_match_nevienareiksmiai %>%
+  group_by(a02_id) %>%
+  summarise(
+    price_A02 = first(price_A02),
+    kiek_atitikmenu = n(),
+    kiek_skirtingu_price = n_distinct(price_original),
+    galimos_originalios_reiksmes = paste(
+      sort(unique(price_original)),
+      collapse = ", "
+    ),
+    .groups = "drop"
+  )
+
+cat(
+  "Dviprasmių price eilučių skaičius:",
+  nrow(price_match_nevienareiksmiai_suvestine),
+  "\n"
+)
+
+price_match_nevienareiksmiai_suvestine
+
+
+# =========================================================
+# 3. PRICE REIKŠMIŲ ATKŪRIMAS
+# =========================================================
+
+# Išsaugome kopiją prieš atkūrimą
+deimantai_pries_price_atkurima <- deimantai
+
+for (i in seq_len(nrow(price_match_unique))) {
+  
+  deimantai$price[
+    price_match_unique$a02_id[i]
+  ] <- price_match_unique$price_original[i]
+}
+
+
+# =========================================================
+# 4. PATIKRINAME PRICE RIBAS PO ATKŪRIMO
+# =========================================================
+
+summary(deimantai$price)
+
+range(
+  deimantai$price,
+  na.rm = TRUE
+)
+
+# Randame, kurios price reikšmės vis dar išeina už
+# originalios Ideal + Premium bazės ribų.
+
+price_liko_itartinu <- deimantai %>%
+  mutate(
+    a02_id = row_number()
+  ) %>%
+  filter(
+    !is.na(price) &
+      (
+        price < price_min_original |
+          price > price_max_original
+      )
+  )
+
+cat(
+  "Po vienareikšmių reikšmių atkūrimo likusių įtartinų price:",
+  nrow(price_liko_itartinu),
+  "\n"
+)
+
+price_liko_itartinu
+
+
+# =========================================================
+# 5. DVIPRASMIŲ PRICE REIKŠMIŲ PAŽYMĖJIMAS
+# =========================================================
+
+# Dviprasmių price reikšmių automatiškai nekeičiam.
+# Jos paliekamos atskiram sprendimui.
+
+if (nrow(price_match_nevienareiksmiai_suvestine) > 0) {
+  
+  cat("\nDviprasmės price eilutės:\n")
+  
+  print(
+    price_match_nevienareiksmiai_suvestine,
+    n = Inf
+  )
+}
+
+
+# =========================================================
+# 6. PERSKAIČIUOJAME NUO price PRIKLAUSANČIUS
+#    IŠVESTINIUS POŽYMIUS
+# =========================================================
+
+deimantai$price_per_carat <-
+  deimantai$price /
+  deimantai$carat
+
+deimantai$price_per_volume <-
+  deimantai$price /
+  deimantai$volume_xyz
+
+
+# Jei volume_xyz = 0, price_per_volume tampa Inf.
+# Tokias reikšmes keičiame į NA.
+
+deimantai$price_per_volume[
+  is.infinite(deimantai$price_per_volume)
+] <- NA
+
+
+# =========================================================
+# 7. PATIKRINAME Inf IR NA PO PERSKAIČIAVIMO
+# =========================================================
+
+cat(
+  "Inf skaičius po perskaičiavimo:",
+  sum(
+    is.infinite(
+      as.matrix(
+        deimantai[
+          sapply(deimantai, is.numeric)
+        ]
+      )
+    )
+  ),
+  "\n"
+)
+
+na_kiekiai_po_price <- colSums(
+  is.na(deimantai)
+)
+
+na_kiekiai_po_price
+
+
+# =========================================================
+# 8. APRAŠOMOJI STATISTIKA PO price ATKŪRIMO
+# =========================================================
+
+numeric_cols_po_price <- names(deimantai)[
+  sapply(deimantai, is.numeric)
+]
+
+aprasomoji_po_price <- t(
+  sapply(
+    deimantai[numeric_cols_po_price],
+    aprasomoji_funkcija
+  )
+)
+
+aprasomoji_po_price <- as.data.frame(
+  aprasomoji_po_price
+)
+
+aprasomoji_po_price$pozymis <-
+  rownames(aprasomoji_po_price)
+
+aprasomoji_po_price <- aprasomoji_po_price[
+  ,
+  c(
+    "pozymis",
+    "n",
+    "NA_kiekis",
+    "vidurkis",
+    "mediana",
+    "standartinis_nuokrypis",
+    "minimumas",
+    "Q1",
+    "Q3",
+    "maksimumas"
+  )
+]
+
+aprasomoji_po_price[, -1] <- round(
+  aprasomoji_po_price[, -1],
+  3
+)
+
+aprasomoji_po_price
+
+
+# =========================================================
+# 9. IŠSKIRČIŲ ANALIZĖ PO price ATKŪRIMO
+# =========================================================
+
+numeric_cols <- names(deimantai)[
+  sapply(deimantai, is.numeric)
+]
+
+outlier_counts_po_price <- sapply(
+  deimantai[numeric_cols],
+  count_outliers
+)
+
+valid_counts_po_price <- sapply(
+  deimantai[numeric_cols],
+  function(x) {
+    sum(!is.na(x))
+  }
+)
+
+outlier_percent_po_price <- round(
+  outlier_counts_po_price /
+    valid_counts_po_price *
+    100,
+  2
+)
+
+rezultatai_isskirtys_po_price <- data.frame(
+  pozymis = names(outlier_counts_po_price),
+  iskirciu_kiekis = outlier_counts_po_price,
+  procentas = outlier_percent_po_price
+)
+
+rezultatai_isskirtys_po_price <-
+  rezultatai_isskirtys_po_price[
+    order(
+      -rezultatai_isskirtys_po_price$iskirciu_kiekis
+    ),
+  ]
+
+rezultatai_isskirtys_po_price
+
+
+# =========================================================
+# 10. GALUTINĖ SUVESTINĖ
+# =========================================================
+
+cat("\n")
+cat("===== PRICE ATKŪRIMO SUVESTINĖ =====\n")
+
+cat(
+  "Pradžioje įtartinų price:",
+  nrow(itartinas_price),
+  "\n"
+)
+
+cat(
+  "Vienareikšmiškai atkurtų price:",
+  nrow(price_match_unique),
+  "\n"
+)
+
+cat(
+  "Dviprasmių price eilučių:",
+  nrow(price_match_nevienareiksmiai_suvestine),
+  "\n"
+)
+
+cat(
+  "Po atkūrimo likusių price už originalios ribos:",
+  nrow(price_liko_itartinu),
+  "\n"
+)
+
+cat(
+  "Dabartinės price ribos:",
+  min(deimantai$price, na.rm = TRUE),
+  "-",
+  max(deimantai$price, na.rm = TRUE),
+  "\n"
+)
+
+cat("====================================\n")
+
+# =========================================================
+# TOLIMESNI ŽINGSNIAI
 # =========================================================
 
 # Toliau:
