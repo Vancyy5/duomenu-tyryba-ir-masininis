@@ -2469,6 +2469,804 @@ boxplot(
   deimantai_robust$price,
   main = "Price - Robust Scaling"
 )
+
+# =========================================================
+# 44. PAGRINDINIŲ POŽYMIŲ RYŠIŲ ANALIZĖ
+# =========================================================
+
+# carat ir price
+
+plot(
+  deimantai$carat,
+  deimantai$price,
+  main = "Carat ir Price ryšys",
+  xlab = "Carat",
+  ylab = "Price",
+  pch = 19,
+  cex = 0.5
+)
+
+
+# volume_xyz ir price
+
+plot(
+  deimantai$volume_xyz,
+  deimantai$price,
+  main = "Volume ir Price ryšys",
+  xlab = "Volume_xyz",
+  ylab = "Price",
+  pch = 19,
+  cex = 0.5
+)
+
+
+# carat ir volume_xyz
+
+plot(
+  deimantai$carat,
+  deimantai$volume_xyz,
+  main = "Carat ir Volume ryšys",
+  xlab = "Carat",
+  ylab = "Volume_xyz",
+  pch = 19,
+  cex = 0.5
+)
+
+
+# =========================================================
+# 45. PEARSON KORELIACIJŲ MATRICA
+# =========================================================
+
+numeric_data <- deimantai[
+  sapply(deimantai, is.numeric)
+]
+
+cor_pearson <- cor(
+  numeric_data,
+  use = "pairwise.complete.obs",
+  method = "pearson"
+)
+
+round(
+  cor_pearson,
+  2
+)
+
+
+# =========================================================
+# 46. SPEARMAN KORELIACIJŲ MATRICA
+# =========================================================
+
+cor_spearman <- cor(
+  numeric_data,
+  use = "pairwise.complete.obs",
+  method = "spearman"
+)
+
+round(
+  cor_spearman,
+  2
+)
+
+
+# =========================================================
+# 47. PAGRINDINIŲ RYŠIŲ PALYGINIMAS
+# =========================================================
+
+pagrindiniu_rysiu_palyginimas <- data.frame(
+  
+  pora = c(
+    "carat - price",
+    "volume_xyz - price",
+    "carat - volume_xyz"
+  ),
+  
+  Pearson = c(
+    cor(
+      deimantai$carat,
+      deimantai$price,
+      use = "complete.obs",
+      method = "pearson"
+    ),
+    
+    cor(
+      deimantai$volume_xyz,
+      deimantai$price,
+      use = "complete.obs",
+      method = "pearson"
+    ),
+    
+    cor(
+      deimantai$carat,
+      deimantai$volume_xyz,
+      use = "complete.obs",
+      method = "pearson"
+    )
+  ),
+  
+  Spearman = c(
+    cor(
+      deimantai$carat,
+      deimantai$price,
+      use = "complete.obs",
+      method = "spearman"
+    ),
+    
+    cor(
+      deimantai$volume_xyz,
+      deimantai$price,
+      use = "complete.obs",
+      method = "spearman"
+    ),
+    
+    cor(
+      deimantai$carat,
+      deimantai$volume_xyz,
+      use = "complete.obs",
+      method = "spearman"
+    )
+  )
+)
+
+pagrindiniu_rysiu_palyginimas$Pearson <-
+  round(
+    pagrindiniu_rysiu_palyginimas$Pearson,
+    3
+  )
+
+pagrindiniu_rysiu_palyginimas$Spearman <-
+  round(
+    pagrindiniu_rysiu_palyginimas$Spearman,
+    3
+  )
+
+pagrindiniu_rysiu_palyginimas
+
+
+# =========================================================
+# 48. STIPRIAUSIŲ KORELIACIJŲ PAIEŠKA
+# =========================================================
+
+cor_matrix <- cor(
+  numeric_data,
+  use = "pairwise.complete.obs",
+  method = "spearman"
+)
+
+cor_table <- as.data.frame(
+  as.table(cor_matrix)
+)
+
+names(cor_table) <- c(
+  "pozymis_1",
+  "pozymis_2",
+  "koreliacija"
+)
+
+cor_table <- cor_table %>%
+  filter(
+    pozymis_1 != pozymis_2
+  ) %>%
+  mutate(
+    absoliuti_koreliacija =
+      abs(koreliacija)
+  ) %>%
+  arrange(
+    desc(absoliuti_koreliacija)
+  )
+
+# Pašaliname pasikartojančias poras
+cor_table_unique <- cor_table %>%
+  rowwise() %>%
+  mutate(
+    pora = paste(
+      sort(c(
+        pozymis_1,
+        pozymis_2
+      )),
+      collapse = " - "
+    )
+  ) %>%
+  ungroup() %>%
+  distinct(
+    pora,
+    .keep_all = TRUE
+  ) %>%
+  select(
+    pozymis_1,
+    pozymis_2,
+    koreliacija,
+    absoliuti_koreliacija
+  )
+
+head(
+  cor_table_unique,
+  20
+)# =========================================================
+# 44. PAGRINDINIŲ POŽYMIŲ RYŠIŲ ANALIZĖ
+# =========================================================
+
+# carat ir price
+
+plot(
+  deimantai$carat,
+  deimantai$price,
+  main = "Carat ir Price ryšys",
+  xlab = "Carat",
+  ylab = "Price",
+  pch = 19,
+  cex = 0.5
+)
+
+
+# volume_xyz ir price
+
+plot(
+  deimantai$volume_xyz,
+  deimantai$price,
+  main = "Volume ir Price ryšys",
+  xlab = "Volume_xyz",
+  ylab = "Price",
+  pch = 19,
+  cex = 0.5
+)
+
+
+# carat ir volume_xyz
+
+plot(
+  deimantai$carat,
+  deimantai$volume_xyz,
+  main = "Carat ir Volume ryšys",
+  xlab = "Carat",
+  ylab = "Volume_xyz",
+  pch = 19,
+  cex = 0.5
+)
+
+
+# =========================================================
+# 45. PEARSON KORELIACIJŲ MATRICA
+# =========================================================
+
+numeric_data <- deimantai[
+  sapply(deimantai, is.numeric)
+]
+
+cor_pearson <- cor(
+  numeric_data,
+  use = "pairwise.complete.obs",
+  method = "pearson"
+)
+
+round(
+  cor_pearson,
+  2
+)
+
+
+# =========================================================
+# 46. SPEARMAN KORELIACIJŲ MATRICA
+# =========================================================
+
+cor_spearman <- cor(
+  numeric_data,
+  use = "pairwise.complete.obs",
+  method = "spearman"
+)
+
+round(
+  cor_spearman,
+  2
+)
+
+
+# =========================================================
+# 47. PAGRINDINIŲ RYŠIŲ PALYGINIMAS
+# =========================================================
+
+pagrindiniu_rysiu_palyginimas <- data.frame(
+  
+  pora = c(
+    "carat - price",
+    "volume_xyz - price",
+    "carat - volume_xyz"
+  ),
+  
+  Pearson = c(
+    cor(
+      deimantai$carat,
+      deimantai$price,
+      use = "complete.obs",
+      method = "pearson"
+    ),
+    
+    cor(
+      deimantai$volume_xyz,
+      deimantai$price,
+      use = "complete.obs",
+      method = "pearson"
+    ),
+    
+    cor(
+      deimantai$carat,
+      deimantai$volume_xyz,
+      use = "complete.obs",
+      method = "pearson"
+    )
+  ),
+  
+  Spearman = c(
+    cor(
+      deimantai$carat,
+      deimantai$price,
+      use = "complete.obs",
+      method = "spearman"
+    ),
+    
+    cor(
+      deimantai$volume_xyz,
+      deimantai$price,
+      use = "complete.obs",
+      method = "spearman"
+    ),
+    
+    cor(
+      deimantai$carat,
+      deimantai$volume_xyz,
+      use = "complete.obs",
+      method = "spearman"
+    )
+  )
+)
+
+pagrindiniu_rysiu_palyginimas$Pearson <-
+  round(
+    pagrindiniu_rysiu_palyginimas$Pearson,
+    3
+  )
+
+pagrindiniu_rysiu_palyginimas$Spearman <-
+  round(
+    pagrindiniu_rysiu_palyginimas$Spearman,
+    3
+  )
+
+pagrindiniu_rysiu_palyginimas
+
+
+# =========================================================
+# 48. STIPRIAUSIŲ KORELIACIJŲ PAIEŠKA
+# =========================================================
+
+cor_matrix <- cor(
+  numeric_data,
+  use = "pairwise.complete.obs",
+  method = "spearman"
+)
+
+cor_table <- as.data.frame(
+  as.table(cor_matrix)
+)
+
+names(cor_table) <- c(
+  "pozymis_1",
+  "pozymis_2",
+  "koreliacija"
+)
+
+cor_table <- cor_table %>%
+  filter(
+    pozymis_1 != pozymis_2
+  ) %>%
+  mutate(
+    absoliuti_koreliacija =
+      abs(koreliacija)
+  ) %>%
+  arrange(
+    desc(absoliuti_koreliacija)
+  )
+
+# Pašaliname pasikartojančias poras
+cor_table_unique <- cor_table %>%
+  rowwise() %>%
+  mutate(
+    pora = paste(
+      sort(c(
+        pozymis_1,
+        pozymis_2
+      )),
+      collapse = " - "
+    )
+  ) %>%
+  ungroup() %>%
+  distinct(
+    pora,
+    .keep_all = TRUE
+  ) %>%
+  select(
+    pozymis_1,
+    pozymis_2,
+    koreliacija,
+    absoliuti_koreliacija
+  )
+
+head(
+  cor_table_unique,
+  20
+)
+
+# =========================================================
+# 49. GALUTINIS KLASIŲ PALYGINIMAS
+# =========================================================
+
+klasiu_statistika <- deimantai %>%
+  group_by(class) %>%
+  summarise(
+    
+    objektu_kiekis = n(),
+    
+    carat_vidurkis = mean(carat, na.rm = TRUE),
+    carat_mediana = median(carat, na.rm = TRUE),
+    
+    depth_vidurkis = mean(depth, na.rm = TRUE),
+    depth_mediana = median(depth, na.rm = TRUE),
+    
+    table_vidurkis = mean(table, na.rm = TRUE),
+    table_mediana = median(table, na.rm = TRUE),
+    
+    price_vidurkis = mean(price, na.rm = TRUE),
+    price_mediana = median(price, na.rm = TRUE),
+    
+    volume_vidurkis = mean(volume_xyz, na.rm = TRUE),
+    volume_mediana = median(volume_xyz, na.rm = TRUE),
+    
+    price_per_carat_vidurkis =
+      mean(price_per_carat, na.rm = TRUE),
+    
+    price_per_carat_mediana =
+      median(price_per_carat, na.rm = TRUE),
+    
+    .groups = "drop"
+  )
+
+klasiu_statistika
+
+
+# =========================================================
+# 50. KLASIŲ SKIRTUMŲ SUVESTINĖ
+# =========================================================
+
+klasiu_palyginimas <- data.frame(
+  
+  pozymis = c(
+    "carat",
+    "depth",
+    "table",
+    "price",
+    "volume_xyz",
+    "price_per_carat"
+  ),
+  
+  Ideal_mediana = c(
+    median(
+      deimantai$carat[
+        deimantai$class == "Ideal"
+      ],
+      na.rm = TRUE
+    ),
+    
+    median(
+      deimantai$depth[
+        deimantai$class == "Ideal"
+      ],
+      na.rm = TRUE
+    ),
+    
+    median(
+      deimantai$table[
+        deimantai$class == "Ideal"
+      ],
+      na.rm = TRUE
+    ),
+    
+    median(
+      deimantai$price[
+        deimantai$class == "Ideal"
+      ],
+      na.rm = TRUE
+    ),
+    
+    median(
+      deimantai$volume_xyz[
+        deimantai$class == "Ideal"
+      ],
+      na.rm = TRUE
+    ),
+    
+    median(
+      deimantai$price_per_carat[
+        deimantai$class == "Ideal"
+      ],
+      na.rm = TRUE
+    )
+  ),
+  
+  Premium_mediana = c(
+    median(
+      deimantai$carat[
+        deimantai$class == "Premium"
+      ],
+      na.rm = TRUE
+    ),
+    
+    median(
+      deimantai$depth[
+        deimantai$class == "Premium"
+      ],
+      na.rm = TRUE
+    ),
+    
+    median(
+      deimantai$table[
+        deimantai$class == "Premium"
+      ],
+      na.rm = TRUE
+    ),
+    
+    median(
+      deimantai$price[
+        deimantai$class == "Premium"
+      ],
+      na.rm = TRUE
+    ),
+    
+    median(
+      deimantai$volume_xyz[
+        deimantai$class == "Premium"
+      ],
+      na.rm = TRUE
+    ),
+    
+    median(
+      deimantai$price_per_carat[
+        deimantai$class == "Premium"
+      ],
+      na.rm = TRUE
+    )
+  )
+)
+
+klasiu_palyginimas[, -1] <- round(
+  klasiu_palyginimas[, -1],
+  3
+)
+
+klasiu_palyginimas
+
+# =========================================================
+# 51. KLASIŲ GRAFIKAI
+# =========================================================
+
+boxplot(
+  carat ~ class,
+  data = deimantai,
+  main = "Carat pagal klasę",
+  xlab = "Klasė",
+  ylab = "Carat"
+)
+
+boxplot(
+  price ~ class,
+  data = deimantai,
+  main = "Price pagal klasę",
+  xlab = "Klasė",
+  ylab = "Price"
+)
+
+boxplot(
+  volume_xyz ~ class,
+  data = deimantai,
+  main = "Volume_xyz pagal klasę",
+  xlab = "Klasė",
+  ylab = "Volume_xyz"
+)
+
+boxplot(
+  table ~ class,
+  data = deimantai,
+  main = "Table pagal klasę",
+  xlab = "Klasė",
+  ylab = "Table"
+)
+
+
+# =========================================================
+# 52. CARAT IR PRICE RYŠYS PAGAL KLASĘ
+# =========================================================
+
+plot(
+  deimantai$carat[
+    deimantai$class == "Ideal"
+  ],
+  deimantai$price[
+    deimantai$class == "Ideal"
+  ],
+  main = "Carat ir Price pagal klasę",
+  xlab = "Carat",
+  ylab = "Price",
+  pch = 19,
+  cex = 0.5
+)
+
+points(
+  deimantai$carat[
+    deimantai$class == "Premium"
+  ],
+  deimantai$price[
+    deimantai$class == "Premium"
+  ],
+  pch = 1,
+  cex = 0.5
+)
+
+legend(
+  "topleft",
+  legend = c(
+    "Ideal",
+    "Premium"
+  ),
+  pch = c(
+    19,
+    1
+  )
+)
+
+print(
+  klasiu_statistika,
+  width = Inf
+)
+
+# =========================================================
+# 53. GALUTINĖ DUOMENŲ RINKINIO PATIKRA
+# =========================================================
+
+cat("===== GALUTINĖ DUOMENŲ RINKINIO BŪKLĖ =====\n\n")
+
+cat(
+  "Objektų skaičius:",
+  nrow(deimantai),
+  "\n"
+)
+
+cat(
+  "Požymių skaičius:",
+  ncol(deimantai),
+  "\n\n"
+)
+
+
+# =========================================================
+# 54. KLASIŲ BALANSAS
+# =========================================================
+
+cat("Klasių pasiskirstymas:\n")
+
+print(
+  table(deimantai$class)
+)
+
+cat("\n")
+
+
+# =========================================================
+# 55. LIKUSIOS TRŪKSTAMOS REIKŠMĖS
+# =========================================================
+
+galutiniai_NA <- colSums(
+  is.na(deimantai)
+)
+
+galutiniai_NA <- galutiniai_NA[
+  galutiniai_NA > 0
+]
+
+cat("Likę NA:\n")
+
+print(
+  galutiniai_NA
+)
+
+cat("\n")
+
+
+# =========================================================
+# 56. DUBLIKATAI
+# =========================================================
+
+galutiniai_dublikatai <-
+  sum(duplicated(deimantai))
+
+cat(
+  "Dublikatų skaičius:",
+  galutiniai_dublikatai,
+  "\n\n"
+)
+
+
+# =========================================================
+# 57. NELLOGIŠKOS BAZINĖS REIKŠMĖS
+# =========================================================
+
+galutine_logikos_patikra <- data.frame(
+  
+  tikrinimas = c(
+    "carat <= 0",
+    "price <= 0",
+    "x <= 0",
+    "y <= 0",
+    "z <= 0",
+    "depth <= 0",
+    "table <= 0"
+  ),
+  
+  kiekis = c(
+    sum(deimantai$carat <= 0, na.rm = TRUE),
+    sum(deimantai$price <= 0, na.rm = TRUE),
+    sum(deimantai$x <= 0, na.rm = TRUE),
+    sum(deimantai$y <= 0, na.rm = TRUE),
+    sum(deimantai$z <= 0, na.rm = TRUE),
+    sum(deimantai$depth <= 0, na.rm = TRUE),
+    sum(deimantai$table <= 0, na.rm = TRUE)
+  )
+)
+
+galutine_logikos_patikra
+
+
+# =========================================================
+# 58. GALUTINĖ SUVESTINĖ
+# =========================================================
+
+cat("\n===== SUVESTINĖ =====\n")
+
+cat(
+  "Objektai:",
+  nrow(deimantai),
+  "\n"
+)
+
+cat(
+  "Požymiai:",
+  ncol(deimantai),
+  "\n"
+)
+
+cat(
+  "Dublikatai:",
+  galutiniai_dublikatai,
+  "\n"
+)
+
+cat(
+  "Visų likusių NA kiekis:",
+  sum(is.na(deimantai)),
+  "\n"
+)
+
+cat(
+  "Ideal objektai:",
+  sum(deimantai$class == "Ideal"),
+  "\n"
+)
+
+cat(
+  "Premium objektai:",
+  sum(deimantai$class == "Premium"),
+  "\n"
+)
+
+cat("=====================\n")
 # =========================================================
 # TOLIMESNI ŽINGSNIAI
 # =========================================================

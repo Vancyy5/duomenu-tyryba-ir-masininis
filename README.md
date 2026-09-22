@@ -1705,17 +1705,467 @@ Iki šio etapo atlikta:
 - pasirinktas Robust Scaling.
 
 ---
+## 30. Požymių ryšių ir koreliacijų analizė
+
+Po duomenų sutvarkymo ir pirminio apdorojimo buvo įvertinti pagrindinių požymių tarpusavio ryšiai.
+
+Analizei naudoti:
+
+- taškiniai grafikai;
+- Pearson koreliacijos koeficientas;
+- Spearman koreliacijos koeficientas;
+- stipriausiai tarpusavyje susijusių požymių paieška.
+
+Pearson koreliacija parodo tiesinio ryšio stiprumą, o Spearman koreliacija vertina monotonišką ryšį ir yra mažiau jautri kraštinėms reikšmėms bei netiesiniam ryšiui.
+
+---
+
+### 30.1. `carat` ir `price` ryšys
+
+Gauti rezultatai:
+
+| Ryšys | Pearson | Spearman |
+|---|---:|---:|
+| `carat` – `price` | 0.827 | 0.938 |
+
+Abu koeficientai rodo stiprų teigiamą ryšį: didėjant deimanto masei, jo kaina paprastai taip pat didėja.
+
+Spearman koreliacija yra didesnė už Pearson koreliaciją. Tai rodo, kad ryšys tarp `carat` ir `price` yra labai stiprus monotoniškai, tačiau nėra visiškai tiesinis.
+
+---
+
+### 30.2. `volume_xyz` ir `price` ryšys
+
+| Ryšys | Pearson | Spearman |
+|---|---:|---:|
+| `volume_xyz` – `price` | 0.831 | 0.942 |
+
+Tarp deimanto tūrio ir kainos taip pat nustatytas stiprus teigiamas ryšys.
+
+Kaip ir `carat` atveju, Spearman koreliacija yra didesnė už Pearson. Tai rodo, kad didesnio tūrio deimantai paprastai yra brangesni, tačiau priklausomybė nėra visiškai tiesinė.
+
+---
+
+### 30.3. `carat` ir `volume_xyz` ryšys
+
+| Ryšys | Pearson | Spearman |
+|---|---:|---:|
+| `carat` – `volume_xyz` | 0.989 | 0.988 |
+
+Šių požymių koreliacija yra beveik lygi 1, todėl tarp deimanto masės ir apskaičiuoto tūrio egzistuoja labai stiprus teigiamas ryšys.
+
+Tai reiškia, kad `carat` ir `volume_xyz` pateikia labai panašią informaciją apie bendrą deimanto dydį.
+
+---
+
+## 31. Stipriausiai koreliuojantys požymiai
+
+Spearman koreliacijų matricoje nustatyta daug labai stiprių ryšių tarp bazinių geometrinių ir išvestinių požymių.
+
+Stipriausių ryšių pavyzdžiai:
+
+| Požymis 1 | Požymis 2 | Spearman koreliacija |
+|---|---|---:|
+| `dimension_cv` | `depth_ratio` | -1.000 |
+| `area_xy` | `y` | 1.000 |
+| `area_xy` | `x` | 1.000 |
+| `area_yz` | `area_xz` | 0.999 |
+| `area_xz` | `volume_xyz` | 0.999 |
+| `area_yz` | `volume_xyz` | 0.999 |
+| `mean_dimension` | `area_xy` | 0.999 |
+| `mean_dimension` | `volume_xyz` | 0.999 |
+| `x` | `y` | 0.998 |
+| `price_per_volume` | `price_per_carat` | 0.996 |
+
+### 31.1. Geometrinių požymių perteklumas
+
+Labai stipriai tarpusavyje koreliuoja:
+
+- `x`;
+- `y`;
+- `z`;
+- `area_xy`;
+- `area_xz`;
+- `area_yz`;
+- `volume_xyz`;
+- `mean_dimension`.
+
+Tai logiška, nes daugelis šių požymių yra tiesiogiai apskaičiuoti iš tų pačių bazinių geometrinių matmenų.
+
+Dėl to vienu metu naudojant visus šiuos požymius modelyje gali atsirasti informacijos dubliavimas.
+
+### 31.2. `price_per_carat` ir `price_per_volume`
+
+Tarp `price_per_carat` ir `price_per_volume` nustatyta labai stipri Spearman koreliacija:
+
+```text
+0.996
+```
+
+Tai rodo, kad abu požymiai labai panašiai aprašo kainą deimanto dydžio atžvilgiu.
+
+### 31.3. `dimension_cv` ir `depth_ratio`
+
+Tarp `dimension_cv` ir `depth_ratio` nustatyta beveik tobula neigiama Spearman koreliacija:
+
+```text
+-1.000
+```
+
+Tai rodo, kad didėjant vienam požymiui kitas beveik monotoniškai mažėja.
+
+---
+
+## 32. Pearson ir Spearman rezultatų palyginimas
+
+| Požymių pora | Pearson | Spearman |
+|---|---:|---:|
+| `carat` – `price` | 0.827 | 0.938 |
+| `volume_xyz` – `price` | 0.831 | 0.942 |
+| `carat` – `volume_xyz` | 0.989 | 0.988 |
+
+`carat` – `price` ir `volume_xyz` – `price` poroms Spearman koreliacija yra aiškiai didesnė nei Pearson.
+
+Tai leidžia daryti išvadą, kad ryšiai yra labai stiprūs monotoniškai, tačiau ne visiškai tiesiniai.
+
+Tuo tarpu `carat` ir `volume_xyz` atveju Pearson ir Spearman reikšmės beveik vienodos, todėl šių požymių ryšys yra ir labai stiprus, ir artimas tiesiniam.
+
+---
+
+## 33. Koreliacijų analizės išvada
+
+Koreliacijų analizė parodė, kad:
+
+- deimanto dydis yra stipriai susijęs su kaina;
+- `carat` ir `volume_xyz` beveik dubliuoja tą pačią dydžio informaciją;
+- dauguma geometrinių išvestinių požymių labai stipriai koreliuoja tarpusavyje;
+- `price_per_carat` ir `price_per_volume` pateikia labai panašią informaciją;
+- kai kurie išvestiniai požymiai gali būti pertekliniai tolimesnei analizei;
+- naudojant daug stipriai koreliuojančių požymių vienu metu gali atsirasti multikolinearumo ir informacijos dubliavimo problema.
+
+Todėl prieš taikant mašininio mokymosi ar kitus statistinius metodus verta įvertinti požymių atranką ir, jei reikia, dalį stipriai tarpusavyje koreliuojančių požymių pašalinti arba pasirinkti reprezentatyviausius iš jų.
+
+---
+## 34. Galutinis `Ideal` ir `Premium` klasių palyginimas
+
+Po duomenų sutvarkymo, trūkstamų reikšmių užpildymo ir išvestinių požymių perskaičiavimo buvo pakartotinai palygintos `Ideal` ir `Premium` klasės.
+
+Abiejose klasėse yra po 2000 objektų, todėl klasės išlieka visiškai subalansuotos.
+
+### 34.1. Pagrindinių požymių statistika pagal klasę
+
+| Požymis | Ideal vidurkis | Ideal mediana | Premium vidurkis | Premium mediana |
+|---|---:|---:|---:|---:|
+| `carat` | 0.707 | 0.550 | 0.904 | 0.820 |
+| `depth` | 61.7 | 61.8 | 61.2 | 61.4 |
+| `table` | 55.9 | 56.0 | 58.7 | 59.0 |
+| `price` | 3699 | 1851 | 4705 | 3040 |
+| `volume_xyz` | 116 | 89.6 | 147 | 141 |
+| `price_per_carat` | 4428 | 3358 | 4397 | 3778 |
+
+---
+
+### 34.2. `carat` skirtumai tarp klasių
+
+`Premium` klasės deimantai pagal `carat` yra didesni.
+
+Medianinė reikšmė:
+
+```text
+Ideal   = 0.55
+Premium = 0.82
+```
+
+Vidurkiai taip pat rodo tą pačią tendenciją:
+
+```text
+Ideal   = 0.707
+Premium = 0.904
+```
+
+Tai rodo, kad šiame rinkinyje `Premium` klasėje dažniau pasitaiko didesnės masės deimantų.
+
+---
+
+### 34.3. `volume_xyz` skirtumai
+
+Tūrio skirtumas tarp klasių taip pat aiškus.
+
+Medianinė `volume_xyz` reikšmė:
+
+```text
+Ideal   = 89.6
+Premium = 141
+```
+
+Vidurkiai:
+
+```text
+Ideal   = 116
+Premium = 147
+```
+
+Tai atitinka `carat` rezultatus ir patvirtina, kad `Premium` klasės objektai šiame rinkinyje vidutiniškai yra didesni.
+
+---
+
+### 34.4. `price` skirtumai
+
+`Premium` klasėje kainos yra aukštesnės.
+
+Medianinė kaina:
+
+```text
+Ideal   = 1851
+Premium = 3040
+```
+
+Vidutinė kaina:
+
+```text
+Ideal   = 3699
+Premium = 4705
+```
+
+Kadangi abiejose klasėse vidurkis yra gerokai didesnis už medianą, kainų pasiskirstymai išlieka asimetriški į dešinę.
+
+---
+
+### 34.5. `table` ir `depth` skirtumai
+
+`table` požymis tarp klasių skiriasi aiškiau nei `depth`.
+
+Medianinė `table` reikšmė:
+
+```text
+Ideal   = 56
+Premium = 59
+```
+
+Tuo tarpu medianinis `depth`:
+
+```text
+Ideal   = 61.8
+Premium = 61.4
+```
+
+Tai rodo, kad `depth` skirtumas tarp klasių yra nedidelis, o `table` požymis klasėse skiriasi labiau.
+
+---
+
+### 34.6. `price_per_carat` skirtumai
+
+Medianinė `price_per_carat` reikšmė:
+
+```text
+Ideal   = 3358
+Premium = 3778
+```
+
+Tačiau vidurkiai yra labai panašūs:
+
+```text
+Ideal   = 4428
+Premium = 4397
+```
+
+Tai rodo, kad šio požymio pasiskirstymui didelę įtaką daro aukštos kraštinės reikšmės, todėl mediana yra informatyvesnė apibūdinant tipinę reikšmę.
+
+---
+
+## 35. Klasių palyginimo išvada
+
+Galutinis `Ideal` ir `Premium` palyginimas parodė, kad:
+
+- klasės yra visiškai subalansuotos: po 2000 objektų;
+- `Premium` klasėje deimantai yra didesni pagal `carat` ir `volume_xyz`;
+- `Premium` klasėje medianinė ir vidutinė kaina yra didesnė;
+- `table` požymis `Premium` klasėje yra aukštesnis;
+- `depth` skirtumas tarp klasių yra nedidelis;
+- `price_per_carat` medianos tarp klasių skiriasi, tačiau vidurkiai yra labai panašūs.
+
+Tai rodo, kad klasės skiriasi ne tik pagal klasės etiketę, bet ir pagal kelias svarbias fizines bei kainos charakteristikas.
+
+---
+## 36. Duomenų rinkinio tinkamumo tolesnei analizei vertinimas
+
+Po visų atliktų duomenų kokybės tikrinimo, validavimo ir pirminio apdorojimo etapų buvo įvertinta galutinė duomenų rinkinio būklė.
+
+Galutinė rinkinio suvestinė:
+
+| Rodiklis | Reikšmė |
+|---|---:|
+| Objektų skaičius | 4000 |
+| Požymių skaičius | 20 |
+| `Ideal` objektų skaičius | 2000 |
+| `Premium` objektų skaičius | 2000 |
+| Dublikatų skaičius | 0 |
+| Likusių `NA` skaičius | 6 |
+
+Klasės yra visiškai subalansuotos, todėl klasifikavimo uždaviniuose nereikėtų papildomai spręsti klasių disbalanso problemos.
+
+---
+
+### 36.1. Galutinė loginių reikšmių patikra
+
+Po visų atliktų korekcijų bazinių požymių loginė patikra parodė:
+
+| Tikrinimas | Kiekis |
+|---|---:|
+| `carat <= 0` | 0 |
+| `price <= 0` | 0 |
+| `x <= 0` | 0 |
+| `y <= 0` | 0 |
+| `z <= 0` | 3 |
+| `depth <= 0` | 0 |
+| `table <= 0` | 0 |
+
+Trys `z = 0` atvejai nebuvo koreguoti, nes tokios reikšmės egzistuoja ir originalioje `ggplot2::diamonds` bazėje.
+
+Dėl jų `volume_xyz = 0`, todėl dviejuose išvestiniuose požymiuose dalyba negalima:
+
+- `carat_per_volume` – 3 `NA`;
+- `price_per_volume` – 3 `NA`.
+
+Šios reikšmės nebuvo dirbtinai pildomos, nes tai sukurtų nepagrįstą informaciją.
+
+---
+
+### 36.2. Duomenų rinkinio stiprybės
+
+Pagrindinės rinkinio stiprybės:
+
+- pakankamai didelis objektų skaičius – 4000;
+- klasės visiškai subalansuotos;
+- nėra dublikatų;
+- dauguma sugadintų bazinių reikšmių buvo sėkmingai identifikuotos ir atkurtos;
+- trūkstamų bazinių reikšmių dalis buvo nedidelė;
+- išvestiniai požymiai buvo perskaičiuoti po bazinių duomenų koregavimo;
+- liko labai mažai trūkstamų reikšmių;
+- duomenyse yra tiek bazinių, tiek išvestinių geometrinių ir kainos požymių;
+- nustatyti aiškūs ryšiai tarp dydžio, tūrio ir kainos;
+- `Ideal` ir `Premium` klasės skiriasi pagal kelis svarbius požymius.
+
+Šios savybės leidžia duomenis naudoti tolimesnei statistinei analizei ir mašininio mokymosi metodams.
+
+---
+
+### 36.3. Duomenų rinkinio apribojimai
+
+Nepaisant atlikto sutvarkymo, rinkinyje išlieka keli apribojimai.
+
+#### 1. Likusios 11 nevienareikšmių `price` reikšmių
+
+Iš 60 aiškiai sugadintų `price` reikšmių 49 buvo vienareikšmiškai atkurtos, tačiau 11 atvejų originalioje bazėje buvo keli galimi atitikmenys.
+
+Kadangi nebuvo patikimo pagrindo pasirinkti vieną konkrečią reikšmę, šios 11 kainų buvo paliktos nepakeistos.
+
+Todėl jos gali turėti įtakos:
+
+- kainos vidurkiui;
+- kainos standartiniam nuokrypiui;
+- kainos išskirčių skaičiui;
+- nuo kainos priklausantiems išvestiniams požymiams.
+
+#### 2. Trys `z = 0` atvejai
+
+Šie atvejai egzistuoja originalioje duomenų bazėje, tačiau fiziškai tokia deimanto aukščio reikšmė yra problemiška.
+
+Dėl jų:
+
+- `volume_xyz = 0`;
+- `carat_per_volume` negali būti apskaičiuojamas;
+- `price_per_volume` negali būti apskaičiuojamas.
+
+#### 3. Daug stipriai koreliuojančių požymių
+
+Geometriniai išvestiniai požymiai labai stipriai koreliuoja tarpusavyje.
+
+Pavyzdžiui, `carat`, `volume_xyz`, `area_xy`, `area_xz`, `area_yz`, `mean_dimension`, `x`, `y` ir `z` dalinai dubliuoja tą pačią dydžio informaciją.
+
+Todėl prieš kuriant kai kuriuos modelius reikėtų atlikti požymių atranką, kad būtų sumažintas multikolinearumas ir informacijos dubliavimas.
+
+#### 4. Išskirtys
+
+Po duomenų sutvarkymo vis dar liko statistinių išskirčių, ypač:
+
+- `price`;
+- `price_per_carat`;
+- `price_per_volume`;
+- `dimension_cv`;
+- `depth_ratio`;
+- `depth`.
+
+Jos nebuvo automatiškai šalinamos, nes dalis jų gali būti realūs reti stebiniai.
+
+---
+
+### 36.4. Tinkamumas mašininiam mokymuisi
+
+Duomenų rinkinys yra tinkamas tolimesniems mašininio mokymosi eksperimentams, tačiau prieš konkretų modeliavimą reikėtų atsižvelgti į metodo reikalavimus.
+
+Jei būtų taikomi metodai, jautrūs požymių masteliui, būtų tikslinga naudoti anksčiau pasirinktą **Robust Scaling**.
+
+Jei būtų taikomi metodai, jautrūs stipriai koreliuojantiems požymiams, reikėtų atlikti požymių atranką ir neįtraukti visų beveik identišką informaciją turinčių geometrinių požymių vienu metu.
+
+Kadangi klasės `Ideal` ir `Premium` yra vienodo dydžio, papildomas klasių balansavimas nėra reikalingas.
+
+---
+
+## 37. Galutinės darbo išvados
+
+Atlikus pirminę duomenų aibės analizę ir paruošimą tyrimui, galima suformuluoti šias pagrindines išvadas:
+
+1. Pradinę duomenų aibę sudarė 4000 objektų ir 20 požymių. Tikslinė klasė turėjo dvi visiškai subalansuotas reikšmes: `Ideal` ir `Premium`, po 2000 objektų kiekvienoje klasėje.
+
+2. Pradinėje duomenų aibėje buvo nustatyta trūkstamų reikšmių, netinkamų duomenų tipų ir nelogiškų bazinių reikšmių.
+
+3. Validuojant duomenis pagal originalią `ggplot2::diamonds` bazę buvo patikimai atkurtos 89 sugadintos bazinių požymių reikšmės:
+   - 14 `carat`;
+   - 13 `y`;
+   - 13 `depth`;
+   - 49 `price`.
+
+4. Dar 11 aiškiai įtartinų `price` reikšmių nepavyko atkurti vienareikšmiškai, todėl jos nebuvo keičiamos. Tai laikoma vienu pagrindinių galutinio rinkinio apribojimų.
+
+5. Trys `z = 0` atvejai buvo palikti, nes jie egzistuoja originalioje duomenų bazėje. Dėl jų galutiniame rinkinyje liko 6 `NA` reikšmės: po 3 `carat_per_volume` ir `price_per_volume` požymiuose.
+
+6. Trūkstamų bazinių reikšmių pildymui buvo palygintas vidurkio ir medianos metodas. Kadangi duomenyse yra asimetriškų pasiskirstymų ir išskirčių, pasirinktas pildymas mediana.
+
+7. Palyginus standartizavimą, Min–Max normalizavimą ir Robust Scaling nustatyta, kad šiai duomenų aibei tinkamiausias yra Robust Scaling, nes jis yra mažiau jautrus išskirtims.
+
+8. Koreliacijų analizė parodė stiprų ryšį tarp deimanto dydžio ir kainos. `carat` ir `price` Spearman koreliacija buvo 0.938, o `volume_xyz` ir `price` – 0.942.
+
+9. Tarp daugelio geometrinių bazinių ir išvestinių požymių nustatytos labai stiprios koreliacijos, todėl dalis jų gali būti pertekliniai tolimesniam modeliavimui.
+
+10. `Premium` klasės deimantai šiame rinkinyje vidutiniškai ir pagal medianą yra didesni bei brangesni už `Ideal` klasės deimantus. Ryškesni skirtumai nustatyti pagal `carat`, `volume_xyz`, `price` ir `table` požymius.
+
+11. Galutinėje duomenų aibėje nėra dublikatų, klasės yra subalansuotos, o didžioji dalis aptiktų kokybės problemų buvo išspręsta.
+
+12. Duomenų rinkinys laikomas tinkamu tolimesnei statistinei analizei ir mašininio mokymosi eksperimentams, tačiau prieš modeliavimą reikėtų atsižvelgti į likusias 11 įtartinų kainos reikšmių, tris `z = 0` atvejus ir stiprų dalies požymių tarpusavio koreliavimą.
+
+---
+
+## Galutinė duomenų būklė
+
+| Charakteristika | Galutinė reikšmė |
+|---|---:|
+| Objektai | 4000 |
+| Požymiai | 20 |
+| Ideal | 2000 |
+| Premium | 2000 |
+| Dublikatai | 0 |
+| Likę NA | 6 |
+| Patikimai atkurtos sugadintos reikšmės | 89 |
+| Nevienareikšmiškai atkuriamos `price` reikšmės | 11 |
+| `z = 0` atvejai | 3 |
+
 
 # Tolimesni analizės žingsniai
 
-Toliau planuojama:
+Toliau lieka:
 
-1. tirti ryšius tarp pagrindinių požymių:
-   - `carat` ir `price`;
-   - `volume_xyz` ir `price`;
-   - `carat` ir `volume_xyz`;
-2. atlikti koreliacijų analizę;
-3. nustatyti stipriai tarpusavyje susijusius bazinius ir išvestinius požymius;
-4. įvertinti, ar dalis stipriai koreliuojančių išvestinių požymių yra pertekliniai;
-5. galutinai įvertinti duomenų rinkinio tinkamumą tolesnei analizei ir mašininio mokymosi metodams;
-6. suformuluoti galutines darbo išvadas.
+1. įvertinti bendrą duomenų rinkinio tinkamumą tolesnei analizei;
+2. apibendrinti pagrindinius rinkinio privalumus ir apribojimus;
+3. įvertinti, ar duomenų kokybė yra pakankama mašininio mokymosi metodams;
+4. suformuluoti galutines darbo išvadas.
