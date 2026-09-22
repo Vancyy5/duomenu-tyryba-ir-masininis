@@ -1156,6 +1156,314 @@ Po duomenų sutvarkymo sumažėjo kai kurių požymių išskirčių skaičius, y
 Svarbu pažymėti, kad IQR metodu nustatytos statistinės išskirtys nėra automatiškai laikomos klaidomis. Jos gali atspindėti realius, retesnius deimantus, todėl prieš jas šalinant ar koreguojant reikia įvertinti jų fizinę prasmę, pasiskirstymą ir ryšį su kitais požymiais.
 
 ---
+## 17. Papildomas bazinių požymių validavimas
+
+Po pirminio duomenų sutvarkymo buvo pastebėta, kad kai kurių bazinių požymių reikšmės vis dar labai stipriai skiriasi nuo įprasto diapazono. Todėl papildomai buvo patikrinti `depth` ir `price` požymiai, lyginant A02 duomenis su originalia `ggplot2::diamonds` baze.
+
+Šiame etape originali bazė naudojama tik aiškiai įtartinoms bazinių požymių reikšmėms validuoti. Statistinės išskirtys nėra automatiškai keičiamos vien todėl, kad jos yra nutolusios nuo pagrindinės duomenų dalies.
+
+### 17.1. `depth` reikšmių validavimas
+
+Pirmiausia nustatytos originalios `Ideal` ir `Premium` klasių `depth` ribos:
+
+```r
+depth_min_original <- min(originalas$depth, na.rm = TRUE)
+depth_max_original <- max(originalas$depth, na.rm = TRUE)
+
+depth_min_original
+depth_max_original
+```
+
+Gautos ribos:
+
+```text
+43.0 – 66.7
+```
+
+A02 duomenyse buvo ieškoma `depth` reikšmių, kurios išeina už šio intervalo:
+
+```r
+itartinas_depth <- deimantai %>%
+  mutate(a02_id = row_number()) %>%
+  filter(
+    !is.na(depth) &
+      (
+        depth < depth_min_original |
+        depth > depth_max_original
+      )
+  )
+
+nrow(itartinas_depth)
+```
+
+Rasta **13 įtartinų `depth` reikšmių**.
+
+Jų A02 reikšmės buvo:
+
+| A02 eilutė | A02 `depth` | Originalus `depth` |
+|---:|---:|---:|
+| 341 | 194.24 | 62.4 |
+| 1215 | 220.67 | 61.8 |
+| 1368 | 200.43 | 60.5 |
+| 1537 | 206.83 | 62.8 |
+| 1879 | 236.04 | 61.9 |
+| 1897 | 140.34 | 62.5 |
+| 2419 | 239.06 | 62.1 |
+| 2568 | 226.26 | 59.9 |
+| 3011 | 215.28 | 61.9 |
+| 3616 | 232.92 | 61.8 |
+| 3748 | 222.99 | 60.1 |
+| 3855 | 141.78 | 60.6 |
+| 3975 | 229.04 | 62.6 |
+
+Visoms 13 eilutėms originalioje bazėje buvo rastas vienareikšmis atitikmuo, todėl reikšmės buvo atkurtos:
+
+```r
+for (i in seq_len(nrow(depth_match_unique))) {
+  deimantai$depth[
+    depth_match_unique$a02_id[i]
+  ] <- depth_match_unique$depth_original[i]
+}
+```
+
+Kadangi `table_depth_ratio` priklauso nuo `depth`, šis išvestinis požymis buvo perskaičiuotas:
+
+```r
+deimantai$table_depth_ratio <-
+  deimantai$table / deimantai$depth
+```
+
+Po atkūrimo:
+
+```text
+depth minimumas = 43.0
+depth maksimumas = 65.1
+įtartinų reikšmių už originalios bazės ribų = 0
+```
+
+### Išvada
+
+Visos 13 labai didelės `depth` reikšmės buvo A02 rinkinio sugadinimo rezultatas. Jas pavyko vienareikšmiškai atkurti pagal originalią `ggplot2::diamonds` bazę.
+
+---
+
+## 18. `price` reikšmių validavimas
+
+Toliau analogiškai patikrintas `price` požymis.
+
+Originalios `Ideal` ir `Premium` klasių kainų ribos:
+
+```r
+price_min_original <- min(originalas$price, na.rm = TRUE)
+price_max_original <- max(originalas$price, na.rm = TRUE)
+```
+
+Gauta:
+
+```text
+326 – 18823
+```
+
+A02 rinkinyje rastos **60 `price` reikšmių**, kurios viršijo originalios bazės maksimumą.
+
+```r
+itartinas_price <- deimantai %>%
+  mutate(a02_id = row_number()) %>%
+  filter(
+    !is.na(price) &
+      (
+        price < price_min_original |
+        price > price_max_original
+      )
+  )
+
+nrow(itartinas_price)
+```
+
+### 18.1. Vienareikšmiškai atkuriamos kainos
+
+Ieškant atitikmenų originalioje bazėje `price` požymis nebuvo naudojamas, nes būtent jis buvo tikrinamas.
+
+Iš 60 įtartinų kainų **49 reikšmėms rastas vienintelis galimas originalus atitikmuo**.
+
+Pavyzdžiai:
+
+| A02 eilutė | A02 `price` | Originalus `price` |
+|---:|---:|---:|
+| 88 | 34554.52 | 1669 |
+| 165 | 36639.98 | 625 |
+| 170 | 40816.50 | 1787 |
+| 406 | 40816.50 | 2804 |
+| 413 | 40816.50 | 2425 |
+| 564 | 37804.70 | 3084 |
+| 675 | 35226.59 | 816 |
+| 721 | 40816.50 | 961 |
+| 842 | 37124.47 | 598 |
+| 999 | 40816.50 | 2181 |
+
+Šios 49 kainos buvo atkurtos:
+
+```r
+for (i in seq_len(nrow(price_match_unique))) {
+
+  deimantai$price[
+    price_match_unique$a02_id[i]
+  ] <- price_match_unique$price_original[i]
+}
+```
+
+### 18.2. Nevienareikšmiai `price` atitikmenys
+
+Likusioms **11 eilučių** pagal kitus bazinius požymius buvo rasti keli galimi originalūs objektai su skirtingomis kainomis.
+
+| A02 eilutė | A02 `price` | Galimos originalios reikšmės |
+|---:|---:|---|
+| 331 | 40816.50 | 828, 900 |
+| 1112 | 40816.50 | 591, 865 |
+| 1138 | 40816.50 | 1574, 1974 |
+| 1485 | 34958.59 | 408, 891, 901, 924 |
+| 1607 | 34306.31 | 605, 737 |
+| 2409 | 38270.46 | 943, 1056 |
+| 2502 | 36770.56 | 1073, 1155 |
+| 2715 | 36576.41 | 872, 997 |
+| 3306 | 36189.88 | 555, 596, 773, 1133 |
+| 3522 | 38555.01 | 1145, 1637 |
+| 3782 | 34137.59 | 11550, 11654 |
+
+Kadangi iš turimų požymių negalima pagrįstai nustatyti, kuri iš kelių originalių kainų priklauso konkrečiai A02 eilutei, šios 11 reikšmių **nebuvo automatiškai keičiamos**.
+
+Taip išvengiama nepagrįsto reikšmių spėjimo.
+
+### 18.3. Išvestinių kainos požymių perskaičiavimas
+
+Po 49 vienareikšmių `price` reikšmių atkūrimo perskaičiuoti nuo kainos priklausantys požymiai:
+
+```r
+deimantai$price_per_carat <-
+  deimantai$price / deimantai$carat
+
+deimantai$price_per_volume <-
+  deimantai$price / deimantai$volume_xyz
+
+deimantai$price_per_volume[
+  is.infinite(deimantai$price_per_volume)
+] <- NA
+```
+
+Po perskaičiavimo `Inf` reikšmių nėra.
+
+### Išvada
+
+Iš 60 aiškiai įtartinų `price` reikšmių **49 buvo vienareikšmiškai atkurtos**, o **11 liko nevienareikšmės ir nebuvo automatiškai keičiamos**.
+
+---
+
+## 19. Aprašomoji statistika po papildomo `depth` ir `price` sutvarkymo
+
+Po `depth` ir 49 vienareikšmių `price` reikšmių atkūrimo aprašomoji statistika buvo perskaičiuota.
+
+Svarbiausi rezultatai:
+
+| Požymis | Vidurkis | Mediana | Minimumas | Q1 | Q3 | Maksimumas |
+|---|---:|---:|---:|---:|---:|---:|
+| `carat` | 0.807 | 0.700 | 0.230 | 0.380 | 1.090 | 4.010 |
+| `depth` | 61.468 | 61.700 | 43.000 | 60.900 | 62.200 | 65.100 |
+| `table` | 57.339 | 57.000 | 43.000 | 56.000 | 59.000 | 62.000 |
+| `price` | 4229.414 | 2385.500 | 348.000 | 968.000 | 5808.500 | 40816.500 |
+| `price_per_carat` | 4384.222 | 3542.582 | 1140.625 | 2587.097 | 5101.911 | 131666.129 |
+| `price_per_volume` | 26.844 | 21.600 | 6.938 | 15.648 | 31.305 | 792.743 |
+| `table_depth_ratio` | 0.933 | 0.929 | 0.684 | 0.905 | 0.959 | 1.256 |
+
+Po `depth` atkūrimo šio požymio standartinis nuokrypis sumažėjo iki **1.024**, o maksimumas – iki **65.1**, todėl anksčiau buvusi labai didelė sklaida buvo susijusi su sugadintomis reikšmėmis.
+
+`price` vidurkis po 49 klaidingų kainų atkūrimo sumažėjo nuo ankstesnės reikšmės, tačiau vis dar yra didesnis už medianą, todėl pasiskirstymas išlieka asimetriškas į dešinę. Tam įtakos turi ir 11 nevienareikšmių kainų, kurios nebuvo keičiamos.
+
+---
+
+## 20. Išskirčių analizė po papildomo sutvarkymo
+
+Po `depth` ir dalies `price` reikšmių atkūrimo IQR analizė buvo pakartota.
+
+Gauti rezultatai:
+
+| Požymis | Išskirčių skaičius | Procentas |
+|---|---:|---:|
+| `price` | 264 | 6.70 % |
+| `price_per_carat` | 145 | 3.74 % |
+| `price_per_volume` | 143 | 3.63 % |
+| `dimension_cv` | 116 | 2.90 % |
+| `depth_ratio` | 114 | 2.85 % |
+| `depth` | 85 | 2.15 % |
+| `volume_xyz` | 61 | 1.52 % |
+| `carat` | 60 | 1.52 % |
+| `carat_per_volume` | 57 | 1.45 % |
+| `table_depth_ratio` | 33 | 0.83 % |
+| `area_xy` | 10 | 0.25 % |
+| `area_xz` | 8 | 0.20 % |
+| `area_yz` | 7 | 0.18 % |
+| `z` | 6 | 0.15 % |
+| `length_width_ratio` | 4 | 0.10 % |
+| `x` | 2 | 0.05 % |
+| `y` | 2 | 0.05 % |
+| `mean_dimension` | 2 | 0.05 % |
+| `table` | 1 | 0.03 % |
+
+### Palyginimas su ankstesne analize
+
+Po papildomo duomenų sutvarkymo:
+
+- `price` IQR išskirčių sumažėjo nuo **295 iki 264**;
+- `price_per_carat` – nuo **163 iki 145**;
+- `price_per_volume` – nuo **163 iki 143**;
+- `depth` – nuo **98 iki 85**;
+- `table_depth_ratio` – nuo **46 iki 33**.
+
+Tai rodo, kad dalis anksčiau nustatytų statistinių išskirčių buvo susijusios ne su natūralia duomenų variacija, o su sugadintomis bazinių požymių reikšmėmis.
+
+Vis dėlto IQR metodu nustatytos likusios išskirtys nėra automatiškai laikomos klaidomis. Jas reikia vertinti pagal jų fizinę prasmę ir ryšį su kitais požymiais.
+
+---
+
+## 21. Dabartinė duomenų kokybės būklė
+
+Po atlikto validavimo:
+
+- atkurtos **14 `carat`** reikšmių;
+- atkurtos **13 `y`** reikšmių;
+- atkurtos **13 `depth`** reikšmių;
+- atkurtos **49 vienareikšmės `price`** reikšmės;
+- 3 `z = 0` reikšmės paliktos, nes jos tokios pačios ir originalioje bazėje;
+- 11 įtartinų `price` reikšmių paliktos nepakeistos, nes jų originalių reikšmių nepavyko nustatyti vienareikšmiškai;
+- po išvestinių požymių perskaičiavimo `Inf` reikšmių nebeliko.
+
+Taigi iš viso patikimai atkurtos **89 sugadintos bazinių požymių reikšmės**:
+
+```text
+14 carat + 13 y + 13 depth + 49 price = 89
+```
+
+---
+
+# Tolimesni analizės žingsniai
+
+Toliau planuojama:
+
+1. išanalizuoti ir pagrįstai pasirinkti trūkstamų reikšmių apdorojimo metodą;
+2. galutinai įvertinti likusias statistines išskirtis ir nuspręsti, kurios jų atspindi realią variaciją;
+3. palyginti skirtingus požymių mastelio keitimo metodus:
+   - standartizavimą;
+   - Min–Max normalizavimą;
+   - Robust Scaling;
+4. atlikti privalomą palyginamąjį pirminio apdorojimo eksperimentą;
+5. tirti ryšius tarp:
+   - `carat` ir `price`;
+   - `volume_xyz` ir `price`;
+   - `carat` ir `volume_xyz`;
+6. atlikti koreliacijų analizę;
+7. nustatyti stipriai tarpusavyje susijusius bazinius ir išvestinius požymius;
+8. įvertinti duomenų rinkinio tinkamumą tolesnei analizei ir mašininio mokymosi metodams;
+9. suformuluoti galutines darbo išvadas.
+
 
 # Tolimesni analizės žingsniai
 
