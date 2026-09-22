@@ -398,4 +398,486 @@ Toliau planuojama:
 8. pasirinkti tinkamus trūkstamų ir nelogiškų reikšmių apdorojimo būdus;
 9. įvertinti, ar duomenų rinkinys tinkamas tolimesnei analizei.
 
+# A02 duomenų validavimas pagal originalią `ggplot2::diamonds` bazę
+
+Šio etapo tikslas – patikrinti fiziškai nelogiškas A02 duomenų reikšmes, palyginti jas su originalia `ggplot2::diamonds` duomenų baze ir, kur galima, pagrįstai atkurti sugadintas bazinių požymių reikšmes.
+
+## 1. Kodėl buvo naudojama originali bazė
+
+A02 duomenų rinkinys yra sudarytas iš `ggplot2::diamonds` duomenų bazės. Pirminės duomenų kokybės analizės metu buvo nustatytos fiziškai nelogiškos reikšmės:
+
+- `carat <= 0` – 14 reikšmių;
+- `y <= 0` – 13 reikšmių;
+- `z <= 0` – 3 reikšmės.
+
+Kadangi šios reikšmės realiam deimantui yra nelogiškos arba abejotinos, buvo nuspręsta patikrinti, ar atitinkamus objektus galima vienareikšmiškai rasti originalioje `ggplot2::diamonds` bazėje.
+
+Svarbu: originali bazė buvo naudojama ne statistinėms išskirtims automatiškai šalinti, o tik konkrečioms fiziškai nelogiškoms A02 reikšmėms validuoti.
+
+---
+
+## 2. Originalios duomenų bazės paruošimas
+
+Originalioje `diamonds` bazėje pjūvio kokybės požymis vadinasi `cut`, o A02 rinkinyje – `class`.
+
+Todėl originalioje bazėje buvo sukurtas `class` stulpelis ir paliktos tik A02 naudojamos klasės `Ideal` ir `Premium`.
+
+```r
+library(ggplot2)
+library(dplyr)
+
+originalas <- ggplot2::diamonds %>%
+  mutate(
+    class = as.character(cut)
+  ) %>%
+  filter(class %in% c("Ideal", "Premium"))
+```
+
+Kad būtų galima aiškiai sekti, kuri A02 eilutė tikrinama, kiekvienai eilutei buvo suteiktas identifikatorius:
+
+```r
+deimantai_su_id <- deimantai %>%
+  mutate(a02_id = row_number())
+```
+
+---
+
+## 3. Neigiamų `carat` reikšmių tikrinimas
+
+Kadangi `carat` reikšmės buvo įtariamos kaip sugadintos, jos nebuvo naudojamos ieškant atitikmens originalioje bazėje.
+
+Atitikmuo buvo ieškomas pagal kitus bazinius požymius:
+
+- `depth`;
+- `table`;
+- `price`;
+- `x`;
+- `y`;
+- `z`;
+- `class`.
+
+```r
+blogas_carat <- deimantai_su_id %>%
+  filter(!is.na(carat) & carat <= 0)
+
+carat_match <- blogas_carat %>%
+  select(
+    a02_id,
+    depth,
+    table,
+    price,
+    x,
+    y,
+    z,
+    class,
+    carat_A02 = carat
+  ) %>%
+  left_join(
+    originalas %>%
+      select(
+        depth,
+        table,
+        price,
+        x,
+        y,
+        z,
+        class,
+        carat_original = carat
+      ),
+    by = c(
+      "depth",
+      "table",
+      "price",
+      "x",
+      "y",
+      "z",
+      "class"
+    )
+  )
+```
+
+Kiekvienai iš 14 probleminių `carat` eilučių buvo rastas po vieną aiškų atitikmenį originalioje bazėje.
+
+Pavyzdžiai:
+
+| A02 eilutė | A02 `carat` | Originalus `carat` |
+|---:|---:|---:|
+| 1 | -0.609 | 0.96 |
+| 168 | -0.246 | 0.31 |
+| 189 | -1.088 | 0.74 |
+| 744 | -1.615 | 1.01 |
+| 1992 | -0.279 | 2.00 |
+| 2178 | -0.941 | 0.57 |
+| 2194 | -1.564 | 0.39 |
+| 2195 | -1.826 | 1.11 |
+| 2762 | -0.914 | 2.43 |
+| 2980 | -2.403 | 0.33 |
+| 3566 | -2.074 | 2.01 |
+| 3594 | -0.408 | 2.47 |
+| 3672 | -1.165 | 0.70 |
+| 3994 | -0.154 | 0.51 |
+
+### Išvada
+
+Visos 14 neigiamos `carat` reikšmės buvo patikimai susietos su originaliais `diamonds` įrašais, todėl jas galima pagrįstai atkurti.
+
+---
+
+## 4. Neigiamų `y` reikšmių tikrinimas
+
+Kadangi `y` buvo probleminis požymis, jis nebuvo naudojamas atitikmens paieškoje.
+
+Atitikmens buvo ieškoma pagal:
+
+- `carat`;
+- `depth`;
+- `table`;
+- `price`;
+- `x`;
+- `z`;
+- `class`.
+
+```r
+blogas_y <- deimantai_su_id %>%
+  filter(!is.na(y) & y <= 0)
+
+y_match <- blogas_y %>%
+  select(
+    a02_id,
+    carat,
+    depth,
+    table,
+    price,
+    x,
+    z,
+    class,
+    y_A02 = y
+  ) %>%
+  left_join(
+    originalas %>%
+      select(
+        carat,
+        depth,
+        table,
+        price,
+        x,
+        z,
+        class,
+        y_original = y
+      ),
+    by = c(
+      "carat",
+      "depth",
+      "table",
+      "price",
+      "x",
+      "z",
+      "class"
+    )
+  )
+```
+
+Visoms 13 probleminių A02 eilučių buvo nustatyta originali teigiama `y` reikšmė.
+
+Vienai A02 eilutei (`a02_id = 3617`) originalioje bazėje buvo rasti du atitikmenys, tačiau abiejuose `y_original` reikšmė buvo vienoda – `4.45`. Todėl ir šiuo atveju atkuriama reikšmė yra vienareikšmė.
+
+Pavyzdžiai:
+
+| A02 eilutė | A02 `y` | Originalus `y` |
+|---:|---:|---:|
+| 868 | -3.956 | 5.79 |
+| 882 | -8.298 | 5.29 |
+| 1059 | -1.202 | 5.16 |
+| 1291 | -11.309 | 5.12 |
+| 1442 | -3.212 | 5.85 |
+| 2037 | -7.940 | 5.25 |
+| 2126 | -2.038 | 7.28 |
+| 2978 | -3.622 | 5.33 |
+| 3036 | -9.506 | 5.63 |
+| 3149 | -7.323 | 7.68 |
+| 3404 | -5.391 | 4.83 |
+| 3509 | -11.851 | 5.76 |
+| 3617 | -10.711 | 4.45 |
+
+### Išvada
+
+Visos 13 neigiamos `y` reikšmės galėjo būti pagrįstai atkurtos pagal originalią duomenų bazę.
+
+---
+
+## 5. `z = 0` reikšmių tikrinimas
+
+Buvo rastos 3 eilutės, kuriose `z = 0`.
+
+Atitikmens buvo ieškoma pagal:
+
+- `carat`;
+- `depth`;
+- `table`;
+- `price`;
+- `x`;
+- `y`;
+- `class`.
+
+```r
+blogas_z <- deimantai_su_id %>%
+  filter(!is.na(z) & z <= 0)
+
+z_match <- blogas_z %>%
+  select(
+    a02_id,
+    carat,
+    depth,
+    table,
+    price,
+    x,
+    y,
+    class,
+    z_A02 = z
+  ) %>%
+  left_join(
+    originalas %>%
+      select(
+        carat,
+        depth,
+        table,
+        price,
+        x,
+        y,
+        class,
+        z_original = z
+      ),
+    by = c(
+      "carat",
+      "depth",
+      "table",
+      "price",
+      "x",
+      "y",
+      "class"
+    )
+  )
+```
+
+Gauti rezultatai:
+
+| A02 eilutė | A02 `z` | Originalus `z` |
+|---:|---:|---:|
+| 1061 | 0 | 0 |
+| 1492 | 0 | 0 |
+| 3658 | 0 | 0 |
+
+### Išvada
+
+Visos 3 `z = 0` reikšmės tokios pačios ir originalioje `ggplot2::diamonds` bazėje.
+
+Todėl jos nelaikomos A02 rinkinio sugadinimo rezultatu ir nebuvo keičiamos. Jos paliekamos kaip originalaus šaltinio probleminės arba fiziškai abejotinos reikšmės.
+
+---
+
+## 6. Patikimai nustatytų reikšmių atkūrimas
+
+Prieš taisant buvo išsaugota duomenų kopija:
+
+```r
+deimantai_pries_atkurima <- deimantai
+```
+
+### `carat` atkūrimas
+
+```r
+for (i in 1:nrow(carat_match)) {
+  deimantai$carat[carat_match$a02_id[i]] <-
+    carat_match$carat_original[i]
+}
+```
+
+### `y` atkūrimas
+
+Kadangi viena eilutė turėjo du identišką `y_original` rezultatą duodančius atitikmenis, paliekamas vienas įrašas kiekvienam A02 objektui:
+
+```r
+y_match_unique <- y_match %>%
+  distinct(a02_id, .keep_all = TRUE)
+
+for (i in 1:nrow(y_match_unique)) {
+  deimantai$y[y_match_unique$a02_id[i]] <-
+    y_match_unique$y_original[i]
+}
+```
+
+Po atkūrimo patikrinta:
+
+```r
+sum(deimantai$carat <= 0, na.rm = TRUE)
+sum(deimantai$y <= 0, na.rm = TRUE)
+sum(deimantai$z <= 0, na.rm = TRUE)
+```
+
+Rezultatai:
+
+```text
+carat <= 0 : 0
+y <= 0     : 0
+z <= 0     : 3
+```
+
+### Išvada
+
+Sėkmingai atkurtos:
+
+- 14 `carat` reikšmių;
+- 13 `y` reikšmių.
+
+Iš viso atkurta **27 fiziškai nelogiškos ir pagal originalią bazę vienareikšmiškai identifikuotos reikšmės**.
+
+---
+
+## 7. Išvestinių požymių perskaičiavimas
+
+Kadangi A02 rinkinyje yra daug iš bazinių matavimų apskaičiuotų požymių, po `carat` ir `y` atkūrimo išvestiniai požymiai buvo perskaičiuoti iš naujo.
+
+```r
+# Tūris
+deimantai$volume_xyz <- deimantai$x * deimantai$y * deimantai$z
+
+# Plotai
+deimantai$area_xy <- deimantai$x * deimantai$y
+deimantai$area_xz <- deimantai$x * deimantai$z
+deimantai$area_yz <- deimantai$y * deimantai$z
+
+# Kaina vienam karatui
+deimantai$price_per_carat <- deimantai$price / deimantai$carat
+
+# Ilgio ir pločio santykis
+deimantai$length_width_ratio <- deimantai$x / deimantai$y
+
+# Gylio santykis
+deimantai$depth_ratio <- deimantai$z / ((deimantai$x + deimantai$y) / 2)
+
+# Table ir depth santykis
+deimantai$table_depth_ratio <- deimantai$table / deimantai$depth
+
+# Karatų kiekis tūrio vienetui
+deimantai$carat_per_volume <- deimantai$carat / deimantai$volume_xyz
+
+# Kaina tūrio vienetui
+deimantai$price_per_volume <- deimantai$price / deimantai$volume_xyz
+
+# Vidutinis matmuo
+deimantai$mean_dimension <- (deimantai$x + deimantai$y + deimantai$z) / 3
+```
+
+### `dimension_cv`
+
+Matmenų variacijos koeficientas perskaičiuotas naudojant populiacijos standartinį nuokrypį:
+
+```r
+deimantai$dimension_cv <- apply(
+  deimantai[, c("x", "y", "z")],
+  1,
+  function(v) {
+    m <- mean(v)
+    sd_pop <- sqrt(mean((v - m)^2))
+    sd_pop / m
+  }
+)
+```
+
+Po šio perskaičiavimo `dimension_cv` reikšmių diapazonas vėl atitiko pradinį A02 duomenų diapazoną.
+
+---
+
+## 8. `Inf` reikšmių tvarkymas
+
+Kadangi trijose eilutėse `z = 0`, šiose eilutėse:
+
+```text
+volume_xyz = x * y * z = 0
+```
+
+Todėl skaičiuojant:
+
+```text
+carat_per_volume = carat / volume_xyz
+price_per_volume = price / volume_xyz
+```
+
+atsirado `Inf` reikšmės.
+
+Kadangi dalyba iš nulio neturi prasmingos skaitinės interpretacijos, `Inf` reikšmės buvo pakeistos į `NA`:
+
+```r
+deimantai$carat_per_volume[
+  is.infinite(deimantai$carat_per_volume)
+] <- NA
+
+deimantai$price_per_volume[
+  is.infinite(deimantai$price_per_volume)
+] <- NA
+```
+
+Patikrinimas:
+
+```r
+sum(is.infinite(as.matrix(
+  deimantai[sapply(deimantai, is.numeric)]
+)))
+```
+
+Rezultatas:
+
+```text
+0
+```
+
+Taigi galutinėje aibėje `Inf` reikšmių nebeliko.
+
+---
+
+## 9. Trūkstamos reikšmės po perskaičiavimo
+
+Po išvestinių požymių perskaičiavimo gauta:
+
+| Požymis | `NA` skaičius |
+|---|---:|
+| `carat` | 60 |
+| `depth` | 40 |
+| `price` | 60 |
+| `price_per_carat` | 120 |
+| `table_depth_ratio` | 40 |
+| `carat_per_volume` | 63 |
+| `price_per_volume` | 63 |
+
+Kituose požymiuose `NA` reikšmių nėra.
+
+### Kodėl padidėjo kai kurių išvestinių požymių `NA` skaičius?
+
+`price_per_carat` priklauso nuo `price` ir `carat`, todėl jei bent vienos bazinės reikšmės nėra, negalima apskaičiuoti ir išvestinio rodiklio.
+
+Analogiškai:
+
+- `table_depth_ratio` negali būti apskaičiuotas, jei trūksta `depth`;
+- `carat_per_volume` negali būti apskaičiuotas, jei trūksta `carat` arba `volume_xyz = 0`;
+- `price_per_volume` negali būti apskaičiuotas, jei trūksta `price` arba `volume_xyz = 0`.
+
+Todėl didesnis `NA` skaičius išvestiniuose požymiuose yra logiška bazinių duomenų trūkumų pasekmė.
+
+---
+
+## 10. Galutinė šio etapo išvada
+
+Palyginus A02 duomenis su originalia `ggplot2::diamonds` baze nustatyta, kad:
+
+- 14 neigiamų `carat` reikšmių buvo A02 rinkinyje pakeistos ir galėjo būti vienareikšmiškai atkurtos;
+- 13 neigiamų `y` reikšmių taip pat galėjo būti atkurtos pagal originalią bazę;
+- iš viso atkurta **27 sugadintos bazinių požymių reikšmės**;
+- 3 `z = 0` reikšmės tokios pačios ir originaliame `diamonds` rinkinyje, todėl jos nebuvo keičiamos;
+- po bazinių reikšmių atkūrimo buvo perskaičiuoti visi nuo jų priklausantys išvestiniai požymiai;
+- dėl `z = 0` atsiradusios `Inf` reikšmės pakeistos į `NA`;
+- po perskaičiavimo išvestinių požymių `NA` kiekis atspindi realius bazinių požymių trūkumus.
+
+Svarbu pažymėti, kad originali duomenų bazė buvo naudojama tik aiškiai fiziškai nelogiškoms reikšmėms validuoti ir atkurti. Statistinės išskirtys pagal IQR taisyklę nėra automatiškai laikomos klaidomis ir turi būti analizuojamos atskirai.
+
+
 [README.md](https://github.com/user-attachments/files/32465561/README.md)
