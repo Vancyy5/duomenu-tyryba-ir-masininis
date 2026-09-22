@@ -772,7 +772,7 @@ Analogiškai:
 
 ## 15. Aprašomoji statistika po sutvarkymo
 
-Po bazinių požymių atkūrimo ir išvestinių požymių perskaičiavimo dar kartą tikrinama aprašomoji statistika:
+Po bazinių požymių atkūrimo pagal originalią `ggplot2::diamonds` bazę ir išvestinių požymių perskaičiavimo aprašomoji statistika buvo apskaičiuota dar kartą.
 
 ```r
 summary(deimantai)
@@ -781,19 +781,21 @@ colSums(is.na(deimantai))
 
 Po sutvarkymo:
 
-- `carat` minimumas tapo **0.23**;
-- `y` minimumas tapo **3.90**;
-- `z` minimumas liko **0**, nes trys tokios reikšmės yra ir originalioje bazėje;
-- `dimension_cv` reikšmės grįžo į logišką diapazoną;
-- `Inf` reikšmių nebėra.
+- `carat` minimumas tapo **0.23**, todėl neigiamų masės reikšmių nebeliko;
+- `y` minimumas tapo **3.90**, todėl neigiamų geometrinių matmenų nebeliko;
+- `z` minimumas liko **0**, nes trys tokios reikšmės egzistuoja ir originalioje `ggplot2::diamonds` bazėje;
+- `price` vidurkis yra **4661.71**, o mediana **2442.50**, todėl kainos pasiskirstymas yra aiškiai asimetriškas į dešinę;
+- `price_per_carat` vidurkis (**5208.44**) yra gerokai didesnis už medianą (**3584.07**), todėl šiame požymyje taip pat matoma ryški dešinioji uodega;
+- `depth` mediana yra **61.7**, trečiasis kvartilis **62.2**, tačiau maksimumas siekia **239.06**, todėl ši reikšmė laikoma labai neįprasta ir turi būti tiriama atskirai;
+- `Inf` reikšmių po perskaičiavimo nebeliko.
 
-Tai rodo, kad aiškiai sugadintos bazinių požymių reikšmės buvo sutvarkytos, o išvestiniai požymiai suderinti su atnaujintais baziniais duomenimis.
+Tai rodo, kad aiškiai sugadintos bazinių požymių reikšmės buvo sutvarkytos, tačiau dalyje požymių vis dar išlieka statistiškai neįprastų reikšmių, kurias reikia vertinti atskirai.
 
 ---
 
 ## 16. Požymių pasiskirstymo ir išskirčių analizė
 
-Po duomenų sutvarkymo histogramas, boxplot diagramas ir IQR išskirčių skaičiavimą reikia atlikti iš naujo, nes dalis reikšmių buvo pakoreguota.
+Po duomenų sutvarkymo histogramų, boxplot diagramų ir IQR išskirčių analizė buvo pakartota, nes dalis reikšmių buvo pakoreguota.
 
 ### Histogramų sudarymas
 
@@ -811,6 +813,8 @@ for (col in numeric_cols) {
 }
 ```
 
+Histogramos naudojamos požymių pasiskirstymo formai, asimetrijai ir nuo pagrindinės reikšmių dalies nutolusioms reikšmėms įvertinti.
+
 ### Boxplot diagramų sudarymas
 
 ```r
@@ -823,6 +827,8 @@ for (col in numeric_cols) {
   )
 }
 ```
+
+Boxplot diagramos leidžia vizualiai įvertinti medianą, kvartilius ir galimas statistines išskirtis.
 
 ### Išskirčių nustatymas pagal 1.5 × IQR taisyklę
 
@@ -865,7 +871,39 @@ rezultatai_isskirtys <- rezultatai_isskirtys[
 rezultatai_isskirtys
 ```
 
-Svarbu: statistinės išskirtys pagal IQR taisyklę nėra automatiškai laikomos klaidomis. Jos gali būti realios retesnių deimantų reikšmės ir turi būti vertinamos atskirai nuo fiziškai nelogiškų duomenų.
+Gauti rezultatai:
+
+| Požymis | Išskirčių skaičius | Procentas |
+|---|---:|---:|
+| `price` | 295 | 7.49 % |
+| `price_per_carat` | 163 | 4.20 % |
+| `price_per_volume` | 163 | 4.14 % |
+| `dimension_cv` | 116 | 2.90 % |
+| `depth_ratio` | 114 | 2.85 % |
+| `depth` | 98 | 2.47 % |
+| `volume_xyz` | 61 | 1.52 % |
+| `carat` | 60 | 1.52 % |
+| `carat_per_volume` | 57 | 1.45 % |
+| `table_depth_ratio` | 46 | 1.16 % |
+| `area_xy` | 10 | 0.25 % |
+| `area_xz` | 8 | 0.20 % |
+| `area_yz` | 7 | 0.18 % |
+| `z` | 6 | 0.15 % |
+| `length_width_ratio` | 4 | 0.10 % |
+| `x` | 2 | 0.05 % |
+| `y` | 2 | 0.05 % |
+| `mean_dimension` | 2 | 0.05 % |
+| `table` | 1 | 0.03 % |
+
+### Išvada
+
+Daugiausia statistinių išskirčių nustatyta `price` požymyje – **295 reikšmės (7.49 %)**.
+
+Taip pat daugiau išskirčių nustatyta `price_per_carat` (**4.20 %**), `price_per_volume` (**4.14 %**), `dimension_cv` (**2.90 %**), `depth_ratio` (**2.85 %**) ir `depth` (**2.47 %**) požymiuose.
+
+Po duomenų sutvarkymo sumažėjo kai kurių požymių išskirčių skaičius, ypač `carat`, `y` ir `volume_xyz`. Tai rodo, kad dalis anksčiau nustatytų išskirčių buvo susijusios su sugadintomis bazinėmis reikšmėmis.
+
+Svarbu pažymėti, kad IQR metodu nustatytos statistinės išskirtys nėra automatiškai laikomos klaidomis. Jos gali atspindėti realius, retesnius deimantus, todėl prieš jas šalinant ar koreguojant reikia įvertinti jų fizinę prasmę, pasiskirstymą ir ryšį su kitais požymiais.
 
 ---
 
