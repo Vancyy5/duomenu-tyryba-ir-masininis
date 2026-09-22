@@ -89,7 +89,84 @@ Gauti du lygiai:
 
 ---
 
-## 3. Trūkstamų reikšmių analizė
+## 3. Pirminė aprašomoji statistika
+
+Prieš duomenų koregavimą apskaičiuojamos pagrindinės skaitinių požymių aprašomosios statistikos. Ši analizė atliekama po duomenų tipų sutvarkymo, bet dar prieš fiziškai nelogiškų reikšmių taisymą ir palyginimą su originalia `ggplot2::diamonds` baze.
+
+Naudojamas kodas:
+
+```r
+numeric_cols_pries <- names(deimantai)[sapply(deimantai, is.numeric)]
+
+aprasomoji_funkcija <- function(x) {
+
+  x_valid <- x[!is.na(x)]
+
+  c(
+    n = length(x_valid),
+    NA_kiekis = sum(is.na(x)),
+    vidurkis = mean(x_valid),
+    mediana = median(x_valid),
+    standartinis_nuokrypis = sd(x_valid),
+    minimumas = min(x_valid),
+    Q1 = quantile(x_valid, 0.25),
+    Q3 = quantile(x_valid, 0.75),
+    maksimumas = max(x_valid)
+  )
+}
+
+aprasomoji_pries <- t(
+  sapply(
+    deimantai[numeric_cols_pries],
+    aprasomoji_funkcija
+  )
+)
+
+aprasomoji_pries <- as.data.frame(aprasomoji_pries)
+
+aprasomoji_pries$pozymis <- rownames(aprasomoji_pries)
+
+aprasomoji_pries <- aprasomoji_pries[
+  ,
+  c(
+    "pozymis",
+    "n",
+    "NA_kiekis",
+    "vidurkis",
+    "mediana",
+    "standartinis_nuokrypis",
+    "minimumas",
+    "Q1",
+    "Q3",
+    "maksimumas"
+  )
+]
+
+aprasomoji_pries[, -1] <- round(aprasomoji_pries[, -1], 3)
+
+aprasomoji_pries
+```
+
+Papildomai galima naudoti:
+
+```r
+summary(deimantai)
+```
+
+Pirminė statistika parodė, kad kai kuriuose požymiuose yra labai neįprastų reikšmių.
+
+Pavyzdžiui:
+
+- `carat` turi neigiamų reikšmių;
+- `y` turi neigiamų reikšmių;
+- `z` turi nulinių reikšmių;
+- `depth` mediana yra apie **61.7**, trečiasis kvartilis apie **62.2**, o maksimali reikšmė siekia **239.06**.
+
+Tai rodo, kad duomenyse gali būti tiek fiziškai nelogiškų reikšmių, tiek statistinių išskirčių, todėl reikalinga tolesnė kokybės analizė.
+
+---
+
+## 4. Trūkstamų reikšmių analizė
 
 Naudotas kodas:
 
@@ -121,7 +198,7 @@ Bent vieną trūkstamą reikšmę turi:
 - **217 eilučių**
 - **5.42 % visų objektų**
 
-Trūkstamų reikšmių pasiskirtymas pagal klasę(procentais):
+Trūkstamų reikšmių pasiskirstymas pagal klasę:
 
 | Požymis | Ideal | Premium |
 |---|---:|---:|
@@ -134,11 +211,11 @@ Trūkstamų reikšmių pasiskirtymas pagal klasę(procentais):
 
 ### Išvada
 
-Trūkstamų reikšmių kiekis nėra labai didelis, tačiau jos yra keliuose svarbiuose požymiuose. Toliau reikės nuspręsti, kokį jų apdorojimo būdą pasirinkti. Trūkstamų reikšmių pasiskirstymas tarp Ideal ir Premium klasių yra beveik vienodas, reikšmingų skirtumų nenustatyta.
+Trūkstamų reikšmių kiekis nėra labai didelis, tačiau jos yra keliuose svarbiuose požymiuose. Trūkstamų reikšmių pasiskirstymas tarp `Ideal` ir `Premium` klasių yra labai panašus.
 
 ---
 
-## 4. Dublikatų patikra
+## 5. Dublikatų patikra
 
 Naudotas kodas:
 
@@ -158,7 +235,7 @@ Duomenų rinkinyje **pilnų dublikatų nėra**.
 
 ---
 
-## 5. Klasių balanso tikrinimas
+## 6. Klasių balanso tikrinimas
 
 Naudotas kodas:
 
@@ -181,7 +258,7 @@ Klasių disbalanso problema nenustatyta. Abi klasės sudaro po **50 %** visų ob
 
 ---
 
-## 6. Nelogiškų reikšmių tikrinimas
+## 7. Nelogiškų reikšmių tikrinimas
 
 Kadangi analizuojami realūs deimantai, kai kurie fiziniai dydžiai negali būti neigiami arba lygūs nuliui.
 
@@ -214,7 +291,7 @@ Rezultatai:
 
 ---
 
-## 7. Probleminių objektų nustatymas
+## 8. Probleminių objektų nustatymas
 
 Kadangi kai kuriuose požymiuose yra `NA`, probleminėms eilutėms išrinkti naudojamas `which()`:
 
@@ -252,11 +329,11 @@ Tai sudaro:
 
 **0.75 % visų objektų** turi bent vieną fiziškai nelogišką `carat`, `y` arba `z` reikšmę.
 
-Šios reikšmės neturėtų būti automatiškai pašalintos neįvertinus jų kilmės ir poveikio kitiems požymiams.
+Šios reikšmės neturėtų būti automatiškai pašalintos neįvertinus jų kilmės.
 
 ---
 
-## 8. Konkrečių nelogiškų reikšmių peržiūra
+## 9. Konkrečių nelogiškų reikšmių peržiūra
 
 ### `carat`
 
@@ -299,128 +376,13 @@ Rastos **3 nulinės `z` reikšmės**.
 
 ---
 
-## 9. Pirminė aprašomoji statistika
+## 10. Duomenų validavimas pagal originalią `ggplot2::diamonds` bazę
 
-Naudotas kodas:
+Šio etapo tikslas – patikrinti fiziškai nelogiškas A02 reikšmes, palyginti jas su originalia `ggplot2::diamonds` baze ir, kur galima, atkurti sugadintas bazinių požymių reikšmes.
 
-```r
-summary(deimantai)
-```
+Svarbu: originali bazė naudojama tik aiškiai fiziškai nelogiškoms reikšmėms validuoti, o ne statistinėms išskirtims automatiškai šalinti.
 
-Pirminė statistika parodė, kad kai kuriuose požymiuose gali būti labai nutolusių reikšmių.
-
-Pavyzdžiui, `depth`:
-
-- mediana: apie **61.7**
-- 3 kvartilis: apie **62.2**
-- maksimali reikšmė: **239.06**
-
-Tai rodo, kad `depth` turi bent vieną labai neįprastą reikšmę, kurią reikės toliau tirti kaip galimą išskirtį.
-
----
-
-## 10. Požymių pasiskirstymo ir išskirčių analizė
-
-Siekiant įvertinti skaitinių požymių pasiskirstymą ir nustatyti galimas statistines išskirtis, kiekvienam skaitiniam požymiui buvo sudaryta atskira histograma ir boxplot diagrama.
-
-### Histogramų sudarymas
-
-Histogramos leidžia įvertinti kiekvieno požymio pasiskirstymo formą, reikšmių koncentraciją ir galimas nuo pagrindinės reikšmių dalies nutolusias reikšmes.
-
-Histogramos parodė, kad skirtingų požymių pasiskirstymai nėra vienodi. Kai kuriuose požymiuose matomos labiau nuo pagrindinės reikšmių dalies nutolusios reikšmės, kurios gali būti laikomos galimomis statistinėmis išskirtimis. Ypač tai pastebima `price`, `price_per_carat`, `price_per_volume`, `depth` ir `volume_xyz` požymiuose.
-
-### Išskirčių nustatymas
-
-Statistinės išskirtys buvo nustatomos naudojant **1.5 × IQR taisyklę**.
-
-Apatinė ir viršutinė išskirčių ribos apskaičiuojamos taip:
-
-```text
-Apatinė riba = Q1 - 1.5 × IQR
-Viršutinė riba = Q3 + 1.5 × IQR
-```
-
-Reikšmės, esančios už šių ribų, laikomos statistinėmis išskirtimis.
-
-Išskirčių procentas skaičiuojamas nuo kiekvieno požymio galiojančių, t. y. ne-`NA`, reikšmių skaičiaus.
-
-Gauti rezultatai:
-
-| Požymis | Išskirčių skaičius | Procentas |
-|---|---:|---:|
-| `price` | 295 | 7.49 % |
-| `price_per_carat` | 146 | 3.65 % |
-| `price_per_volume` | 136 | 3.40 % |
-| `dimension_cv` | 116 | 2.90 % |
-| `volume_xyz` | 114 | 2.89 % |
-| `depth_ratio` | 114 | 2.85 % |
-| `depth` | 98 | 2.47 % |
-| `carat` | 73 | 1.85 % |
-| `carat_per_volume` | 62 | 1.55 % |
-| `table_depth_ratio` | 34 | 0.85 % |
-| `y` | 15 | 0.38 % |
-| `area_xy` | 10 | 0.25 % |
-| `area_xz` | 8 | 0.20 % |
-| `area_yz` | 7 | 0.18 % |
-| `z` | 6 | 0.15 % |
-| `length_width_ratio` | 4 | 0.10 % |
-| `x` | 2 | 0.05 % |
-| `mean_dimension` | 2 | 0.05 % |
-| `table` | 1 | 0.03 % |
-
-### Išvada
-
-Pagal **1.5 × IQR taisyklę** daugiausia statistinių išskirčių nustatyta `price` požymyje – **295 reikšmės (7.49 % galiojančių `price` reikšmių)**.
-
-Santykinai daugiau išskirčių taip pat nustatyta `price_per_carat` (3.65 %), `price_per_volume` (3.40 %), `dimension_cv` (2.90 %), `volume_xyz` (2.89 %), `depth_ratio` (2.85 %) ir `depth` (2.47 %) požymiuose.
-
-Svarbu pažymėti, kad pagal IQR taisyklę nustatytos statistinės išskirtys nebūtinai yra klaidingos reikšmės. Jos gali atspindėti realius, retesnius deimantus, todėl prieš sprendžiant dėl jų šalinimo ar koregavimo būtina įvertinti jų fizinę prasmę, pasiskirstymą ir ryšį su kitais požymiais.
-
-Fiziškai nelogiškos reikšmės, tokios kaip neigiamas `carat`, neigiamas `y` ar `z = 0`, vertinamos atskirai nuo statistinių išskirčių.
-
-
-
-
-# Tolimesni analizės žingsniai
-
-Toliau planuojama:
-
-1. tirti požymių pasiskirstymus naudojant histogramas; +
-2. aptikti galimas išskirtis naudojant boxplot diagramas;+
-3. įvertinti išskirčių skaičių ir jų poveikį; +-
-4. palyginti `Ideal` ir `Premium` klases;
-5. tirti ryšius tarp:
-   - `carat` ir `price`;
-   - `volume_xyz` ir `price`;
-   - `carat` ir `volume_xyz`;
-6. atlikti koreliacijų analizę;
-7. nustatyti stipriai tarpusavyje susijusius bazinius ir išvestinius požymius;
-8. pasirinkti tinkamus trūkstamų ir nelogiškų reikšmių apdorojimo būdus;
-9. įvertinti, ar duomenų rinkinys tinkamas tolimesnei analizei.
-
-# A02 duomenų validavimas pagal originalią `ggplot2::diamonds` bazę
-
-Šio etapo tikslas – patikrinti fiziškai nelogiškas A02 duomenų reikšmes, palyginti jas su originalia `ggplot2::diamonds` duomenų baze ir, kur galima, pagrįstai atkurti sugadintas bazinių požymių reikšmes.
-
-## 1. Kodėl buvo naudojama originali bazė
-
-A02 duomenų rinkinys yra sudarytas iš `ggplot2::diamonds` duomenų bazės. Pirminės duomenų kokybės analizės metu buvo nustatytos fiziškai nelogiškos reikšmės:
-
-- `carat <= 0` – 14 reikšmių;
-- `y <= 0` – 13 reikšmių;
-- `z <= 0` – 3 reikšmės.
-
-Kadangi šios reikšmės realiam deimantui yra nelogiškos arba abejotinos, buvo nuspręsta patikrinti, ar atitinkamus objektus galima vienareikšmiškai rasti originalioje `ggplot2::diamonds` bazėje.
-
-Svarbu: originali bazė buvo naudojama ne statistinėms išskirtims automatiškai šalinti, o tik konkrečioms fiziškai nelogiškoms A02 reikšmėms validuoti.
-
----
-
-## 2. Originalios duomenų bazės paruošimas
-
-Originalioje `diamonds` bazėje pjūvio kokybės požymis vadinasi `cut`, o A02 rinkinyje – `class`.
-
-Todėl originalioje bazėje buvo sukurtas `class` stulpelis ir paliktos tik A02 naudojamos klasės `Ideal` ir `Premium`.
+### 10.1. Originalios bazės paruošimas
 
 ```r
 library(ggplot2)
@@ -431,30 +393,16 @@ originalas <- ggplot2::diamonds %>%
     class = as.character(cut)
   ) %>%
   filter(class %in% c("Ideal", "Premium"))
-```
 
-Kad būtų galima aiškiai sekti, kuri A02 eilutė tikrinama, kiekvienai eilutei buvo suteiktas identifikatorius:
-
-```r
 deimantai_su_id <- deimantai %>%
   mutate(a02_id = row_number())
 ```
 
 ---
 
-## 3. Neigiamų `carat` reikšmių tikrinimas
+### 10.2. Neigiamų `carat` reikšmių tikrinimas
 
-Kadangi `carat` reikšmės buvo įtariamos kaip sugadintos, jos nebuvo naudojamos ieškant atitikmens originalioje bazėje.
-
-Atitikmuo buvo ieškomas pagal kitus bazinius požymius:
-
-- `depth`;
-- `table`;
-- `price`;
-- `x`;
-- `y`;
-- `z`;
-- `class`.
+Kadangi `carat` yra tikrinamas požymis, jis nenaudojamas ieškant atitikmens originalioje bazėje.
 
 ```r
 blogas_carat <- deimantai_su_id %>%
@@ -496,9 +444,7 @@ carat_match <- blogas_carat %>%
   )
 ```
 
-Kiekvienai iš 14 probleminių `carat` eilučių buvo rastas po vieną aiškų atitikmenį originalioje bazėje.
-
-Pavyzdžiai:
+Visoms 14 probleminių `carat` eilučių buvo rastas aiškus originalus atitikmuo.
 
 | A02 eilutė | A02 `carat` | Originalus `carat` |
 |---:|---:|---:|
@@ -519,23 +465,13 @@ Pavyzdžiai:
 
 ### Išvada
 
-Visos 14 neigiamos `carat` reikšmės buvo patikimai susietos su originaliais `diamonds` įrašais, todėl jas galima pagrįstai atkurti.
+Visos 14 neigiamos `carat` reikšmės gali būti pagrįstai atkurtos pagal originalią bazę.
 
 ---
 
-## 4. Neigiamų `y` reikšmių tikrinimas
+### 10.3. Neigiamų `y` reikšmių tikrinimas
 
-Kadangi `y` buvo probleminis požymis, jis nebuvo naudojamas atitikmens paieškoje.
-
-Atitikmens buvo ieškoma pagal:
-
-- `carat`;
-- `depth`;
-- `table`;
-- `price`;
-- `x`;
-- `z`;
-- `class`.
+Kadangi `y` yra tikrinamas požymis, jis nenaudojamas atitikmens paieškoje.
 
 ```r
 blogas_y <- deimantai_su_id %>%
@@ -579,9 +515,7 @@ y_match <- blogas_y %>%
 
 Visoms 13 probleminių A02 eilučių buvo nustatyta originali teigiama `y` reikšmė.
 
-Vienai A02 eilutei (`a02_id = 3617`) originalioje bazėje buvo rasti du atitikmenys, tačiau abiejuose `y_original` reikšmė buvo vienoda – `4.45`. Todėl ir šiuo atveju atkuriama reikšmė yra vienareikšmė.
-
-Pavyzdžiai:
+Vienai A02 eilutei (`a02_id = 3617`) originalioje bazėje rasti du atitikmenys, tačiau abiejuose `y_original = 4.45`, todėl atkuriama reikšmė vis tiek yra vienareikšmė.
 
 | A02 eilutė | A02 `y` | Originalus `y` |
 |---:|---:|---:|
@@ -601,23 +535,11 @@ Pavyzdžiai:
 
 ### Išvada
 
-Visos 13 neigiamos `y` reikšmės galėjo būti pagrįstai atkurtos pagal originalią duomenų bazę.
+Visos 13 neigiamos `y` reikšmės gali būti pagrįstai atkurtos pagal originalią bazę.
 
 ---
 
-## 5. `z = 0` reikšmių tikrinimas
-
-Buvo rastos 3 eilutės, kuriose `z = 0`.
-
-Atitikmens buvo ieškoma pagal:
-
-- `carat`;
-- `depth`;
-- `table`;
-- `price`;
-- `x`;
-- `y`;
-- `class`.
+### 10.4. `z = 0` reikšmių tikrinimas
 
 ```r
 blogas_z <- deimantai_su_id %>%
@@ -671,13 +593,13 @@ Gauti rezultatai:
 
 Visos 3 `z = 0` reikšmės tokios pačios ir originalioje `ggplot2::diamonds` bazėje.
 
-Todėl jos nelaikomos A02 rinkinio sugadinimo rezultatu ir nebuvo keičiamos. Jos paliekamos kaip originalaus šaltinio probleminės arba fiziškai abejotinos reikšmės.
+Todėl jos nelaikomos A02 rinkinio sugadinimo rezultatu ir nebuvo keičiamos.
 
 ---
 
-## 6. Patikimai nustatytų reikšmių atkūrimas
+## 11. Patikimai nustatytų reikšmių atkūrimas
 
-Prieš taisant buvo išsaugota duomenų kopija:
+Prieš taisant išsaugoma duomenų kopija:
 
 ```r
 deimantai_pries_atkurima <- deimantai
@@ -694,8 +616,6 @@ for (i in 1:nrow(carat_match)) {
 
 ### `y` atkūrimas
 
-Kadangi viena eilutė turėjo du identišką `y_original` rezultatą duodančius atitikmenis, paliekamas vienas įrašas kiekvienam A02 objektui:
-
 ```r
 y_match_unique <- y_match %>%
   distinct(a02_id, .keep_all = TRUE)
@@ -706,7 +626,7 @@ for (i in 1:nrow(y_match_unique)) {
 }
 ```
 
-Po atkūrimo patikrinta:
+Patikrinimas:
 
 ```r
 sum(deimantai$carat <= 0, na.rm = TRUE)
@@ -729,48 +649,37 @@ Sėkmingai atkurtos:
 - 14 `carat` reikšmių;
 - 13 `y` reikšmių.
 
-Iš viso atkurta **27 fiziškai nelogiškos ir pagal originalią bazę vienareikšmiškai identifikuotos reikšmės**.
+Iš viso atkurta **27 sugadintos bazinių požymių reikšmės**.
 
 ---
 
-## 7. Išvestinių požymių perskaičiavimas
+## 12. Išvestinių požymių perskaičiavimas
 
-Kadangi A02 rinkinyje yra daug iš bazinių matavimų apskaičiuotų požymių, po `carat` ir `y` atkūrimo išvestiniai požymiai buvo perskaičiuoti iš naujo.
+Kadangi dalis A02 požymių apskaičiuojama iš bazinių matavimų, po `carat` ir `y` atkūrimo išvestiniai požymiai perskaičiuojami iš naujo.
 
 ```r
-# Tūris
 deimantai$volume_xyz <- deimantai$x * deimantai$y * deimantai$z
 
-# Plotai
 deimantai$area_xy <- deimantai$x * deimantai$y
 deimantai$area_xz <- deimantai$x * deimantai$z
 deimantai$area_yz <- deimantai$y * deimantai$z
 
-# Kaina vienam karatui
 deimantai$price_per_carat <- deimantai$price / deimantai$carat
 
-# Ilgio ir pločio santykis
 deimantai$length_width_ratio <- deimantai$x / deimantai$y
 
-# Gylio santykis
 deimantai$depth_ratio <- deimantai$z / ((deimantai$x + deimantai$y) / 2)
 
-# Table ir depth santykis
 deimantai$table_depth_ratio <- deimantai$table / deimantai$depth
 
-# Karatų kiekis tūrio vienetui
 deimantai$carat_per_volume <- deimantai$carat / deimantai$volume_xyz
 
-# Kaina tūrio vienetui
 deimantai$price_per_volume <- deimantai$price / deimantai$volume_xyz
 
-# Vidutinis matmuo
 deimantai$mean_dimension <- (deimantai$x + deimantai$y + deimantai$z) / 3
 ```
 
 ### `dimension_cv`
-
-Matmenų variacijos koeficientas perskaičiuotas naudojant populiacijos standartinį nuokrypį:
 
 ```r
 deimantai$dimension_cv <- apply(
@@ -784,28 +693,26 @@ deimantai$dimension_cv <- apply(
 )
 ```
 
-Po šio perskaičiavimo `dimension_cv` reikšmių diapazonas vėl atitiko pradinį A02 duomenų diapazoną.
-
 ---
 
-## 8. `Inf` reikšmių tvarkymas
+## 13. `Inf` reikšmių tvarkymas
 
-Kadangi trijose eilutėse `z = 0`, šiose eilutėse:
-
-```text
-volume_xyz = x * y * z = 0
-```
-
-Todėl skaičiuojant:
+Kadangi trijose eilutėse `z = 0`, gaunama:
 
 ```text
-carat_per_volume = carat / volume_xyz
-price_per_volume = price / volume_xyz
+volume_xyz = 0
 ```
 
-atsirado `Inf` reikšmės.
+Todėl:
 
-Kadangi dalyba iš nulio neturi prasmingos skaitinės interpretacijos, `Inf` reikšmės buvo pakeistos į `NA`:
+```text
+carat_per_volume = carat / 0
+price_per_volume = price / 0
+```
+
+gali tapti `Inf`.
+
+Tokios reikšmės pakeičiamos į `NA`:
 
 ```r
 deimantai$carat_per_volume[
@@ -831,13 +738,13 @@ Rezultatas:
 0
 ```
 
-Taigi galutinėje aibėje `Inf` reikšmių nebeliko.
+Taigi po sutvarkymo `Inf` reikšmių duomenyse nebeliko.
 
 ---
 
-## 9. Trūkstamos reikšmės po perskaičiavimo
+## 14. Trūkstamos reikšmės po perskaičiavimo
 
-Po išvestinių požymių perskaičiavimo gauta:
+Po išvestinių požymių perskaičiavimo:
 
 | Požymis | `NA` skaičius |
 |---|---:|
@@ -851,9 +758,9 @@ Po išvestinių požymių perskaičiavimo gauta:
 
 Kituose požymiuose `NA` reikšmių nėra.
 
-### Kodėl padidėjo kai kurių išvestinių požymių `NA` skaičius?
+### Kodėl išvestiniuose požymiuose `NA` padaugėjo?
 
-`price_per_carat` priklauso nuo `price` ir `carat`, todėl jei bent vienos bazinės reikšmės nėra, negalima apskaičiuoti ir išvestinio rodiklio.
+`price_per_carat` priklauso nuo `price` ir `carat`, todėl jei trūksta bent vienos bazinės reikšmės, išvestinis rodiklis taip pat negali būti apskaičiuotas.
 
 Analogiškai:
 
@@ -861,23 +768,120 @@ Analogiškai:
 - `carat_per_volume` negali būti apskaičiuotas, jei trūksta `carat` arba `volume_xyz = 0`;
 - `price_per_volume` negali būti apskaičiuotas, jei trūksta `price` arba `volume_xyz = 0`.
 
-Todėl didesnis `NA` skaičius išvestiniuose požymiuose yra logiška bazinių duomenų trūkumų pasekmė.
+---
+
+## 15. Aprašomoji statistika po sutvarkymo
+
+Po bazinių požymių atkūrimo ir išvestinių požymių perskaičiavimo dar kartą tikrinama aprašomoji statistika:
+
+```r
+summary(deimantai)
+colSums(is.na(deimantai))
+```
+
+Po sutvarkymo:
+
+- `carat` minimumas tapo **0.23**;
+- `y` minimumas tapo **3.90**;
+- `z` minimumas liko **0**, nes trys tokios reikšmės yra ir originalioje bazėje;
+- `dimension_cv` reikšmės grįžo į logišką diapazoną;
+- `Inf` reikšmių nebėra.
+
+Tai rodo, kad aiškiai sugadintos bazinių požymių reikšmės buvo sutvarkytos, o išvestiniai požymiai suderinti su atnaujintais baziniais duomenimis.
 
 ---
 
-## 10. Galutinė šio etapo išvada
+## 16. Požymių pasiskirstymo ir išskirčių analizė
 
-Palyginus A02 duomenis su originalia `ggplot2::diamonds` baze nustatyta, kad:
+Po duomenų sutvarkymo histogramas, boxplot diagramas ir IQR išskirčių skaičiavimą reikia atlikti iš naujo, nes dalis reikšmių buvo pakoreguota.
 
-- 14 neigiamų `carat` reikšmių buvo A02 rinkinyje pakeistos ir galėjo būti vienareikšmiškai atkurtos;
-- 13 neigiamų `y` reikšmių taip pat galėjo būti atkurtos pagal originalią bazę;
-- iš viso atkurta **27 sugadintos bazinių požymių reikšmės**;
-- 3 `z = 0` reikšmės tokios pačios ir originaliame `diamonds` rinkinyje, todėl jos nebuvo keičiamos;
-- po bazinių reikšmių atkūrimo buvo perskaičiuoti visi nuo jų priklausantys išvestiniai požymiai;
-- dėl `z = 0` atsiradusios `Inf` reikšmės pakeistos į `NA`;
-- po perskaičiavimo išvestinių požymių `NA` kiekis atspindi realius bazinių požymių trūkumus.
+### Histogramų sudarymas
 
-Svarbu pažymėti, kad originali duomenų bazė buvo naudojama tik aiškiai fiziškai nelogiškoms reikšmėms validuoti ir atkurti. Statistinės išskirtys pagal IQR taisyklę nėra automatiškai laikomos klaidomis ir turi būti analizuojamos atskirai.
+```r
+numeric_cols <- names(deimantai)[sapply(deimantai, is.numeric)]
 
+for (col in numeric_cols) {
+  hist(
+    deimantai[[col]],
+    main = col,
+    xlab = col,
+    col = "lightblue",
+    border = "white"
+  )
+}
+```
 
-[README.md](https://github.com/user-attachments/files/32465561/README.md)
+### Boxplot diagramų sudarymas
+
+```r
+for (col in numeric_cols) {
+  boxplot(
+    deimantai[[col]],
+    main = col,
+    ylab = col,
+    col = "lightgreen"
+  )
+}
+```
+
+### Išskirčių nustatymas pagal 1.5 × IQR taisyklę
+
+```r
+count_outliers <- function(x) {
+  qnt <- quantile(x, probs = c(0.25, 0.75), na.rm = TRUE)
+  H <- 1.5 * IQR(x, na.rm = TRUE)
+
+  apacia <- qnt[1] - H
+  virsus <- qnt[2] + H
+
+  sum(x < apacia | x > virsus, na.rm = TRUE)
+}
+
+outlier_counts <- sapply(
+  deimantai[numeric_cols],
+  count_outliers
+)
+
+valid_counts <- sapply(
+  deimantai[numeric_cols],
+  function(x) sum(!is.na(x))
+)
+
+outlier_percent <- round(
+  outlier_counts / valid_counts * 100,
+  2
+)
+
+rezultatai_isskirtys <- data.frame(
+  pozymis = names(outlier_counts),
+  iskirciu_kiekis = outlier_counts,
+  procentas = outlier_percent
+)
+
+rezultatai_isskirtys <- rezultatai_isskirtys[
+  order(-rezultatai_isskirtys$iskirciu_kiekis),
+]
+
+rezultatai_isskirtys
+```
+
+Svarbu: statistinės išskirtys pagal IQR taisyklę nėra automatiškai laikomos klaidomis. Jos gali būti realios retesnių deimantų reikšmės ir turi būti vertinamos atskirai nuo fiziškai nelogiškų duomenų.
+
+---
+
+# Tolimesni analizės žingsniai
+
+Toliau planuojama:
+
+1. iš naujo įvertinti požymių pasiskirstymus po duomenų koregavimo;
+2. perskaičiuoti statistines išskirtis;
+3. palyginti `Ideal` ir `Premium` klases;
+4. tirti ryšius tarp:
+   - `carat` ir `price`;
+   - `volume_xyz` ir `price`;
+   - `carat` ir `volume_xyz`;
+5. atlikti koreliacijų analizę;
+6. nustatyti stipriai tarpusavyje susijusius bazinius ir išvestinius požymius;
+7. pasirinkti tinkamą trūkstamų reikšmių apdorojimo metodą;
+8. atlikti palyginamąjį duomenų paruošimo eksperimentą;
+9. įvertinti, ar duomenų rinkinys tinkamas tolimesnei analizei ir mašininio mokymosi metodams.
