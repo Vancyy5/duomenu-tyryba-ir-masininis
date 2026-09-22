@@ -793,7 +793,257 @@ Tai rodo, kad aiškiai sugadintos bazinių požymių reikšmės buvo sutvarkytos
 
 ---
 
-## 16. Požymių pasiskirstymo ir išskirčių analizė
+## 16. Aprašomoji statistika pagal klasę
+
+Po bendros aprašomosios statistikos `Ideal` ir `Premium` klasės buvo analizuotos atskirai. Tai leidžia įvertinti, ar požymių pasiskirstymai ir kraštinės reikšmės priklauso nuo klasės.
+
+Naudota funkcija:
+
+```r
+aprasomoji_klasei <- function(data) {
+
+  numeric_cols <- names(data)[sapply(data, is.numeric)]
+
+  rezultatas <- t(
+    sapply(
+      data[numeric_cols],
+      aprasomoji_funkcija
+    )
+  )
+
+  rezultatas <- as.data.frame(rezultatas)
+  rezultatas$pozymis <- rownames(rezultatas)
+
+  rezultatas <- rezultatas[
+    ,
+    c(
+      "pozymis",
+      "n",
+      "NA_kiekis",
+      "vidurkis",
+      "mediana",
+      "standartinis_nuokrypis",
+      "minimumas",
+      "Q1",
+      "Q3",
+      "maksimumas"
+    )
+  ]
+
+  rezultatas[, -1] <- round(rezultatas[, -1], 3)
+
+  rezultatas
+}
+```
+
+### 16.1. Ideal klasė
+
+```r
+deimantai_ideal <- deimantai %>%
+  filter(class == "Ideal")
+
+aprasomoji_ideal <- aprasomoji_klasei(
+  deimantai_ideal
+)
+
+aprasomoji_ideal
+```
+
+Svarbiausi rezultatai:
+
+| Požymis | Vidurkis | Mediana | Q1 | Q3 | Maksimumas |
+|---|---:|---:|---:|---:|---:|
+| `carat` | 0.708 | 0.540 | 0.350 | 1.010 | 3.220 |
+| `depth` | 62.369 | 61.800 | 61.300 | 62.200 | 239.060 |
+| `table` | 55.931 | 56.000 | 55.000 | 57.000 | 62.000 |
+| `price` | 4130.683 | 1851.000 | 903.250 | 5026.750 | 40816.500 |
+| `volume_xyz` | 116.196 | 89.609 | 57.513 | 166.004 | 529.223 |
+| `price_per_carat` | 5320.508 | 3374.259 | 2487.879 | 4891.340 | 147762.552 |
+
+`Ideal` klasėje `price` ir `price_per_carat` vidurkiai yra gerokai didesni už medianas, todėl šių požymių pasiskirstymai yra asimetriški į dešinę. `depth` maksimumas **239.06** labai nutolęs nuo medianos **61.8**, todėl ši reikšmė turi būti tiriama atskirai.
+
+### 16.2. Premium klasė
+
+```r
+deimantai_premium <- deimantai %>%
+  filter(class == "Premium")
+
+aprasomoji_premium <- aprasomoji_klasei(
+  deimantai_premium
+)
+
+aprasomoji_premium
+```
+
+Svarbiausi rezultatai:
+
+| Požymis | Vidurkis | Mediana | Q1 | Q3 | Maksimumas |
+|---|---:|---:|---:|---:|---:|
+| `carat` | 0.907 | 0.900 | 0.410 | 1.200 | 4.010 |
+| `depth` | 61.527 | 61.400 | 60.500 | 62.200 | 220.670 |
+| `table` | 58.747 | 59.000 | 58.000 | 60.000 | 62.000 |
+| `price` | 5192.737 | 3393.000 | 1057.750 | 6688.250 | 40816.500 |
+| `volume_xyz` | 147.107 | 140.983 | 67.480 | 194.027 | 631.894 |
+| `price_per_carat` | 5096.366 | 3799.545 | 2631.707 | 5543.810 | 144562.439 |
+
+`Premium` klasėje taip pat matoma ryški `price` ir `price_per_carat` dešinioji uodega. `depth` maksimumas **220.67** taip pat labai nutolęs nuo įprastų šios klasės reikšmių.
+
+---
+
+## 17. Ideal ir Premium klasių palyginimas
+
+Pagrindinių požymių vidurkiai ir medianos buvo palyginti tiesiogiai:
+
+```r
+klasiu_palyginimas <- deimantai %>%
+  group_by(class) %>%
+  summarise(
+    n = n(),
+
+    carat_vidurkis = mean(carat, na.rm = TRUE),
+    carat_mediana = median(carat, na.rm = TRUE),
+
+    depth_vidurkis = mean(depth, na.rm = TRUE),
+    depth_mediana = median(depth, na.rm = TRUE),
+
+    table_vidurkis = mean(table, na.rm = TRUE),
+    table_mediana = median(table, na.rm = TRUE),
+
+    price_vidurkis = mean(price, na.rm = TRUE),
+    price_mediana = median(price, na.rm = TRUE),
+
+    volume_vidurkis = mean(volume_xyz, na.rm = TRUE),
+    volume_mediana = median(volume_xyz, na.rm = TRUE),
+
+    price_per_carat_vidurkis =
+      mean(price_per_carat, na.rm = TRUE),
+
+    price_per_carat_mediana =
+      median(price_per_carat, na.rm = TRUE),
+
+    .groups = "drop"
+  )
+
+klasiu_palyginimas
+```
+
+Pagrindiniai skirtumai:
+
+| Požymis | Ideal | Premium |
+|---|---:|---:|
+| `carat` vidurkis | 0.708 | 0.907 |
+| `carat` mediana | 0.540 | 0.900 |
+| `depth` vidurkis | 62.369 | 61.527 |
+| `depth` mediana | 61.800 | 61.400 |
+| `table` vidurkis | 55.931 | 58.747 |
+| `table` mediana | 56.000 | 59.000 |
+| `price` vidurkis | 4130.683 | 5192.737 |
+| `price` mediana | 1851.000 | 3393.000 |
+| `volume_xyz` vidurkis | 116.196 | 147.107 |
+| `volume_xyz` mediana | 89.609 | 140.983 |
+| `price_per_carat` vidurkis | 5320.508 | 5096.366 |
+| `price_per_carat` mediana | 3374.259 | 3799.545 |
+
+### Išvada
+
+`Premium` klasės deimantai šiame rinkinyje paprastai yra didesni:
+
+- didesnis `carat` vidurkis ir mediana;
+- didesnis `volume_xyz` vidurkis ir mediana;
+- didesnės `x`, `y` ir `z` reikšmės;
+- didesnis `table`.
+
+`Premium` klasėje taip pat didesnė tiek vidutinė, tiek medianinė kaina.
+
+`depth` medianos tarp klasių yra gana panašios, tačiau abiejose klasėse yra labai didelių ekstremalių reikšmių.
+
+`price_per_carat` atveju `Ideal` klasės vidurkis yra šiek tiek didesnis, tačiau `Premium` mediana yra didesnė. Tai rodo, kad vien vidurkiu šio požymio skirtumų vertinti nepakanka, nes rezultatus stipriai veikia kraštinės reikšmės.
+
+---
+
+## 18. Klasių pasiskirstymų vizualus palyginimas
+
+Pagrindinių požymių skirtumai tarp klasių papildomai vertinami boxplot diagramomis:
+
+```r
+boxplot(
+  carat ~ class,
+  data = deimantai,
+  main = "Carat pagal klasę",
+  xlab = "Klasė",
+  ylab = "Carat"
+)
+
+boxplot(
+  price ~ class,
+  data = deimantai,
+  main = "Price pagal klasę",
+  xlab = "Klasė",
+  ylab = "Price"
+)
+
+boxplot(
+  depth ~ class,
+  data = deimantai,
+  main = "Depth pagal klasę",
+  xlab = "Klasė",
+  ylab = "Depth"
+)
+
+boxplot(
+  table ~ class,
+  data = deimantai,
+  main = "Table pagal klasę",
+  xlab = "Klasė",
+  ylab = "Table"
+)
+
+boxplot(
+  volume_xyz ~ class,
+  data = deimantai,
+  main = "Volume pagal klasę",
+  xlab = "Klasė",
+  ylab = "Volume"
+)
+```
+
+Taip pat sudaromos atskiros pagrindinių požymių histogramos kiekvienai klasei:
+
+```r
+pagrindiniai_pozymiai <- c(
+  "carat",
+  "depth",
+  "table",
+  "price",
+  "volume_xyz",
+  "price_per_carat"
+)
+
+for (col in pagrindiniai_pozymiai) {
+
+  hist(
+    deimantai_ideal[[col]],
+    main = paste("Ideal klasė -", col),
+    xlab = col,
+    col = "lightblue",
+    border = "white"
+  )
+
+  hist(
+    deimantai_premium[[col]],
+    main = paste("Premium klasė -", col),
+    xlab = col,
+    col = "lightblue",
+    border = "white"
+  )
+}
+```
+
+Ši analizė leidžia įvertinti ne tik vidurkių ar medianų skirtumus, bet ir tai, kiek klasių pasiskirstymai persidengia bei kuriose klasėse dažniau pasitaiko kraštinių reikšmių.
+
+---
+
+## 19. Požymių pasiskirstymo ir išskirčių analizė
 
 Po duomenų sutvarkymo histogramų, boxplot diagramų ir IQR išskirčių analizė buvo pakartota, nes dalis reikšmių buvo pakoreguota.
 
@@ -911,15 +1161,14 @@ Svarbu pažymėti, kad IQR metodu nustatytos statistinės išskirtys nėra autom
 
 Toliau planuojama:
 
-1. iš naujo įvertinti požymių pasiskirstymus po duomenų koregavimo;
-2. perskaičiuoti statistines išskirtis;
-3. palyginti `Ideal` ir `Premium` klases;
-4. tirti ryšius tarp:
+1. patikrinti likusias labai neįprastas bazinių požymių reikšmes, ypač `depth` ekstremumus;
+2. pasirinkti tinkamą trūkstamų reikšmių apdorojimo metodą;
+3. įvertinti, kurios statistinės išskirtys yra realios, o kurios gali būti klaidos;
+4. atlikti palyginamąjį normavimo / standartizavimo eksperimentą;
+5. tirti ryšius tarp:
    - `carat` ir `price`;
    - `volume_xyz` ir `price`;
    - `carat` ir `volume_xyz`;
-5. atlikti koreliacijų analizę;
-6. nustatyti stipriai tarpusavyje susijusius bazinius ir išvestinius požymius;
-7. pasirinkti tinkamą trūkstamų reikšmių apdorojimo metodą;
-8. atlikti palyginamąjį duomenų paruošimo eksperimentą;
-9. įvertinti, ar duomenų rinkinys tinkamas tolimesnei analizei ir mašininio mokymosi metodams.
+6. atlikti koreliacijų analizę;
+7. nustatyti stipriai tarpusavyje susijusius bazinius ir išvestinius požymius;
+8. įvertinti, ar duomenų rinkinys tinkamas tolimesnei analizei ir mašininio mokymosi metodams.
