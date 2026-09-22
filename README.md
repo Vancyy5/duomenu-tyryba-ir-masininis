@@ -1444,39 +1444,278 @@ Taigi iš viso patikimai atkurtos **89 sugadintos bazinių požymių reikšmės*
 
 ---
 
+## 22. Trūkstamų reikšmių analizė ir apdorojimo metodo pasirinkimas
+
+Po bazinių požymių validavimo ir sugadintų reikšmių atkūrimo buvo iš naujo įvertintos trūkstamos reikšmės.
+
+Gauti rezultatai:
+
+| Požymis | `NA` kiekis | Procentas |
+|---|---:|---:|
+| `carat` | 60 | 1.50 % |
+| `depth` | 40 | 1.00 % |
+| `price` | 60 | 1.50 % |
+| `price_per_carat` | 120 | 3.00 % |
+| `table_depth_ratio` | 40 | 1.00 % |
+| `carat_per_volume` | 63 | 1.57 % |
+| `price_per_volume` | 63 | 1.57 % |
+
+Trūkstamos bazinių požymių reikšmės tarp klasių pasiskirstė panašiai:
+
+| Klasė | `carat` NA | `depth` NA | `price` NA |
+|---|---:|---:|---:|
+| Ideal | 30 (1.5 %) | 18 (0.9 %) | 30 (1.5 %) |
+| Premium | 30 (1.5 %) | 22 (1.1 %) | 30 (1.5 %) |
+
+Taip pat patikrinta, ar bazinių požymių trūkstamos reikšmės persidengia:
+
+- `carat` ir `depth` vienu metu trūko 2 eilutėse;
+- `carat` ir `price` vienu metu netrūko nė vienoje eilutėje;
+- `depth` ir `price` vienu metu netrūko nė vienoje eilutėje;
+- visų trijų požymių vienu metu netrūko nė vienoje eilutėje.
+
+Tai rodo, kad trūkstamos reikšmės nėra stipriai susitelkusios vienoje klasėje ar tose pačiose eilutėse.
+
+---
+
+## 23. Palyginamasis eksperimentas: `carat` pildymas vidurkiu ir mediana
+
+Siekiant pagrįsti trūkstamų reikšmių pildymo metodą, atliktas palyginamasis eksperimentas su `carat` požymiu.
+
+`carat` turi 60 trūkstamų reikšmių, t. y. 1.5 % visų objektų.
+
+Apskaičiuotos reikšmės:
+
+```text
+carat vidurkis = 0.807
+carat mediana = 0.700
+```
+
+Buvo sukurti du variantai:
+
+1. trūkstamos `carat` reikšmės užpildytos vidurkiu;
+2. trūkstamos `carat` reikšmės užpildytos mediana.
+
+Gauti statistikos rezultatai:
+
+| Rodiklis | Prieš pildymą | Pildymas vidurkiu | Pildymas mediana |
+|---|---:|---:|---:|
+| Vidurkis | 0.807 | 0.807 | 0.806 |
+| Mediana | 0.700 | 0.700 | 0.700 |
+| SD | 0.499 | 0.495 | 0.495 |
+| Q1 | 0.380 | 0.380 | 0.380 |
+| Q3 | 1.090 | 1.080 | 1.080 |
+
+Išskirčių skaičius pagal 1.5 × IQR taisyklę:
+
+| Variantas | Išskirčių skaičius |
+|---|---:|
+| Prieš pildymą | 60 |
+| Pildymas vidurkiu | 66 |
+| Pildymas mediana | 66 |
+
+### Išvada
+
+Abu pildymo metodai pagrindines `carat` statistikas pakeitė labai mažai.
+
+Kadangi duomenyse yra asimetriškų požymių ir išskirčių, tolesniam bazinių trūkstamų reikšmių pildymui pasirinkta **mediana**, nes ji yra mažiau jautri kraštinėms reikšmėms nei vidurkis.
+
+---
+
+## 24. Bazinių trūkstamų reikšmių užpildymas mediana
+
+Bazinių požymių trūkstamos reikšmės užpildytos šiomis medianomis:
+
+```text
+carat = 0.7
+depth = 61.7
+price = 2385.5
+```
+
+Po užpildymo nuo šių bazinių požymių priklausantys išvestiniai požymiai buvo perskaičiuoti.
+
+Po pildymo:
+
+- `carat` – 0 NA;
+- `depth` – 0 NA;
+- `price` – 0 NA;
+- `price_per_carat` – 0 NA;
+- `table_depth_ratio` – 0 NA;
+- `carat_per_volume` – 3 NA;
+- `price_per_volume` – 3 NA.
+
+Likę 3 `NA` yra susiję su trimis originalioje bazėje taip pat egzistuojančiomis `z = 0` reikšmėmis, todėl jų papildomai pildyti nebuvo nuspręsta.
+
+---
+
+## 25. Aprašomoji statistika po trūkstamų reikšmių užpildymo
+
+Po medianos pildymo statistikos buvo perskaičiuotos.
+
+Svarbiausi rezultatai:
+
+| Požymis | Vidurkis | Mediana | SD | Minimumas | Q1 | Q3 | Maksimumas |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| `carat` | 0.806 | 0.700 | 0.495 | 0.230 | 0.380 | 1.080 | 4.010 |
+| `depth` | 61.470 | 61.700 | 1.020 | 43.000 | 61.000 | 62.200 | 65.100 |
+| `price` | 4201.755 | 2385.500 | 4584.454 | 348.000 | 974.000 | 5749.250 | 40816.500 |
+| `price_per_carat` | 4412.770 | 3542.582 | 5629.600 | 617.143 | 2586.667 | 5154.980 | 131666.129 |
+| `table_depth_ratio` | 0.933 | 0.929 | 0.040 | 0.684 | 0.905 | 0.959 | 1.256 |
+| `price_per_volume` | 26.831 | 21.601 | 33.981 | 6.938 | 15.620 | 31.543 | 792.743 |
+
+Pagrindinės statistikos po medianos pildymo pasikeitė nedaug, todėl pasirinktas metodas stipriai neiškraipė bendros duomenų struktūros.
+
+---
+
+## 26. Išskirčių analizė po trūkstamų reikšmių pildymo
+
+Po medianos pildymo IQR analizė buvo pakartota.
+
+| Požymis | Išskirčių skaičius | Procentas |
+|---|---:|---:|
+| `price` | 271 | 6.78 % |
+| `price_per_carat` | 145 | 3.62 % |
+| `price_per_volume` | 131 | 3.28 % |
+| `dimension_cv` | 116 | 2.90 % |
+| `depth_ratio` | 114 | 2.85 % |
+| `depth` | 113 | 2.83 % |
+| `carat_per_volume` | 112 | 2.80 % |
+| `carat` | 66 | 1.65 % |
+| `volume_xyz` | 61 | 1.52 % |
+| `table_depth_ratio` | 33 | 0.83 % |
+| `area_xy` | 10 | 0.25 % |
+| `area_xz` | 8 | 0.20 % |
+| `area_yz` | 7 | 0.18 % |
+| `z` | 6 | 0.15 % |
+| `length_width_ratio` | 4 | 0.10 % |
+| `x` | 2 | 0.05 % |
+| `y` | 2 | 0.05 % |
+| `mean_dimension` | 2 | 0.05 % |
+| `table` | 1 | 0.03 % |
+
+Po medianos pildymo dalies požymių IQR ribos šiek tiek pasikeitė, todėl kai kurių požymių išskirčių skaičius padidėjo arba sumažėjo.
+
+Tai nereiškia, kad naujai užpildytos reikšmės automatiškai tapo išskirtimis. Pasikeitus kvartiliams ir IQR riboms, dalis anksčiau buvusių kraštinių reikšmių gali patekti už naujų ribų.
+
+Likusių statistinių išskirčių automatiškai nešalinama.
+
+---
+
+## 27. Mastelio keitimo metodų palyginimas
+
+Kadangi požymių masteliai labai skiriasi, buvo palyginti trys mastelio keitimo metodai:
+
+1. standartizavimas;
+2. Min–Max normalizavimas;
+3. Robust Scaling.
+
+### 27.1. Standartizavimas
+
+Naudota formulė:
+
+```text
+(x - vidurkis) / SD
+```
+
+Po standartizavimo `price` požymio:
+
+- vidurkis ≈ 0;
+- mediana ≈ -0.396;
+- SD = 1.
+
+### 27.2. Min–Max normalizavimas
+
+Naudota formulė:
+
+```text
+(x - min) / (max - min)
+```
+
+Po Min–Max normalizavimo tiek `carat`, tiek `price` reikšmės pateko į intervalą `[0;1]`.
+
+### 27.3. Robust Scaling
+
+Naudota formulė:
+
+```text
+(x - mediana) / IQR
+```
+
+Po Robust Scaling `price` požymio:
+
+- vidurkis ≈ 0.380;
+- mediana = 0;
+- SD ≈ 0.960.
+
+Šis metodas centruoja duomenis pagal medianą ir yra mažiau jautrus kraštinėms reikšmėms.
+
+---
+
+## 28. Mastelio keitimo rezultatų palyginimas
+
+`carat` ir `price` reikšmių ribos po skirtingų metodų:
+
+| Metodas | `carat` min | `carat` max | `price` min | `price` max |
+|---|---:|---:|---:|---:|
+| Pradiniai duomenys | 0.230 | 4.010 | 348.000 | 40816.500 |
+| Standardizavimas | -1.162 | 6.469 | -0.841 | 7.987 |
+| Min–Max | 0.000 | 1.000 | 0.000 | 1.000 |
+| Robust Scaling | -0.671 | 4.729 | -0.427 | 8.048 |
+
+`price` statistikos:
+
+| Metodas | Vidurkis | Mediana | SD |
+|---|---:|---:|---:|
+| Pradiniai | 4201.755 | 2385.500 | 4584.454 |
+| Standardizavimas | 0.000 | -0.396 | 1.000 |
+| Min–Max | 0.095 | 0.050 | 0.113 |
+| Robust Scaling | 0.380 | 0.000 | 0.960 |
+
+### Išvada
+
+Visi trys metodai sėkmingai pakeičia požymių mastelį, tačiau jų savybės skiriasi.
+
+Standardizavimas remiasi vidurkiu ir standartiniu nuokrypiu, todėl yra jautresnis stipriai nuo centro nutolusioms reikšmėms.
+
+Min–Max normalizavimas perkelia visas reikšmes į `[0;1]`, tačiau jo rezultatas tiesiogiai priklauso nuo minimumo ir maksimumo.
+
+Robust Scaling remiasi mediana ir IQR, todėl yra atsparesnis išskirtims ir asimetriškiems pasiskirstymams.
+
+Kadangi šioje duomenų aibėje nustatyta nemažai statistinių išskirčių, o `price` ir dalis kitų požymių yra asimetriški, **tolimesniam mastelio keitimui pasirinktas Robust Scaling**.
+
+---
+
+## 29. Pirminio apdorojimo sprendimų santrauka
+
+Iki šio etapo atlikta:
+
+- sutvarkyti netinkami duomenų tipai;
+- įvertintos trūkstamos reikšmės;
+- patikrinti dublikatai;
+- įvertintas klasių balansas;
+- nustatytos nelogiškos bazinių požymių reikšmės;
+- `carat`, `y`, `depth` ir dalis `price` reikšmių validuotos pagal originalią `ggplot2::diamonds` bazę;
+- patikimai atkurtos 89 sugadintos bazinių požymių reikšmės;
+- perskaičiuoti išvestiniai požymiai;
+- pašalintos `Inf` reikšmės;
+- palygintas `carat` pildymas vidurkiu ir mediana;
+- bazinių požymių trūkstamos reikšmės užpildytos mediana;
+- pakartotinai įvertintos išskirtys;
+- palyginti trys mastelio keitimo metodai;
+- pasirinktas Robust Scaling.
+
+---
+
 # Tolimesni analizės žingsniai
 
 Toliau planuojama:
 
-1. išanalizuoti ir pagrįstai pasirinkti trūkstamų reikšmių apdorojimo metodą;
-2. galutinai įvertinti likusias statistines išskirtis ir nuspręsti, kurios jų atspindi realią variaciją;
-3. palyginti skirtingus požymių mastelio keitimo metodus:
-   - standartizavimą;
-   - Min–Max normalizavimą;
-   - Robust Scaling;
-4. atlikti privalomą palyginamąjį pirminio apdorojimo eksperimentą;
-5. tirti ryšius tarp:
+1. tirti ryšius tarp pagrindinių požymių:
    - `carat` ir `price`;
    - `volume_xyz` ir `price`;
    - `carat` ir `volume_xyz`;
-6. atlikti koreliacijų analizę;
-7. nustatyti stipriai tarpusavyje susijusius bazinius ir išvestinius požymius;
-8. įvertinti duomenų rinkinio tinkamumą tolesnei analizei ir mašininio mokymosi metodams;
-9. suformuluoti galutines darbo išvadas.
-
-
-# Tolimesni analizės žingsniai
-
-Toliau planuojama:
-
-1. patikrinti likusias labai neįprastas bazinių požymių reikšmes, ypač `depth` ekstremumus;
-2. pasirinkti tinkamą trūkstamų reikšmių apdorojimo metodą;
-3. įvertinti, kurios statistinės išskirtys yra realios, o kurios gali būti klaidos;
-4. atlikti palyginamąjį normavimo / standartizavimo eksperimentą;
-5. tirti ryšius tarp:
-   - `carat` ir `price`;
-   - `volume_xyz` ir `price`;
-   - `carat` ir `volume_xyz`;
-6. atlikti koreliacijų analizę;
-7. nustatyti stipriai tarpusavyje susijusius bazinius ir išvestinius požymius;
-8. įvertinti, ar duomenų rinkinys tinkamas tolimesnei analizei ir mašininio mokymosi metodams.
+2. atlikti koreliacijų analizę;
+3. nustatyti stipriai tarpusavyje susijusius bazinius ir išvestinius požymius;
+4. įvertinti, ar dalis stipriai koreliuojančių išvestinių požymių yra pertekliniai;
+5. galutinai įvertinti duomenų rinkinio tinkamumą tolesnei analizei ir mašininio mokymosi metodams;
+6. suformuluoti galutines darbo išvadas.

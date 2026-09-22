@@ -1714,6 +1714,762 @@ cat(
 cat("====================================\n")
 
 # =========================================================
+# 20. TRŪKSTAMŲ REIKŠMIŲ ANALIZĖ
+# =========================================================
+
+# Bendras NA kiekis kiekviename požymyje
+
+na_kiekiai <- colSums(
+  is.na(deimantai)
+)
+
+na_procentai <- round(
+  colMeans(is.na(deimantai)) * 100,
+  2
+)
+
+na_suvestine <- data.frame(
+  pozymis = names(na_kiekiai),
+  NA_kiekis = na_kiekiai,
+  procentas = na_procentai
+)
+
+na_suvestine <- na_suvestine[
+  na_suvestine$NA_kiekis > 0,
+]
+
+na_suvestine
+
+
+# =========================================================
+# 21. TRŪKSTAMOS REIKŠMĖS PAGAL KLASĘ
+# =========================================================
+
+na_pagal_klase <- deimantai %>%
+  group_by(class) %>%
+  summarise(
+    objektu_kiekis = n(),
+    
+    carat_NA = sum(is.na(carat)),
+    carat_NA_proc = round(
+      mean(is.na(carat)) * 100,
+      2
+    ),
+    
+    depth_NA = sum(is.na(depth)),
+    depth_NA_proc = round(
+      mean(is.na(depth)) * 100,
+      2
+    ),
+    
+    price_NA = sum(is.na(price)),
+    price_NA_proc = round(
+      mean(is.na(price)) * 100,
+      2
+    ),
+    
+    .groups = "drop"
+  )
+
+na_pagal_klase
+
+
+# =========================================================
+# 22. AR NA EILUTĖS PERSIDENGIA?
+# =========================================================
+
+sum(
+  is.na(deimantai$carat) &
+    is.na(deimantai$depth)
+)
+
+sum(
+  is.na(deimantai$carat) &
+    is.na(deimantai$price)
+)
+
+sum(
+  is.na(deimantai$depth) &
+    is.na(deimantai$price)
+)
+
+sum(
+  is.na(deimantai$carat) &
+    is.na(deimantai$depth) &
+    is.na(deimantai$price)
+)
+
+
+# =========================================================
+# 23. PALYGINAMASIS EKSPERIMENTAS:
+#     CARAT PILDYMAS VIDURKIU IR MEDIANA
+# =========================================================
+
+# Carat pasirinktas todėl, kad:
+# - turi 60 trūkstamų reikšmių;
+# - yra bazinis požymis;
+# - jo pasiskirstymas nėra visiškai simetriškas;
+# - nuo jo priklauso keli išvestiniai požymiai.
+
+
+# Apskaičiuojame carat vidurkį ir medianą
+# tik iš žinomų reikšmių
+
+carat_vidurkis <- mean(
+  deimantai$carat,
+  na.rm = TRUE
+)
+
+carat_mediana <- median(
+  deimantai$carat,
+  na.rm = TRUE
+)
+
+carat_vidurkis
+carat_mediana
+
+
+# =========================================================
+# 24. SUKURIAME DVI DUOMENŲ KOPIJAS
+# =========================================================
+
+deimantai_carat_mean <- deimantai
+
+deimantai_carat_median <- deimantai
+
+
+# Variantas A:
+# trūkstamas carat reikšmes užpildome vidurkiu
+
+deimantai_carat_mean$carat[
+  is.na(deimantai_carat_mean$carat)
+] <- carat_vidurkis
+
+
+# Variantas B:
+# trūkstamas carat reikšmes užpildome mediana
+
+deimantai_carat_median$carat[
+  is.na(deimantai_carat_median$carat)
+] <- carat_mediana
+
+
+# =========================================================
+# 25. PALYGINAME CARAT STATISTIKAS
+# =========================================================
+
+carat_pries <- c(
+  vidurkis = mean(
+    deimantai$carat,
+    na.rm = TRUE
+  ),
+  mediana = median(
+    deimantai$carat,
+    na.rm = TRUE
+  ),
+  SD = sd(
+    deimantai$carat,
+    na.rm = TRUE
+  ),
+  Q1 = quantile(
+    deimantai$carat,
+    0.25,
+    na.rm = TRUE
+  ),
+  Q3 = quantile(
+    deimantai$carat,
+    0.75,
+    na.rm = TRUE
+  )
+)
+
+
+carat_po_mean <- c(
+  vidurkis = mean(
+    deimantai_carat_mean$carat
+  ),
+  mediana = median(
+    deimantai_carat_mean$carat
+  ),
+  SD = sd(
+    deimantai_carat_mean$carat
+  ),
+  Q1 = quantile(
+    deimantai_carat_mean$carat,
+    0.25
+  ),
+  Q3 = quantile(
+    deimantai_carat_mean$carat,
+    0.75
+  )
+)
+
+
+carat_po_median <- c(
+  vidurkis = mean(
+    deimantai_carat_median$carat
+  ),
+  mediana = median(
+    deimantai_carat_median$carat
+  ),
+  SD = sd(
+    deimantai_carat_median$carat
+  ),
+  Q1 = quantile(
+    deimantai_carat_median$carat,
+    0.25
+  ),
+  Q3 = quantile(
+    deimantai_carat_median$carat,
+    0.75
+  )
+)
+
+
+carat_palyginimas <- data.frame(
+  rodiklis = names(carat_pries),
+  
+  pries_pildyma =
+    round(
+      as.numeric(carat_pries),
+      3
+    ),
+  
+  pildymas_vidurkiu =
+    round(
+      as.numeric(carat_po_mean),
+      3
+    ),
+  
+  pildymas_mediana =
+    round(
+      as.numeric(carat_po_median),
+      3
+    )
+)
+
+carat_palyginimas
+
+
+# =========================================================
+# 26. HISTOGRAMŲ PALYGINIMAS
+# =========================================================
+
+hist(
+  deimantai$carat,
+  main = "Carat prieš NA užpildymą",
+  xlab = "Carat",
+  breaks = 30
+)
+
+hist(
+  deimantai_carat_mean$carat,
+  main = "Carat po užpildymo vidurkiu",
+  xlab = "Carat",
+  breaks = 30
+)
+
+hist(
+  deimantai_carat_median$carat,
+  main = "Carat po užpildymo mediana",
+  xlab = "Carat",
+  breaks = 30
+)
+
+
+# =========================================================
+# 27. BOXPLOT PALYGINIMAS
+# =========================================================
+
+boxplot(
+  deimantai$carat,
+  main = "Carat prieš NA užpildymą",
+  ylab = "Carat"
+)
+
+boxplot(
+  deimantai_carat_mean$carat,
+  main = "Carat po užpildymo vidurkiu",
+  ylab = "Carat"
+)
+
+boxplot(
+  deimantai_carat_median$carat,
+  main = "Carat po užpildymo mediana",
+  ylab = "Carat"
+)
+
+
+# =========================================================
+# 28. IŠSKIRČIŲ PALYGINIMAS
+# =========================================================
+
+carat_outliers_pries <- count_outliers(
+  deimantai$carat
+)
+
+carat_outliers_mean <- count_outliers(
+  deimantai_carat_mean$carat
+)
+
+carat_outliers_median <- count_outliers(
+  deimantai_carat_median$carat
+)
+
+carat_outlier_palyginimas <- data.frame(
+  variantas = c(
+    "Prieš pildymą",
+    "Pildymas vidurkiu",
+    "Pildymas mediana"
+  ),
+  
+  iskirciu_kiekis = c(
+    carat_outliers_pries,
+    carat_outliers_mean,
+    carat_outliers_median
+  )
+)
+
+carat_outlier_palyginimas
+
+
+# =========================================================
+# 29. PALYGINAMOJO EKSPERIMENTO SUVESTINĖ
+# =========================================================
+
+cat("\n")
+cat("===== CARAT NA PILDYMO PALYGINIMAS =====\n")
+
+cat(
+  "Carat NA kiekis:",
+  sum(is.na(deimantai$carat)),
+  "\n"
+)
+
+cat(
+  "Carat vidurkis:",
+  round(carat_vidurkis, 3),
+  "\n"
+)
+
+cat(
+  "Carat mediana:",
+  round(carat_mediana, 3),
+  "\n"
+)
+
+cat("\nStatistikų palyginimas:\n")
+print(carat_palyginimas)
+
+cat("\nIšskirčių palyginimas:\n")
+print(carat_outlier_palyginimas)
+
+cat("========================================\n")
+
+# =========================================================
+# 30. TRŪKSTAMŲ BAZINIŲ REIKŠMIŲ UŽPILDYMAS MEDIANA
+# =========================================================
+
+# Išsaugome kopiją prieš NA pildymą
+
+deimantai_pries_NA_pildyma <- deimantai
+
+
+# Apskaičiuojame bazinių požymių medianas
+
+carat_mediana <- median(
+  deimantai$carat,
+  na.rm = TRUE
+)
+
+depth_mediana <- median(
+  deimantai$depth,
+  na.rm = TRUE
+)
+
+price_mediana <- median(
+  deimantai$price,
+  na.rm = TRUE
+)
+
+
+carat_mediana
+depth_mediana
+price_mediana
+
+
+# =========================================================
+# 31. UŽPILDOME NA REIKŠMES
+# =========================================================
+
+deimantai$carat[
+  is.na(deimantai$carat)
+] <- carat_mediana
+
+
+deimantai$depth[
+  is.na(deimantai$depth)
+] <- depth_mediana
+
+
+deimantai$price[
+  is.na(deimantai$price)
+] <- price_mediana
+
+
+# Patikrinimas
+
+sum(is.na(deimantai$carat))
+sum(is.na(deimantai$depth))
+sum(is.na(deimantai$price))
+
+
+# =========================================================
+# 32. PERSKAIČIUOJAME IŠVESTINIUS POŽYMIUS
+# =========================================================
+
+deimantai$price_per_carat <-
+  deimantai$price /
+  deimantai$carat
+
+deimantai$table_depth_ratio <-
+  deimantai$table /
+  deimantai$depth
+
+deimantai$carat_per_volume <-
+  deimantai$carat /
+  deimantai$volume_xyz
+
+deimantai$price_per_volume <-
+  deimantai$price /
+  deimantai$volume_xyz
+
+
+# volume_xyz = 0 atvejais gaunamas Inf
+
+deimantai$carat_per_volume[
+  is.infinite(deimantai$carat_per_volume)
+] <- NA
+
+deimantai$price_per_volume[
+  is.infinite(deimantai$price_per_volume)
+] <- NA
+
+
+# =========================================================
+# 33. NA PATIKRA PO UŽPILDYMO
+# =========================================================
+
+na_po_pildymo <- colSums(
+  is.na(deimantai)
+)
+
+na_po_pildymo
+
+
+# =========================================================
+# 34. APRAŠOMOJI STATISTIKA PO NA UŽPILDYMO
+# =========================================================
+
+numeric_cols <- names(deimantai)[
+  sapply(deimantai, is.numeric)
+]
+
+aprasomoji_po_NA <- t(
+  sapply(
+    deimantai[numeric_cols],
+    aprasomoji_funkcija
+  )
+)
+
+aprasomoji_po_NA <- as.data.frame(
+  aprasomoji_po_NA
+)
+
+aprasomoji_po_NA$pozymis <-
+  rownames(aprasomoji_po_NA)
+
+aprasomoji_po_NA <- aprasomoji_po_NA[
+  ,
+  c(
+    "pozymis",
+    "n",
+    "NA_kiekis",
+    "vidurkis",
+    "mediana",
+    "standartinis_nuokrypis",
+    "minimumas",
+    "Q1",
+    "Q3",
+    "maksimumas"
+  )
+]
+
+aprasomoji_po_NA[, -1] <- round(
+  aprasomoji_po_NA[, -1],
+  3
+)
+
+aprasomoji_po_NA
+
+
+# =========================================================
+# 35. IŠSKIRTYS PO NA UŽPILDYMO
+# =========================================================
+
+outlier_counts_po_NA <- sapply(
+  deimantai[numeric_cols],
+  count_outliers
+)
+
+valid_counts_po_NA <- sapply(
+  deimantai[numeric_cols],
+  function(x) {
+    sum(!is.na(x))
+  }
+)
+
+outlier_percent_po_NA <- round(
+  outlier_counts_po_NA /
+    valid_counts_po_NA *
+    100,
+  2
+)
+
+rezultatai_isskirtys_po_NA <- data.frame(
+  pozymis = names(outlier_counts_po_NA),
+  iskirciu_kiekis = outlier_counts_po_NA,
+  procentas = outlier_percent_po_NA
+)
+
+rezultatai_isskirtys_po_NA <-
+  rezultatai_isskirtys_po_NA[
+    order(
+      -rezultatai_isskirtys_po_NA$iskirciu_kiekis
+    ),
+  ]
+
+rezultatai_isskirtys_po_NA
+
+# =========================================================
+# 36. MASTELIO KEITIMO METODŲ PALYGINIMAS
+# =========================================================
+
+# Naudojame tik skaitinius požymius
+
+numeric_cols <- names(deimantai)[
+  sapply(deimantai, is.numeric)
+]
+
+
+# =========================================================
+# 37. STANDARDIZAVIMAS
+#     (x - vidurkis) / SD
+# =========================================================
+
+deimantai_standard <- deimantai
+
+deimantai_standard[numeric_cols] <-
+  lapply(
+    deimantai_standard[numeric_cols],
+    function(x) {
+      (x - mean(x, na.rm = TRUE)) /
+        sd(x, na.rm = TRUE)
+    }
+  )
+
+
+# =========================================================
+# 38. MIN-MAX NORMALIZAVIMAS
+#     (x - min) / (max - min)
+# =========================================================
+
+deimantai_minmax <- deimantai
+
+deimantai_minmax[numeric_cols] <-
+  lapply(
+    deimantai_minmax[numeric_cols],
+    function(x) {
+      
+      xmin <- min(x, na.rm = TRUE)
+      xmax <- max(x, na.rm = TRUE)
+      
+      (x - xmin) /
+        (xmax - xmin)
+    }
+  )
+
+
+# =========================================================
+# 39. ROBUST SCALING
+#     (x - mediana) / IQR
+# =========================================================
+
+deimantai_robust <- deimantai
+
+deimantai_robust[numeric_cols] <-
+  lapply(
+    deimantai_robust[numeric_cols],
+    function(x) {
+      
+      med <- median(x, na.rm = TRUE)
+      iqr <- IQR(x, na.rm = TRUE)
+      
+      (x - med) / iqr
+    }
+  )
+
+
+# =========================================================
+# 40. PALYGINAME KELIS POŽYMIUS
+# =========================================================
+
+mastelio_palyginimas <- data.frame(
+  
+  metodas = c(
+    "Pradiniai duomenys",
+    "Standardizavimas",
+    "Min-Max",
+    "Robust Scaling"
+  ),
+  
+  carat_min = c(
+    min(deimantai$carat),
+    min(deimantai_standard$carat),
+    min(deimantai_minmax$carat),
+    min(deimantai_robust$carat)
+  ),
+  
+  carat_max = c(
+    max(deimantai$carat),
+    max(deimantai_standard$carat),
+    max(deimantai_minmax$carat),
+    max(deimantai_robust$carat)
+  ),
+  
+  price_min = c(
+    min(deimantai$price),
+    min(deimantai_standard$price),
+    min(deimantai_minmax$price),
+    min(deimantai_robust$price)
+  ),
+  
+  price_max = c(
+    max(deimantai$price),
+    max(deimantai_standard$price),
+    max(deimantai_minmax$price),
+    max(deimantai_robust$price)
+  )
+)
+
+round(
+  mastelio_palyginimas[, -1],
+  3
+)
+
+mastelio_palyginimas
+
+
+# =========================================================
+# 41. STATISTIKŲ PALYGINIMAS PRICE POŽYMIUI
+# =========================================================
+
+price_scaling_palyginimas <- data.frame(
+  
+  metodas = c(
+    "Pradiniai",
+    "Standardizavimas",
+    "Min-Max",
+    "Robust Scaling"
+  ),
+  
+  vidurkis = c(
+    mean(deimantai$price, na.rm = TRUE),
+    mean(deimantai_standard$price, na.rm = TRUE),
+    mean(deimantai_minmax$price, na.rm = TRUE),
+    mean(deimantai_robust$price, na.rm = TRUE)
+  ),
+  
+  mediana = c(
+    median(deimantai$price, na.rm = TRUE),
+    median(deimantai_standard$price, na.rm = TRUE),
+    median(deimantai_minmax$price, na.rm = TRUE),
+    median(deimantai_robust$price, na.rm = TRUE)
+  ),
+  
+  SD = c(
+    sd(deimantai$price, na.rm = TRUE),
+    sd(deimantai_standard$price, na.rm = TRUE),
+    sd(deimantai_minmax$price, na.rm = TRUE),
+    sd(deimantai_robust$price, na.rm = TRUE)
+  )
+)
+
+round(
+  price_scaling_palyginimas[, -1],
+  3
+)
+
+price_scaling_palyginimas
+
+
+# =========================================================
+# 42. HISTOGRAMOS PRICE POŽYMIUI
+# =========================================================
+
+hist(
+  deimantai$price,
+  main = "Price - pradiniai duomenys",
+  xlab = "Price",
+  breaks = 30
+)
+
+hist(
+  deimantai_standard$price,
+  main = "Price - standartizuota",
+  xlab = "Price",
+  breaks = 30
+)
+
+hist(
+  deimantai_minmax$price,
+  main = "Price - Min-Max",
+  xlab = "Price",
+  breaks = 30
+)
+
+hist(
+  deimantai_robust$price,
+  main = "Price - Robust Scaling",
+  xlab = "Price",
+  breaks = 30
+)
+
+
+# =========================================================
+# 43. BOXPLOT PALYGINIMAS PRICE POŽYMIUI
+# =========================================================
+
+boxplot(
+  deimantai$price,
+  main = "Price - pradiniai duomenys"
+)
+
+boxplot(
+  deimantai_standard$price,
+  main = "Price - standartizuota"
+)
+
+boxplot(
+  deimantai_minmax$price,
+  main = "Price - Min-Max"
+)
+
+boxplot(
+  deimantai_robust$price,
+  main = "Price - Robust Scaling"
+)
+# =========================================================
 # TOLIMESNI ŽINGSNIAI
 # =========================================================
 
