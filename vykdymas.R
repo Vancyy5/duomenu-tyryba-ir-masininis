@@ -9,9 +9,11 @@
 # pagrindiniame vykdymo faile nereikia:
 # install.packages("ggplot2")
 # install.packages("dplyr")
+# install.packages("e1071")
 
 library(ggplot2)
 library(dplyr)
+library(e1071)   # skewness() funkcijai
 
 
 # =========================================================
@@ -2250,6 +2252,41 @@ rezultatai_isskirtys_po_NA <-
   ]
 
 rezultatai_isskirtys_po_NA
+
+# --- price ---
+qnt <- quantile(deimantai$price, c(.25, .75), na.rm = TRUE)
+H <- 1.5 * IQR(deimantai$price, na.rm = TRUE)
+i_price <- which(deimantai$price < qnt[1] - H | deimantai$price > qnt[2] + H)
+length(i_price)
+deimantai[i_price, c("carat", "price", "price_per_carat", "class")]
+# ar atitinka price = carat * price_per_carat? (jei ne, dar liko klaidų)
+sum(abs(deimantai$price[i_price] - deimantai$carat[i_price] * deimantai$price_per_carat[i_price]) > 1)
+# ar koreliuoja su carat? (jei taip - realūs brangūs deimantai, ne klaida)
+cor(deimantai$carat[i_price], deimantai$price[i_price])
+
+# --- carat ---
+qnt <- quantile(deimantai$carat, c(.25, .75), na.rm = TRUE)
+H <- 1.5 * IQR(deimantai$carat, na.rm = TRUE)
+i_carat <- which(deimantai$carat < qnt[1] - H | deimantai$carat > qnt[2] + H)
+length(i_carat)
+deimantai[i_carat, c("carat", "volume_xyz", "price")]
+cor(deimantai$carat[i_carat], deimantai$volume_xyz[i_carat])
+
+# --- depth ---
+qnt <- quantile(deimantai$depth, c(.25, .75), na.rm = TRUE)
+H <- 1.5 * IQR(deimantai$depth, na.rm = TRUE)
+i_depth <- which(deimantai$depth < qnt[1] - H | deimantai$depth > qnt[2] + H)
+length(i_depth)
+deimantai[i_depth, c("depth", "table", "table_depth_ratio")]
+sum(abs(deimantai$depth[i_depth] - deimantai$table[i_depth] / deimantai$table_depth_ratio[i_depth]) > 0.01)
+
+# --- y ---
+qnt <- quantile(deimantai$y, c(.25, .75), na.rm = TRUE)
+H <- 1.5 * IQR(deimantai$y, na.rm = TRUE)
+i_y <- which(deimantai$y < qnt[1] - H | deimantai$y > qnt[2] + H)
+length(i_y)
+deimantai[i_y, c("x", "y", "z", "carat")]
+cor(deimantai$y[i_y], deimantai$x[i_y])
 
 # =========================================================
 # 36. MASTELIO KEITIMO METODŲ PALYGINIMAS

@@ -1599,6 +1599,17 @@ Tai nereiškia, kad naujai užpildytos reikšmės automatiškai tapo išskirtimi
 
 Likusių statistinių išskirčių automatiškai nešalinama.
 
+
+### Išskirčių vertinimas po duomenų sutvarkymo
+
+Po valymo kiekvienam požymiui svarbesniam ir su reikšmingu IQR-išskirčių skaičiumi patikrinta, ar išskirtys atitinka vidines duomenų formules (price = carat·price_per_carat, depth = table/table_depth_ratio) ir ar koreliuoja su logiškai susijusiais požymiais.
+
+depth (113 išskirčių) ir y (2 išskirtys) visiškai atitinka formules ir logiškus ryšius (koreliacija su x = 1,00), todėl laikomos realiomis, retomis reikšmėmis, ne klaidomis.
+
+carat (66 išskirtys) daugiausia yra realūs dideli deimantai (koreliacija su tūriu 0,77), išskyrus vieną eilutę, kurioje volume_xyz = 0 dėl anksčiau paliktos z = 0 neatitikties.
+
+price (271 išskirtis) yra mišri grupė: didžioji dalis — realios didelės kainos, tačiau yra eilučių (mažas carat, price_per_carat > 80 000 €) rodo, kad kai kurios klaidingos kainos.
+
 ---
 
 ## 27. Mastelio keitimo metodų palyginimas
