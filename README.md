@@ -1333,8 +1333,8 @@ Po medianos pildymo IQR analizė pakartota su pilnai sutvarkytais duomenimis.
 | `price` | 265 | 6.62 % |
 | `price_per_carat` | 136 | 3.40 % |
 | `price_per_volume` | 132 | 3.30 % |
-| `dimension_cv` | 116 | 2.90 % |
-| `depth_ratio` | 114 | 2.85 % |
+| `dimension_cv` | 115 | 2.88 % |
+| `depth_ratio` | 112 | 2.80 % |
 | `depth` | 113 | 2.83 % |
 | `carat_per_volume` | 112 | 2.80 % |
 | `carat` | 66 | 1.65 % |
@@ -1343,7 +1343,7 @@ Po medianos pildymo IQR analizė pakartota su pilnai sutvarkytais duomenimis.
 | `area_xy` | 10 | 0.25 % |
 | `area_xz` | 8 | 0.20 % |
 | `area_yz` | 7 | 0.18 % |
-| `z` | 6 | 0.15 % |
+| `z` | 3 | 0.07 % |
 | `length_width_ratio` | 4 | 0.10 % |
 | `x` | 2 | 0.05 % |
 | `y` | 2 | 0.05 % |
@@ -1352,6 +1352,7 @@ Po medianos pildymo IQR analizė pakartota su pilnai sutvarkytais duomenimis.
 
 IQR metodu nustatytos reikšmės **nėra automatiškai laikomos klaidomis**. Po sugadintų bazinių reikšmių validavimo likusios statistinės išskirtys šiame laboratoriniame darbe tik identifikuojamos ir aprašomos. Pagal dėstytojos pastabą jų šalinimas bus nagrinėjamas kitame darbe.
 
+Palyginus su ankstesniu skaičiavimu, z, depth_ratio ir dimension_cv išskirčių sumažėjo — tai z = 0 atvejų atkūrimo pagal formulę z = depth × (x+y) / 200 pasekmė.
 ---
 
 ## 26. Pasiskirstymų asimetrijos analizė
