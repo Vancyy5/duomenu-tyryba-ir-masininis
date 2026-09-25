@@ -82,6 +82,13 @@ deimantai$class <- as.factor(deimantai$class)
 str(deimantai$class)
 
 
+# depth ir table - abu turi būti procentai (0-100 intervale)
+range(deimantai$table, na.rm = TRUE)
+range(suppressWarnings(as.numeric(deimantai_original$depth)), na.rm = TRUE)
+
+# x, y, z - visi turi būti tos pačios eilės (mm), ne skirtingų mastelių
+summary(deimantai[, c("x", "y", "z")])
+
 # =========================================================
 # 3. PIRMINĖ APRAŠOMOJI STATISTIKA
 # =========================================================
@@ -148,6 +155,92 @@ aprasomoji_pries
 summary(deimantai)
 
 
+numeric_cols_pries0 <- names(deimantai)[sapply(deimantai, is.numeric)]
+
+#asimetrija
+asimetrija_pries <- sapply(deimantai[numeric_cols_pries0], skewness, na.rm = TRUE)
+sort(round(asimetrija_pries, 2), decreasing = TRUE)
+
+numeric_cols <- names(deimantai)[
+  sapply(deimantai, is.numeric)
+]
+#histogramos
+for (col in numeric_cols) {
+  
+  hist(
+    deimantai[[col]],
+    main = col,
+    xlab = col,
+    col = "lightblue",
+    border = "white"
+  )
+}
+#kiek isskirciu
+count_outliers <- function(x) {
+  
+  qnt <- quantile(
+    x,
+    probs = c(0.25, 0.75),
+    na.rm = TRUE
+  )
+  
+  H <- 1.5 * IQR(
+    x,
+    na.rm = TRUE
+  )
+  
+  apacia <- qnt[1] - H
+  virsus <- qnt[2] + H
+  
+  sum(
+    x < apacia |
+      x > virsus,
+    na.rm = TRUE
+  )
+}
+
+outlier_counts <- sapply(
+  deimantai[numeric_cols],
+  count_outliers
+)
+
+valid_counts <- sapply(
+  deimantai[numeric_cols],
+  function(x) {
+    sum(!is.na(x))
+  }
+)
+
+outlier_percent <- round(
+  outlier_counts /
+    valid_counts *
+    100,
+  2
+)
+
+rezultatai_isskirtys1 <- data.frame(
+  pozymis = names(outlier_counts),
+  iskirciu_kiekis = outlier_counts,
+  procentas = outlier_percent
+)
+
+rezultatai_isskirtys1 <-
+  rezultatai_isskirtys[
+    order(
+      -rezultatai_isskirtys$iskirciu_kiekis1),
+  ]
+
+rezultatai_isskirtys1
+
+variacijos_koef <- sapply(deimantai[numeric_cols_pries0], function(x) {
+  sd(x, na.rm = TRUE) / abs(mean(x, na.rm = TRUE))
+})
+sort(round(variacijos_koef, 3))
+
+diapazonas <- sapply(deimantai[numeric_cols_pries0], function(x) {
+  diff(range(x, na.rm = TRUE))
+})
+sort(round(diapazonas, 2), decreasing = TRUE)
 # =========================================================
 # 4. DUOMENŲ KOKYBĖS TIKRINIMAS
 # =========================================================
@@ -567,6 +660,7 @@ for (i in seq_len(nrow(y_match_unique))) {
 }
 
 
+
 # =========================================================
 # 8. PATIKRINAME, AR BAZINĖS REIKŠMĖS SUTVARKYTOS
 # =========================================================
@@ -575,10 +669,35 @@ sum(deimantai$carat <= 0, na.rm = TRUE)
 sum(deimantai$y <= 0, na.rm = TRUE)
 sum(deimantai$z <= 0, na.rm = TRUE)
 
-# Pagal originalią bazę z = 0 atvejai nėra A02 sugadinimas.
-# Pagal dėstytojos pastabą šiuos 3 atvejus fiksuojame,
-# aprašome ir paliekame nepakeistus.
+# Pagal originalią bazę z = 0 atvejai nėra A02 sugadinimas
+# (žr. 6.3 z_match rezultatus), tačiau paieška originalioje
+# bazėje šiems atvejams nedavė patikimo vienareikšmio atsakymo.
+# Todėl z reikšmes atkuriame ne per sujungimą su originalia baze
+# (kaip carat/y/depth/price), o TIESIOGIAI IŠ GEOMETRINĖS FORMULĖS,
+# nes depth apibrėžimas diamonds duomenyse yra:
+#   depth = z / ((x + y) / 2) * 100
+# iš čia išreiškus z:
+#   z = depth * (x + y) / 200
 
+# =========================================================
+# 8.1. z = 0 ATKŪRIMAS PAGAL depth FORMULĘ
+# =========================================================
+
+i_z0 <- which(deimantai$z <= 0)
+length(i_z0)
+
+# atkuriame z iš depth (nepriklausomas, nesugadintas požymis)
+z_implied <- deimantai$depth[i_z0] * (deimantai$x[i_z0] + deimantai$y[i_z0]) / 200
+z_implied
+
+# Patikra PRIEŠ priskiriant - ar apskaičiuotos reikšmės patenka
+# į tikėtiną deimanto z matmens intervalą (paprastai 2-6 mm)?
+range(z_implied)
+all(z_implied > 1 & z_implied < 8)   # jei FALSE, reikia peržiūrėti i_z0 objektus atskirai
+
+deimantai$z[i_z0] <- z_implied
+
+sum(deimantai$z <= 0, na.rm = TRUE)  # turi būti 0
 
 # =========================================================
 # 9. PERSKAIČIUOJAME IŠVESTINIUS POŽYMIUS
@@ -669,25 +788,24 @@ deimantai$dimension_cv <- apply(
 # Dėl dalybos iš nulio carat_per_volume ir price_per_volume
 # gali tapti Inf. Tokias reikšmes keičiame į NA.
 
-deimantai$carat_per_volume[
-  is.infinite(deimantai$carat_per_volume)
-] <- NA
+#deimantai$carat_per_volume[
+#  is.infinite(deimantai$carat_per_volume)
+#] <- NA
 
-deimantai$price_per_volume[
-  is.infinite(deimantai$price_per_volume)
-] <- NA
+#deimantai$price_per_volume[
+#  is.infinite(deimantai$price_per_volume)
+#] <- NA
 
 # Patikriname, ar Inf nebeliko
-sum(
-  is.infinite(
-    as.matrix(
-      deimantai[
-        sapply(deimantai, is.numeric)
-      ]
-    )
-  )
-)
-
+#sum(
+#  is.infinite(
+#    as.matrix(
+#      deimantai[
+#        sapply(deimantai, is.numeric)
+#      ]
+#    )
+#  )
+#)
 
 # =========================================================
 # 11. DUOMENŲ KOKYBĖS PATIKRA PO SUTVARKYMO
@@ -1000,29 +1118,6 @@ for (col in numeric_cols) {
 # 19. IŠSKIRČIŲ ANALIZĖ PAGAL 1.5 × IQR
 # =========================================================
 
-count_outliers <- function(x) {
-  
-  qnt <- quantile(
-    x,
-    probs = c(0.25, 0.75),
-    na.rm = TRUE
-  )
-  
-  H <- 1.5 * IQR(
-    x,
-    na.rm = TRUE
-  )
-  
-  apacia <- qnt[1] - H
-  virsus <- qnt[2] + H
-  
-  sum(
-    x < apacia |
-      x > virsus,
-    na.rm = TRUE
-  )
-}
-
 outlier_counts <- sapply(
   deimantai[numeric_cols],
   count_outliers
@@ -1042,20 +1137,20 @@ outlier_percent <- round(
   2
 )
 
-rezultatai_isskirtys <- data.frame(
+rezultatai_isskirtys2 <- data.frame(
   pozymis = names(outlier_counts),
   iskirciu_kiekis = outlier_counts,
   procentas = outlier_percent
 )
 
-rezultatai_isskirtys <-
+rezultatai_isskirtys2 <-
   rezultatai_isskirtys[
     order(
-      -rezultatai_isskirtys$iskirciu_kiekis
+      -rezultatai_isskirtys$iskirciu_kiekis2
     ),
   ]
 
-rezultatai_isskirtys
+rezultatai_isskirtys2
 
 # =========================================================
 # PAPILDOMAS BAZINIŲ POŽYMIŲ VALIDAVIMAS
@@ -2236,6 +2331,8 @@ aprasomoji_po_NA[, -1] <- round(
 
 aprasomoji_po_NA
 
+table(gsub("[0-9.,\\s]", "", deimantai$price), useNA = "ifany")
+# turi būti tik "€" - jei būtų kitas simbolis, reikštų sumaišytus vienetus
 
 # =========================================================
 # 35. IŠSKIRTYS PO NA UŽPILDYMO
@@ -3245,7 +3342,10 @@ cat("=====================\n")
 # PASTABOS GALUTINEI ATASKAITAI
 # =========================================================
 
-# 1. 3 z = 0 atvejai fiksuojami, aprašomi ir paliekami.
+# 1. 3 z = 0 atvejai NEpaliekami nepakeisti - jie atkuriami
+#    naudojant geometrinę depth formulę z = depth * (x + y) / 200
+#    (žr. 8.1 dalį), o ne per sujungimą su originalia
+#    ggplot2::diamonds baze (skirtingai nei carat, y, depth, price).
 # 2. 11 nevienareikšmių price atvejų koreguojami naudojant
 #    galimų originalių price reikšmių vidurkį.
 # 3. Palyginamajam eksperimentui pakanka carat pildymo

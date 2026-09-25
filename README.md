@@ -47,6 +47,9 @@ Pradinė patikra parodė, kad duomenų rinkinyje yra **4000 eilučių ir 20 stul
 
 ## 2. Duomenų tipų ir formato tvarkymas
 
+Matavimo vienetų nuoseklumo patikra
+Patikrinta, ar x, y, z yra tos pačios eilės dydžio (visi mm intervale, be dešimčių kartų skirtumo tarp stulpelių), ar depth ir table yra tame pačiame procentiniame intervale, ir ar price visur nurodytas ta pačia valiuta (€). Pastebėtos anomalijos buvo depth iki 239,06, y iki −11,85, z = 0.
+
 ### `price`
 
 `price` buvo nuskaitytas kaip tekstinis stulpelis, nes reikšmėse yra valiutos simbolis, pavyzdžiui:
@@ -595,7 +598,7 @@ Gauti rezultatai:
 
 Visos 3 `z = 0` reikšmės tokios pačios ir originalioje `ggplot2::diamonds` bazėje.
 
-Todėl jos nelaikomos A02 rinkinio sugadinimo rezultatu ir nebuvo keičiamos.
+Todėl buvo tikrinti jų kiti požymiai ir atkirtos tikrosios z reikšmės.
 
 ---
 
@@ -695,56 +698,7 @@ deimantai$dimension_cv <- apply(
 )
 ```
 
----
-
-## 13. `Inf` reikšmių tvarkymas
-
-Kadangi trijose eilutėse `z = 0`, gaunama:
-
-```text
-volume_xyz = 0
-```
-
-Todėl:
-
-```text
-carat_per_volume = carat / 0
-price_per_volume = price / 0
-```
-
-gali tapti `Inf`.
-
-Tokios reikšmės pakeičiamos į `NA`:
-
-```r
-deimantai$carat_per_volume[
-  is.infinite(deimantai$carat_per_volume)
-] <- NA
-
-deimantai$price_per_volume[
-  is.infinite(deimantai$price_per_volume)
-] <- NA
-```
-
-Patikrinimas:
-
-```r
-sum(is.infinite(as.matrix(
-  deimantai[sapply(deimantai, is.numeric)]
-)))
-```
-
-Rezultatas:
-
-```text
-0
-```
-
-Taigi po sutvarkymo `Inf` reikšmių duomenyse nebeliko.
-
----
-
-## 14. Trūkstamos reikšmės po perskaičiavimo
+## 13. Trūkstamos reikšmės po perskaičiavimo
 
 Po išvestinių požymių perskaičiavimo:
 
@@ -772,7 +726,7 @@ Analogiškai:
 
 ---
 
-## 15. Tarpinė aprašomoji statistika po `carat` ir `y` sutvarkymo
+## 14. Tarpinė aprašomoji statistika po `carat` ir `y` sutvarkymo
 
 Po `carat` ir `y` atkūrimo bei išvestinių požymių perskaičiavimo aprašomoji statistika buvo apskaičiuota dar kartą. Tai yra tarpinis etapas prieš papildomą `depth` ir `price` validavimą.
 
@@ -795,7 +749,7 @@ Tai rodo, kad aiškiai sugadintos bazinių požymių reikšmės buvo sutvarkytos
 
 ---
 
-## 16. Tarpinė aprašomoji statistika pagal klasę
+## 15. Tarpinė aprašomoji statistika pagal klasę
 
 Po bendros aprašomosios statistikos `Ideal` ir `Premium` klasės buvo analizuotos atskirai. Tai leidžia įvertinti, ar požymių pasiskirstymai ir kraštinės reikšmės priklauso nuo klasės.
 
@@ -838,7 +792,7 @@ aprasomoji_klasei <- function(data) {
 }
 ```
 
-### 16.1. Ideal klasė
+### 15.1. Ideal klasė
 
 ```r
 deimantai_ideal <- deimantai %>%
@@ -864,7 +818,7 @@ Svarbiausi rezultatai:
 
 `Ideal` klasėje `price` ir `price_per_carat` vidurkiai yra gerokai didesni už medianas, todėl šių požymių pasiskirstymai yra asimetriški į dešinę. `depth` maksimumas **239.06** labai nutolęs nuo medianos **61.8**, todėl ši reikšmė turi būti tiriama atskirai.
 
-### 16.2. Premium klasė
+### 15.2. Premium klasė
 
 ```r
 deimantai_premium <- deimantai %>%
@@ -892,7 +846,7 @@ Svarbiausi rezultatai:
 
 ---
 
-## 17. Tarpinis Ideal ir Premium klasių palyginimas
+## 16. Tarpinis Ideal ir Premium klasių palyginimas
 
 Pagrindinių požymių vidurkiai ir medianos buvo palyginti tiesiogiai:
 
@@ -963,7 +917,7 @@ Pagrindiniai skirtumai:
 
 ---
 
-## 18. Tarpinis klasių pasiskirstymų vizualus palyginimas
+## 17. Tarpinis klasių pasiskirstymų vizualus palyginimas
 
 Pagrindinių požymių skirtumai tarp klasių papildomai vertinami boxplot diagramomis:
 
@@ -1045,7 +999,7 @@ for (col in pagrindiniai_pozymiai) {
 
 ---
 
-## 19. Tarpinė požymių pasiskirstymo ir išskirčių analizė
+## 18. Tarpinė požymių pasiskirstymo ir išskirčių analizė
 
 Po duomenų sutvarkymo histogramų, boxplot diagramų ir IQR išskirčių analizė buvo pakartota, nes dalis reikšmių buvo pakoreguota.
 
@@ -1161,13 +1115,13 @@ Svarbu pažymėti, kad IQR metodu nustatytos statistinės išskirtys nėra autom
 
 ---
 
-## 20. Papildomas bazinių požymių validavimas
+## 19. Papildomas bazinių požymių validavimas
 
 Po pirminio `carat` ir `y` sutvarkymo buvo pastebėta, kad `depth` ir `price` požymiuose vis dar yra reikšmių, kurios labai stipriai skiriasi nuo originalios `Ideal` ir `Premium` duomenų aibės ribų. Todėl atliktas papildomas šių dviejų požymių validavimas.
 
 Originali bazė šiame etape naudojama tik aiškiai įtartinoms bazinių požymių reikšmėms tikrinti. Statistinės išskirtys vien dėl to, kad yra nutolusios nuo pagrindinės duomenų dalies, automatiškai nekoreguojamos ir nešalinamos.
 
-### 20.1. `depth` reikšmių validavimas
+### 19.1. `depth` reikšmių validavimas
 
 Originalios `Ideal` ir `Premium` klasių `depth` ribos:
 
@@ -1203,7 +1157,7 @@ reikšmių už originalios bazės ribų = 0
 
 Kadangi `table_depth_ratio` priklauso nuo `depth`, šis išvestinis požymis buvo perskaičiuotas.
 
-### 20.2. `price` reikšmių validavimas
+### 19.2. `price` reikšmių validavimas
 
 Originalios `Ideal` ir `Premium` klasių kainų ribos:
 
@@ -1250,7 +1204,7 @@ Po kainų koregavimo perskaičiuoti `price_per_carat` ir `price_per_volume`.
 
 ---
 
-## 21. Duomenų kokybės būklė po bazinių reikšmių validavimo
+## 20. Duomenų kokybės būklė po bazinių reikšmių validavimo
 
 Po atlikto validavimo:
 
@@ -1259,15 +1213,14 @@ Po atlikto validavimo:
 - atkurtos **13 `depth`** reikšmių;
 - **49 `price`** reikšmės atkurtos vienareikšmiškai;
 - **11 `price`** reikšmių pakeistos galimų originalių kainų vidurkiu;
-- 3 `z = 0` reikšmės paliktos, nes tokios pačios reikšmės egzistuoja ir originalioje `ggplot2::diamonds` bazėje;
 - visi nuo pakoreguotų bazinių požymių priklausantys išvestiniai požymiai perskaičiuoti;
-- `Inf` reikšmių nebeliko.
+
 
 Svarbu atskirti, kad **89 bazinės reikšmės buvo atkurtos tiksliai**, o dar **11 `price` reikšmių buvo įvertintos pagal kelių galimų atitikmenų vidurkį**.
 
 ---
 
-## 22. Trūkstamų reikšmių analizė
+## 21. Trūkstamų reikšmių analizė
 
 Po bazinių požymių validavimo trūkstamų reikšmių situacija buvo:
 
@@ -1292,7 +1245,7 @@ Tai rodo, kad trūkstamos reikšmės nėra stipriai susitelkusios vienoje klasė
 
 ---
 
-## 23. Palyginamasis eksperimentas: `carat` pildymas vidurkiu ir mediana
+## 22. Palyginamasis eksperimentas: `carat` pildymas vidurkiu ir mediana
 
 Palyginamajam eksperimentui pasirinktas vienas aiškus pirminio apdorojimo sprendimas – `carat` trūkstamų reikšmių pildymas.
 
@@ -1328,7 +1281,7 @@ Abu metodai pagrindines statistikas pakeitė nedaug. Tolimesniam pildymui pasiri
 
 ---
 
-## 24. Bazinių trūkstamų reikšmių užpildymas mediana
+## 23. Bazinių trūkstamų reikšmių užpildymas mediana
 
 Galutinės bazinių požymių medianos:
 
@@ -1349,14 +1302,12 @@ Galutinis `NA` skaičius:
 - `price` – 0;
 - `price_per_carat` – 0;
 - `table_depth_ratio` – 0;
-- `carat_per_volume` – 3;
-- `price_per_volume` – 3.
-
-Likę 6 `NA` yra tiesioginė trijų `z = 0` objektų pasekmė. Kadangi `volume_xyz = 0`, šiuose objektuose negalima prasmingai apskaičiuoti `carat_per_volume` ir `price_per_volume`, todėl šios reikšmės dirbtinai nepildomos.
+- `carat_per_volume` – 0;
+- `price_per_volume` – 0.
 
 ---
 
-## 25. Galutinė aprašomoji statistika
+## 24. Galutinė aprašomoji statistika
 
 Po visų korekcijų ir medianos pildymo gauti šie svarbiausi rezultatai:
 
@@ -1373,7 +1324,7 @@ Po visų korekcijų ir medianos pildymo gauti šie svarbiausi rezultatai:
 
 ---
 
-## 26. Išskirčių analizė po galutinio sutvarkymo
+## 25. Išskirčių analizė po galutinio sutvarkymo
 
 Po medianos pildymo IQR analizė pakartota su pilnai sutvarkytais duomenimis.
 
@@ -1403,7 +1354,7 @@ IQR metodu nustatytos reikšmės **nėra automatiškai laikomos klaidomis**. Po 
 
 ---
 
-## 27. Pasiskirstymų asimetrijos analizė
+## 26. Pasiskirstymų asimetrijos analizė
 
 Kad mastelio keitimo metodo pasirinkimas būtų grindžiamas ne vien `price`, apskaičiuotas kiekvieno skaitinio požymio asimetrijos koeficientas (`skewness`).
 
@@ -1420,11 +1371,9 @@ Asimetriškų skaitinių požymių: 13 iš 19
 
 Ryškiau asimetriški buvo `price`, `price_per_carat`, `price_per_volume`, `carat`, `volume_xyz`, `area_xy`, `area_xz`, `area_yz` ir keli santykiniai požymiai.
 
-Ypač didelės `dimension_cv`, `depth_ratio` ir `carat_per_volume` asimetrijos reikšmės iš dalies susijusios su trimis paliktais `z = 0` objektais. Vis dėlto asimetrija stebima ir daugelyje kitų požymių, todėl ji nėra vien šių trijų atvejų pasekmė.
-
 ---
 
-## 28. Mastelio keitimo metodų palyginimas
+## 27. Mastelio keitimo metodų palyginimas
 
 Mastelio keitimas atliekamas **tik po pilno duomenų validavimo, trūkstamų reikšmių pildymo ir išvestinių požymių perskaičiavimo**.
 
@@ -1434,7 +1383,7 @@ Palyginti trys metodai:
 2. Min–Max normalizavimas;
 3. Robust Scaling.
 
-### 28.1. Reikšmių ribų palyginimas
+### 27.1. Reikšmių ribų palyginimas
 
 | Metodas | `carat` min | `carat` max | `price` min | `price` max |
 |---|---:|---:|---:|---:|
@@ -1443,7 +1392,7 @@ Palyginti trys metodai:
 | Min–Max | 0.000 | 1.000 | 0.000 | 1.000 |
 | Robust Scaling | -0.671 | 4.729 | -0.426 | 3.466 |
 
-### 28.2. `price` statistikos po mastelio keitimo
+### 27.2. `price` statistikos po mastelio keitimo
 
 | Metodas | Vidurkis | Mediana | SD |
 |---|---:|---:|---:|
@@ -1460,13 +1409,13 @@ Kadangi **13 iš 19 skaitinių požymių yra asimetriški**, o po duomenų valid
 
 ---
 
-## 29. Požymių ryšių ir koreliacijų analizė
+## 28. Požymių ryšių ir koreliacijų analizė
 
 Ryšiams įvertinti pateikiami tiek **Pearson**, tiek **Spearman** koreliacijos koeficientai.
 
 Pearson geriau aprašo tiesinį ryšį, o Spearman – monotonišką ryšį ir yra mažiau jautrus išskirtims. Kadangi daug požymių yra asimetriški ir turi išskirčių, pagrindinei ryšių interpretacijai daugiau remiamasi **Spearman**, tačiau abu koeficientai pateikiami palyginimui.
 
-### 29.1. Pagrindinių porų palyginimas
+### 28.1. Pagrindinių porų palyginimas
 
 | Požymių pora | Pearson | Spearman |
 |---|---:|---:|
@@ -1476,7 +1425,7 @@ Pearson geriau aprašo tiesinį ryšį, o Spearman – monotonišką ryšį ir y
 
 `carat` ir `price` bei `volume_xyz` ir `price` turi labai stiprų teigiamą monotonišką ryšį. `carat` ir `volume_xyz` ryšys yra beveik tobulas ir pagal Pearson, ir pagal Spearman.
 
-### 29.2. Stipriausiai koreliuojantys požymiai
+### 28.2. Stipriausiai koreliuojantys požymiai
 
 Spearman koreliacijų matricoje nustatytos **52 poros**, kurių absoliuti koreliacija yra bent 0.90.
 
@@ -1493,7 +1442,7 @@ Stipriausių pavyzdžiai:
 | `mean_dimension` | `area_xy` | 0.999 |
 | `mean_dimension` | `volume_xyz` | 0.999 |
 
-### 29.3. Stipriai koreliuojančių požymių grupės
+### 28.3. Stipriai koreliuojančių požymių grupės
 
 Šiame darbe požymiai **dar nešalinami**. Jie tik identifikuojami ir grupuojami:
 
@@ -1513,7 +1462,7 @@ Požymių mažinimas ir atranka bus atliekami kitame laboratoriniame darbe.
 
 ---
 
-## 30. Galutinis `Ideal` ir `Premium` klasių palyginimas
+## 29. Galutinis `Ideal` ir `Premium` klasių palyginimas
 
 Abiejose klasėse yra po 2000 objektų.
 
@@ -1543,9 +1492,9 @@ Papildomai vidutinės reikšmės:
 
 ---
 
-## 31. Duomenų rinkinio tinkamumo tolesnei analizei vertinimas
+## 30. Duomenų rinkinio tinkamumo tolesnei analizei vertinimas
 
-### 31.1. Galutinė rinkinio būklė
+### 30.1. Galutinė rinkinio būklė
 
 | Rodiklis | Reikšmė |
 |---|---:|
@@ -1554,7 +1503,7 @@ Papildomai vidutinės reikšmės:
 | `Ideal` objektai | 2000 |
 | `Premium` objektai | 2000 |
 | Dublikatų skaičius | 0 |
-| Likusių `NA` skaičius | 6 |
+| Likusių `NA` skaičius | 0 |
 
 Galutinė bazinių požymių loginė patikra:
 
@@ -1564,16 +1513,11 @@ Galutinė bazinių požymių loginė patikra:
 | `price <= 0` | 0 |
 | `x <= 0` | 0 |
 | `y <= 0` | 0 |
-| `z <= 0` | 3 |
+| `z <= 0` | 0 |
 | `depth <= 0` | 0 |
 | `table <= 0` | 0 |
 
-Trys `z = 0` atvejai palikti, nes jie egzistuoja ir originalioje bazėje. Dėl jų liko:
-
-- `carat_per_volume` – 3 `NA`;
-- `price_per_volume` – 3 `NA`.
-
-### 31.2. Stiprybės
+### 30.2. Stiprybės
 
 - 4000 objektų;
 - klasės visiškai subalansuotos;
@@ -1586,17 +1530,15 @@ Trys `z = 0` atvejai palikti, nes jie egzistuoja ir originalioje bazėje. Dėl j
 - nustatyti aiškūs ryšiai tarp dydžio, tūrio ir kainos;
 - klasės skiriasi pagal kelis svarbius požymius.
 
-### 31.3. Apribojimai
+### 30.3. Apribojimai
 
-1. **3 `z = 0` atvejai.** Jie egzistuoja originalioje bazėje, tačiau fiziškai yra problemiški ir sukuria 6 trūkstamas išvestines reikšmes.
+1. **11 įvertintų `price` reikšmių.** Jos nėra tiksliai atkurtos – naudotas kelių galimų originalių kainų vidurkis. Todėl jos turėtų būti laikomos įvertintomis, o ne tiksliai žinomomis reikšmėmis.
 
-2. **11 įvertintų `price` reikšmių.** Jos nėra tiksliai atkurtos – naudotas kelių galimų originalių kainų vidurkis. Todėl jos turėtų būti laikomos įvertintomis, o ne tiksliai žinomomis reikšmėmis.
+2. **Daug stipriai koreliuojančių požymių.** Dalis geometrinių požymių dubliuoja panašią informaciją. Šiame darbe jie tik identifikuojami ir grupuojami.
 
-3. **Daug stipriai koreliuojančių požymių.** Dalis geometrinių požymių dubliuoja panašią informaciją. Šiame darbe jie tik identifikuojami ir grupuojami.
+3. **Statistinės išskirtys.** Po klaidingų reikšmių sutvarkymo išskirtys vis dar egzistuoja, tačiau šiame darbe jos nešalinamos.
 
-4. **Statistinės išskirtys.** Po klaidingų reikšmių sutvarkymo išskirtys vis dar egzistuoja, tačiau šiame darbe jos nešalinamos.
-
-### 31.4. Tinkamumas mašininiam mokymuisi
+### 30.4. Tinkamumas mašininiam mokymuisi
 
 Duomenų rinkinys laikomas tinkamu tolimesnei statistinei analizei ir mašininio mokymosi eksperimentams.
 
@@ -1606,7 +1548,7 @@ Jei modelis jautrus stipriai koreliuojantiems požymiams, požymių atranka ar m
 
 ---
 
-## 32. Galutinės darbo išvados
+## 31. Galutinės darbo išvados
 
 1. A02 duomenų rinkinį sudaro **4000 objektų ir 20 požymių**, iš kurių 19 skaitinių ir vienas kategorinis `class`.
 
@@ -1620,7 +1562,7 @@ Jei modelis jautrus stipriai koreliuojantiems požymiams, požymių atranka ar m
 
 6. Po `price` korekcijų neliko kainų už originalios bazės ribų; galutinės neimputuotos `price` reikšmės buvo intervale **348–18784**.
 
-7. Trys `z = 0` objektai palikti, nes tokios reikšmės egzistuoja ir originalioje bazėje. Dėl jų galutiniame rinkinyje liko 6 `NA`.
+7. Trys `z = 0` objektai palikti, nes tokios reikšmės egzistuoja ir originalioje bazėje, jos buvo perskaičiuotos
 
 8. Trūkstamoms bazinėms reikšmėms pildyti palyginti vidurkio ir medianos metodai. Pasirinkta mediana.
 
@@ -1652,5 +1594,4 @@ Jei modelis jautrus stipriai koreliuojantiems požymiams, požymių atranka ar m
 | Likę NA | 6 |
 | Tiksliai atkurtos sugadintos bazinės reikšmės | 89 |
 | Pagal galimų kainų vidurkį įvertintos `price` reikšmės | 11 |
-| `z = 0` atvejai | 3 |
 | Asimetriški skaitiniai požymiai | 13 iš 19 |
