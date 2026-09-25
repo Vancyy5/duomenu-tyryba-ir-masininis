@@ -326,6 +326,13 @@ originalas <- ggplot2::diamonds %>%
     class %in% c("Ideal", "Premium")
   )
 
+# SVARBU:
+# A02 eilutės numeris neturi sutapti su originalios
+# ggplot2::diamonds bazės eilutės numeriu.
+# Atitikmenys ieškomi pagal kitų, nesugadintų požymių reikšmes.
+# a02_id naudojamas tik tam, kad galėtume grįžti į konkrečią
+# mūsų A02 duomenų rinkinio eilutę.
+
 
 # A02 eilutėms pridedame identifikatorių,
 # kad būtų aišku, kuri eilutė buvo tikrinama.
@@ -568,8 +575,9 @@ sum(deimantai$carat <= 0, na.rm = TRUE)
 sum(deimantai$y <= 0, na.rm = TRUE)
 sum(deimantai$z <= 0, na.rm = TRUE)
 
-# Pagal originalią bazę z = 0 atvejai nėra A02 sugadinimas,
-# todėl jų reikšmių nekeičiam.
+# Pagal originalią bazę z = 0 atvejai nėra A02 sugadinimas.
+# Pagal dėstytojos pastabą šiuos 3 atvejus fiksuojame,
+# aprašome ir paliekame nepakeistus.
 
 
 # =========================================================
@@ -1396,20 +1404,14 @@ cat("===============================\n")
 
 # =========================================================
 # PRICE REIKŠMIŲ ATKŪRIMAS
-# Atkuriamos tik vienareikšmės price reikšmės
 # =========================================================
-
-# kai jau turimi objektai:
-# - price_match
-# - price_match_suvestine
-# - deimantai
 #
-# Tikslas:
-# 1. atkurti tik tas price reikšmes, kurioms rastas vienas
-#    vienintelis originalus atitikmuo;
-# 2. atskirai išskirti dviprasmes eilutes;
-# 3. perskaičiuoti nuo price priklausančius išvestinius požymius;
-# 4. patikrinti rezultatą.
+# Pagal dėstytojos pastabą:
+# - vienareikšmiai atitikmenys atkuriami tikslia originalia price reikšme;
+# - jei pagal kitus požymius randami keli galimi originalūs objektai,
+#   naudojamas UNIKALIŲ galimų originalių price reikšmių vidurkis.
+#
+# A02 ir originalios bazės eilučių numeriai tarpusavyje nesiejami.
 
 
 # =========================================================
@@ -1437,46 +1439,70 @@ price_match_unique
 
 
 # =========================================================
-# 2. DVIPRASMIŲ price ATITIKMENŲ ATRINKIMAS
+# 2. NEVIENAREIKŠMIŲ price ATITIKMENŲ ATRINKIMAS
 # =========================================================
 
 price_match_nevienareiksmiai <- price_match %>%
+  filter(
+    !is.na(price_original)
+  ) %>%
   group_by(a02_id) %>%
   filter(
     n_distinct(price_original) > 1
   ) %>%
   ungroup()
 
-price_match_nevienareiksmiai_suvestine <-
+
+# Kiekvienai tokiai A02 eilutei apskaičiuojame
+# unikalių galimų originalių kainų vidurkį.
+
+price_match_nevienareiksmiai_vidurkiai <-
   price_match_nevienareiksmiai %>%
   group_by(a02_id) %>%
   summarise(
     price_A02 = first(price_A02),
+    
     kiek_atitikmenu = n(),
-    kiek_skirtingu_price = n_distinct(price_original),
-    galimos_originalios_reiksmes = paste(
-      sort(unique(price_original)),
-      collapse = ", "
-    ),
+    
+    kiek_skirtingu_price =
+      n_distinct(price_original),
+    
+    galimos_originalios_reiksmes =
+      paste(
+        sort(unique(price_original)),
+        collapse = ", "
+      ),
+    
+    price_vidurkis =
+      mean(
+        unique(price_original),
+        na.rm = TRUE
+      ),
+    
     .groups = "drop"
   )
 
 cat(
-  "Dviprasmių price eilučių skaičius:",
-  nrow(price_match_nevienareiksmiai_suvestine),
+  "Nevienareikšmių price eilučių skaičius:",
+  nrow(price_match_nevienareiksmiai_vidurkiai),
   "\n"
 )
 
-price_match_nevienareiksmiai_suvestine
+print(
+  price_match_nevienareiksmiai_vidurkiai,
+  n = Inf
+)
 
 
 # =========================================================
 # 3. PRICE REIKŠMIŲ ATKŪRIMAS
 # =========================================================
 
-# Išsaugome kopiją prieš atkūrimą
+# Išsaugome kopiją prieš price koregavimą.
 deimantai_pries_price_atkurima <- deimantai
 
+
+# 3.1. Tiksliai atkuriame vienareikšmes price reikšmes.
 for (i in seq_len(nrow(price_match_unique))) {
   
   deimantai$price[
@@ -1485,8 +1511,23 @@ for (i in seq_len(nrow(price_match_unique))) {
 }
 
 
+# 3.2. Nevienareikšmes price reikšmes pakeičiame
+# galimų originalių kainų vidurkiu.
+for (
+  i in seq_len(
+    nrow(price_match_nevienareiksmiai_vidurkiai)
+  )
+) {
+  
+  deimantai$price[
+    price_match_nevienareiksmiai_vidurkiai$a02_id[i]
+  ] <-
+    price_match_nevienareiksmiai_vidurkiai$price_vidurkis[i]
+}
+
+
 # =========================================================
-# 4. PATIKRINAME PRICE RIBAS PO ATKŪRIMO
+# 4. PATIKRINAME PRICE RIBAS PO VISŲ KOREKCIJŲ
 # =========================================================
 
 summary(deimantai$price)
@@ -1496,8 +1537,6 @@ range(
   na.rm = TRUE
 )
 
-# Randame, kurios price reikšmės vis dar išeina už
-# originalios Ideal + Premium bazės ribų.
 
 price_liko_itartinu <- deimantai %>%
   mutate(
@@ -1512,7 +1551,7 @@ price_liko_itartinu <- deimantai %>%
   )
 
 cat(
-  "Po vienareikšmių reikšmių atkūrimo likusių įtartinų price:",
+  "Po visų price korekcijų likusių reikšmių už originalios bazės ribų:",
   nrow(price_liko_itartinu),
   "\n"
 )
@@ -1521,25 +1560,7 @@ price_liko_itartinu
 
 
 # =========================================================
-# 5. DVIPRASMIŲ PRICE REIKŠMIŲ PAŽYMĖJIMAS
-# =========================================================
-
-# Dviprasmių price reikšmių automatiškai nekeičiam.
-# Jos paliekamos atskiram sprendimui.
-
-if (nrow(price_match_nevienareiksmiai_suvestine) > 0) {
-  
-  cat("\nDviprasmės price eilutės:\n")
-  
-  print(
-    price_match_nevienareiksmiai_suvestine,
-    n = Inf
-  )
-}
-
-
-# =========================================================
-# 6. PERSKAIČIUOJAME NUO price PRIKLAUSANČIUS
+# 5. PERSKAIČIUOJAME NUO price PRIKLAUSANČIUS
 #    IŠVESTINIUS POŽYMIUS
 # =========================================================
 
@@ -1552,8 +1573,8 @@ deimantai$price_per_volume <-
   deimantai$volume_xyz
 
 
-# Jei volume_xyz = 0, price_per_volume tampa Inf.
-# Tokias reikšmes keičiame į NA.
+# Kai volume_xyz = 0, price_per_volume tampa Inf.
+# 3 z = 0 atvejai yra paliekami, todėl šiuos Inf keičiame į NA.
 
 deimantai$price_per_volume[
   is.infinite(deimantai$price_per_volume)
@@ -1561,7 +1582,7 @@ deimantai$price_per_volume[
 
 
 # =========================================================
-# 7. PATIKRINAME Inf IR NA PO PERSKAIČIAVIMO
+# 6. PATIKRINAME Inf IR NA PO PERSKAIČIAVIMO
 # =========================================================
 
 cat(
@@ -1586,7 +1607,7 @@ na_kiekiai_po_price
 
 
 # =========================================================
-# 8. APRAŠOMOJI STATISTIKA PO price ATKŪRIMO
+# 7. APRAŠOMOJI STATISTIKA PO price ATKŪRIMO
 # =========================================================
 
 numeric_cols_po_price <- names(deimantai)[
@@ -1632,7 +1653,7 @@ aprasomoji_po_price
 
 
 # =========================================================
-# 9. IŠSKIRČIŲ ANALIZĖ PO price ATKŪRIMO
+# 8. IŠSKIRČIŲ ANALIZĖ PO price ATKŪRIMO
 # =========================================================
 
 numeric_cols <- names(deimantai)[
@@ -1675,7 +1696,7 @@ rezultatai_isskirtys_po_price
 
 
 # =========================================================
-# 10. GALUTINĖ SUVESTINĖ
+# 9. PRICE ATKŪRIMO SUVESTINĖ
 # =========================================================
 
 cat("\n")
@@ -1694,13 +1715,13 @@ cat(
 )
 
 cat(
-  "Dviprasmių price eilučių:",
-  nrow(price_match_nevienareiksmiai_suvestine),
+  "Pagal galimų originalių kainų vidurkį užpildytų price:",
+  nrow(price_match_nevienareiksmiai_vidurkiai),
   "\n"
 )
 
 cat(
-  "Po atkūrimo likusių price už originalios ribos:",
+  "Po visų korekcijų likusių price už originalios ribos:",
   nrow(price_liko_itartinu),
   "\n"
 )
@@ -1714,6 +1735,7 @@ cat(
 )
 
 cat("====================================\n")
+
 
 # =========================================================
 # 20. TRŪKSTAMŲ REIKŠMIŲ ANALIZĖ
@@ -2289,6 +2311,78 @@ deimantai[i_y, c("x", "y", "z", "carat")]
 cor(deimantai$y[i_y], deimantai$x[i_y])
 
 # =========================================================
+# 35.1. PASISKIRSTYMŲ ASIMETRIJOS ANALIZĖ
+#      MASTELIO KEITIMO METODO PAGRINDIMUI
+# =========================================================
+
+# Dėstytojos pastaba:
+# mastelio keitimo metodo pasirinkimą grindžiame tuo,
+# koks pasiskirstymas dominuoja sutvarkytoje duomenų aibėje.
+#
+# Skewness skaičiuojame tik po duomenų validavimo,
+# NA pildymo ir išvestinių požymių perskaičiavimo.
+
+numeric_cols_asimetrijai <- names(deimantai)[
+  sapply(deimantai, is.numeric)
+]
+
+asimetrija <- sapply(
+  deimantai[numeric_cols_asimetrijai],
+  function(x) {
+    e1071::skewness(
+      x,
+      na.rm = TRUE,
+      type = 2
+    )
+  }
+)
+
+asimetrijos_lentele <- data.frame(
+  pozymis = names(asimetrija),
+  asimetrija = round(
+    as.numeric(asimetrija),
+    3
+  )
+)
+
+# Praktiniam palyginimui:
+# |skewness| <= 0.5  -> gana simetriškas;
+# |skewness| > 0.5   -> pastebimai asimetriškas.
+
+asimetrijos_lentele$vertinimas <- ifelse(
+  abs(asimetrijos_lentele$asimetrija) > 0.5,
+  "Asimetriškas",
+  "Gana simetriškas"
+)
+
+asimetrijos_lentele <-
+  asimetrijos_lentele[
+    order(
+      -abs(
+        asimetrijos_lentele$asimetrija
+      )
+    ),
+  ]
+
+asimetrijos_lentele
+
+cat(
+  "Asimetriškų skaitinių požymių:",
+  sum(
+    abs(asimetrija) > 0.5,
+    na.rm = TRUE
+  ),
+  "iš",
+  length(asimetrija),
+  "\n"
+)
+
+# Jei reikšminga dalis požymių išlieka asimetriški
+# ir išskirtys po validavimo yra realios, tai pagrindžia
+# Robust Scaling pasirinkimą, nes jis remiasi mediana ir IQR.
+
+
+# =========================================================
 # 36. MASTELIO KEITIMO METODŲ PALYGINIMAS
 # =========================================================
 
@@ -2554,217 +2648,12 @@ plot(
 # 45. PEARSON KORELIACIJŲ MATRICA
 # =========================================================
 
-numeric_data <- deimantai[
-  sapply(deimantai, is.numeric)
-]
+# Pateikiami abu metodai: Pearson ir Spearman.
+# Galutinėje interpretacijoje metodo pasirinkimas grindžiamas
+# pasiskirstymų forma, išskirtimis ir ryšio pobūdžiu.
+# Jei požymiai asimetriški ir yra realių išskirčių,
+# pagrindinei interpretacijai daugiau remiamės Spearman.
 
-cor_pearson <- cor(
-  numeric_data,
-  use = "pairwise.complete.obs",
-  method = "pearson"
-)
-
-round(
-  cor_pearson,
-  2
-)
-
-
-# =========================================================
-# 46. SPEARMAN KORELIACIJŲ MATRICA
-# =========================================================
-
-cor_spearman <- cor(
-  numeric_data,
-  use = "pairwise.complete.obs",
-  method = "spearman"
-)
-
-round(
-  cor_spearman,
-  2
-)
-
-
-# =========================================================
-# 47. PAGRINDINIŲ RYŠIŲ PALYGINIMAS
-# =========================================================
-
-pagrindiniu_rysiu_palyginimas <- data.frame(
-  
-  pora = c(
-    "carat - price",
-    "volume_xyz - price",
-    "carat - volume_xyz"
-  ),
-  
-  Pearson = c(
-    cor(
-      deimantai$carat,
-      deimantai$price,
-      use = "complete.obs",
-      method = "pearson"
-    ),
-    
-    cor(
-      deimantai$volume_xyz,
-      deimantai$price,
-      use = "complete.obs",
-      method = "pearson"
-    ),
-    
-    cor(
-      deimantai$carat,
-      deimantai$volume_xyz,
-      use = "complete.obs",
-      method = "pearson"
-    )
-  ),
-  
-  Spearman = c(
-    cor(
-      deimantai$carat,
-      deimantai$price,
-      use = "complete.obs",
-      method = "spearman"
-    ),
-    
-    cor(
-      deimantai$volume_xyz,
-      deimantai$price,
-      use = "complete.obs",
-      method = "spearman"
-    ),
-    
-    cor(
-      deimantai$carat,
-      deimantai$volume_xyz,
-      use = "complete.obs",
-      method = "spearman"
-    )
-  )
-)
-
-pagrindiniu_rysiu_palyginimas$Pearson <-
-  round(
-    pagrindiniu_rysiu_palyginimas$Pearson,
-    3
-  )
-
-pagrindiniu_rysiu_palyginimas$Spearman <-
-  round(
-    pagrindiniu_rysiu_palyginimas$Spearman,
-    3
-  )
-
-pagrindiniu_rysiu_palyginimas
-
-
-# =========================================================
-# 48. STIPRIAUSIŲ KORELIACIJŲ PAIEŠKA
-# =========================================================
-
-cor_matrix <- cor(
-  numeric_data,
-  use = "pairwise.complete.obs",
-  method = "spearman"
-)
-
-cor_table <- as.data.frame(
-  as.table(cor_matrix)
-)
-
-names(cor_table) <- c(
-  "pozymis_1",
-  "pozymis_2",
-  "koreliacija"
-)
-
-cor_table <- cor_table %>%
-  filter(
-    pozymis_1 != pozymis_2
-  ) %>%
-  mutate(
-    absoliuti_koreliacija =
-      abs(koreliacija)
-  ) %>%
-  arrange(
-    desc(absoliuti_koreliacija)
-  )
-
-# Pašaliname pasikartojančias poras
-cor_table_unique <- cor_table %>%
-  rowwise() %>%
-  mutate(
-    pora = paste(
-      sort(c(
-        pozymis_1,
-        pozymis_2
-      )),
-      collapse = " - "
-    )
-  ) %>%
-  ungroup() %>%
-  distinct(
-    pora,
-    .keep_all = TRUE
-  ) %>%
-  select(
-    pozymis_1,
-    pozymis_2,
-    koreliacija,
-    absoliuti_koreliacija
-  )
-
-head(
-  cor_table_unique,
-  20
-)# =========================================================
-# 44. PAGRINDINIŲ POŽYMIŲ RYŠIŲ ANALIZĖ
-# =========================================================
-
-# carat ir price
-
-plot(
-  deimantai$carat,
-  deimantai$price,
-  main = "Carat ir Price ryšys",
-  xlab = "Carat",
-  ylab = "Price",
-  pch = 19,
-  cex = 0.5
-)
-
-
-# volume_xyz ir price
-
-plot(
-  deimantai$volume_xyz,
-  deimantai$price,
-  main = "Volume ir Price ryšys",
-  xlab = "Volume_xyz",
-  ylab = "Price",
-  pch = 19,
-  cex = 0.5
-)
-
-
-# carat ir volume_xyz
-
-plot(
-  deimantai$carat,
-  deimantai$volume_xyz,
-  main = "Carat ir Volume ryšys",
-  xlab = "Carat",
-  ylab = "Volume_xyz",
-  pch = 19,
-  cex = 0.5
-)
-
-
-# =========================================================
-# 45. PEARSON KORELIACIJŲ MATRICA
-# =========================================================
 
 numeric_data <- deimantai[
   sapply(deimantai, is.numeric)
@@ -2932,6 +2821,54 @@ head(
   cor_table_unique,
   20
 )
+
+# =========================================================
+# 48.1. STIPRIAI KORELIUOJANČIŲ POŽYMIŲ GRUPAVIMAS
+# =========================================================
+
+# Pagal dėstytojos pastabą šiame laboratoriniame darbe
+# stipriai koreliuojančių požymių dar nešaliname.
+# Juos tik identifikuojame ir susigrupuojame.
+# Požymių skaičiaus mažinimas bus atliekamas kitame darbe.
+
+stiprios_koreliacijos <- cor_table_unique %>%
+  filter(
+    absoliuti_koreliacija >= 0.90
+  )
+
+stiprios_koreliacijos
+
+
+# Loginės požymių grupės pagal jų prasmę ir tarpusavio ryšius.
+
+koreliuojanciu_pozymiu_grupes <- list(
+  
+  dydzio_ir_geometrijos = c(
+    "carat",
+    "x",
+    "y",
+    "z",
+    "volume_xyz",
+    "area_xy",
+    "area_xz",
+    "area_yz",
+    "mean_dimension"
+  ),
+  
+  kainos_santykiniai = c(
+    "price_per_carat",
+    "price_per_volume"
+  ),
+  
+  proporciju_ir_formos = c(
+    "depth_ratio",
+    "dimension_cv",
+    "length_width_ratio",
+    "table_depth_ratio"
+  )
+)
+
+koreliuojanciu_pozymiu_grupes
 
 # =========================================================
 # 49. GALUTINIS KLASIŲ PALYGINIMAS
@@ -3305,17 +3242,20 @@ cat(
 
 cat("=====================\n")
 # =========================================================
-# TOLIMESNI ŽINGSNIAI
+# PASTABOS GALUTINEI ATASKAITAI
 # =========================================================
 
-# Toliau:
-# 1. ištirti likusias labai įtartinas bazines reikšmes
-#    (pvz., depth = 239.06);
-# 2. pasirinkti trūkstamų reikšmių apdorojimo metodą;
-# 3. nuspręsti, kaip elgtis su statistinėmis išskirtimis;
-# 4. atlikti normavimo / standartizavimo palyginimą;
-# 5. atlikti koreliacijų analizę;
-# 6. tirti carat ir price ryšį;
-# 7. tirti volume_xyz ir price ryšį;
-# 8. tirti carat ir volume_xyz ryšį;
-# 9. įvertinti duomenų tinkamumą tolimesnei analizei.
+# 1. 3 z = 0 atvejai fiksuojami, aprašomi ir paliekami.
+# 2. 11 nevienareikšmių price atvejų koreguojami naudojant
+#    galimų originalių price reikšmių vidurkį.
+# 3. Palyginamajam eksperimentui pakanka carat pildymo
+#    vidurkiu ir mediana palyginimo.
+# 4. Realios statistinės išskirtys šiame darbe nešalinamos.
+# 5. Robust Scaling pasirinkimas grindžiamas galutinių
+#    požymių pasiskirstymų asimetrija ir realių išskirčių buvimu.
+# 6. Stipriai koreliuojantys požymiai šiame darbe tik
+#    identifikuojami ir grupuojami, bet nešalinami.
+# 7. Pearson ir Spearman rezultatai pateikiami abu;
+#    pagrindinė interpretacija parenkama pagal duomenų savybes.
+# 8. A02 ir ggplot2::diamonds eilučių numeriai neprivalo sutapti;
+#    atitikmenys nustatomi pagal kitų požymių reikšmes.
