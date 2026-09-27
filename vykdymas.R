@@ -10,6 +10,7 @@
 # install.packages("ggplot2")
 # install.packages("dplyr")
 # install.packages("e1071")
+install.packages("corrplot")
 
 library(ggplot2)
 library(dplyr)
@@ -267,6 +268,7 @@ boxplot(
   xlab = "Klasė",
   ylab = "Volume_xyz"
 )
+
 
 # ---------------------------------------------------------
 # 3.8. Ryšiai tarp požymių - taškinės diagramos
@@ -3112,6 +3114,12 @@ koreliuojanciu_pozymiu_grupes <- list(
 
 koreliuojanciu_pozymiu_grupes
 
+#corrplot diegrama
+library(corrplot)
+numeric_cols <- names(deimantai)[sapply(deimantai, is.numeric)]
+cor_matrix <- cor(deimantai[numeric_cols], use = "pairwise.complete.obs", method = "spearman")
+corrplot(cor_matrix, method = "color", type = "upper", tl.cex = 0.7, tl.col = "black",
+         title = "Požymių koreliacijų matrica (Spearman)", mar = c(0,0,2,0))
 # =========================================================
 # 49. GALUTINIS KLASIŲ PALYGINIMAS
 # =========================================================
@@ -3295,6 +3303,13 @@ boxplot(
   ylab = "Table"
 )
 
+boxplot(
+  depth ~ class,
+  data = deimantai,
+  main = "Depth pagal klasę",
+  xlab = "Klasė",
+  ylab = "Table"
+)
 
 # =========================================================
 # 52. CARAT IR PRICE RYŠYS PAGAL KLASĘ
