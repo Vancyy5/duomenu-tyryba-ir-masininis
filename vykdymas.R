@@ -10,7 +10,7 @@
 # install.packages("ggplot2")
 # install.packages("dplyr")
 # install.packages("e1071")
-install.packages("corrplot")
+# install.packages("corrplot")
 
 library(ggplot2)
 library(dplyr)
@@ -3308,7 +3308,7 @@ boxplot(
   data = deimantai,
   main = "Depth pagal klasę",
   xlab = "Klasė",
-  ylab = "Table"
+  ylab = "Depth"
 )
 
 # =========================================================
