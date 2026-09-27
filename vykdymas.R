@@ -1260,7 +1260,7 @@ rezultatai_isskirtys2 <- data.frame(
 )
 
 rezultatai_isskirtys2 <-
-  rezultatai_isskirtys[
+  rezultatai_isskirtys2[
     order(
       -rezultatai_isskirtys2$iskirciu_kiekis
     ),
@@ -1313,7 +1313,35 @@ cat(
   price_max_original,
   "\n"
 )
+#---
+# Originalios bazės ribos VISIEMS baziniams požymiams
+#---
+originalo_ribos <- data.frame(
+  pozymis = c("carat", "x", "y", "z", "table", "depth", "price"),
+  min_original = c(
+    min(originalas$carat), min(originalas$x), min(originalas$y),
+    min(originalas$z), min(originalas$table), min(originalas$depth),
+    min(originalas$price)
+  ),
+  max_original = c(
+    max(originalas$carat), max(originalas$x), max(originalas$y),
+    max(originalas$z), max(originalas$table), max(originalas$depth),
+    max(originalas$price)
+  )
+)
+originalo_ribos
 
+# Patikriname, kiek A02 reikšmių (JAU po carat/y/z/depth/price atkūrimo)
+# viršija šias ribas kiekvienam požymiui
+for (i in seq_len(nrow(originalo_ribos))) {
+  col <- originalo_ribos$pozymis[i]
+  virsija <- sum(
+    deimantai[[col]] < originalo_ribos$min_original[i] |
+      deimantai[[col]] > originalo_ribos$max_original[i],
+    na.rm = TRUE
+  )
+  cat(col, "- viršija originalios bazės ribas:", virsija, "\n")
+}
 
 # =========================================================
 # 2. ĮTARTINŲ depth REIKŠMIŲ PAIEŠKA
@@ -3119,7 +3147,6 @@ klasiu_statistika <- deimantai %>%
   )
 
 klasiu_statistika
-
 
 # =========================================================
 # 50. KLASIŲ SKIRTUMŲ SUVESTINĖ
