@@ -653,8 +653,9 @@ Sėkmingai atkurtos:
 
 - 14 `carat` reikšmių;
 - 13 `y` reikšmių.
+- 3 `z` reikšmių
 
-Iš viso atkurta **27 sugadintos bazinių požymių reikšmės**.
+Iš viso atkurta **30 sugadintos bazinių požymių reikšmės**.
 
 ---
 
@@ -709,8 +710,8 @@ Po išvestinių požymių perskaičiavimo:
 | `price` | 60 |
 | `price_per_carat` | 120 |
 | `table_depth_ratio` | 40 |
-| `carat_per_volume` | 63 |
-| `price_per_volume` | 63 |
+| `carat_per_volume` | 60 |
+| `price_per_volume` | 60 |
 
 Kituose požymiuose `NA` reikšmių nėra.
 
@@ -739,7 +740,7 @@ Po sutvarkymo:
 
 - `carat` minimumas tapo **0.23**, todėl neigiamų masės reikšmių nebeliko;
 - `y` minimumas tapo **3.90**, todėl neigiamų geometrinių matmenų nebeliko;
-- `z` minimumas liko **0**, nes trys tokios reikšmės egzistuoja ir originalioje `ggplot2::diamonds` bazėje;
+- `z` minimumas tapo **1.410 **, todėl neigiamų masės reikšmių nebeliko;
 - `price` vidurkis yra **4661.71**, o mediana **2442.50**, todėl kainos pasiskirstymas yra aiškiai asimetriškas į dešinę;
 - `price_per_carat` vidurkis (**5208.44**) yra gerokai didesnis už medianą (**3584.07**), todėl šiame požymyje taip pat matoma ryški dešinioji uodega;
 - `depth` mediana yra **61.7**, trečiasis kvartilis **62.2**, tačiau maksimumas siekia **239.06**, todėl ši reikšmė laikoma labai neįprasta ir turi būti tiriama atskirai;
@@ -813,7 +814,7 @@ Svarbiausi rezultatai:
 | `depth` | 62.369 | 61.800 | 61.300 | 62.200 | 239.060 |
 | `table` | 55.931 | 56.000 | 55.000 | 57.000 | 62.000 |
 | `price` | 4130.683 | 1851.000 | 903.250 | 5026.750 | 40816.500 |
-| `volume_xyz` | 116.196 | 89.609 | 57.513 | 166.004 | 529.223 |
+| `volume_xyz` | 116.291 | 89.650 | 57.531 | 166.053 | 529.223 |
 | `price_per_carat` | 5320.508 | 3374.259 | 2487.879 | 4891.340 | 147762.552 |
 
 `Ideal` klasėje `price` ir `price_per_carat` vidurkiai yra gerokai didesni už medianas, todėl šių požymių pasiskirstymai yra asimetriški į dešinę. `depth` maksimumas **239.06** labai nutolęs nuo medianos **61.8**, todėl ši reikšmė turi būti tiriama atskirai.
@@ -839,7 +840,7 @@ Svarbiausi rezultatai:
 | `depth` | 61.527 | 61.400 | 60.500 | 62.200 | 220.670 |
 | `table` | 58.747 | 59.000 | 58.000 | 60.000 | 62.000 |
 | `price` | 5192.737 | 3393.000 | 1057.750 | 6688.250 | 40816.500 |
-| `volume_xyz` | 147.107 | 140.983 | 67.480 | 194.027 | 631.894 |
+| `volume_xyz` | 147.370 | 141.372 | 67.547 | 194.033 | 631.894 |
 | `price_per_carat` | 5096.366 | 3799.545 | 2631.707 | 5543.810 | 144562.439 |
 
 `Premium` klasėje taip pat matoma ryški `price` ir `price_per_carat` dešinioji uodega. `depth` maksimumas **220.67** taip pat labai nutolęs nuo įprastų šios klasės reikšmių.
@@ -895,8 +896,8 @@ Pagrindiniai skirtumai:
 | `table` mediana | 56.000 | 59.000 |
 | `price` vidurkis | 4130.683 | 5192.737 |
 | `price` mediana | 1851.000 | 3393.000 |
-| `volume_xyz` vidurkis | 116.196 | 147.107 |
-| `volume_xyz` mediana | 89.609 | 140.983 |
+| `volume_xyz` vidurkis | 116.291 | 147.370 |
+| `volume_xyz` mediana | 89.650 | 141.372 |
 | `price_per_carat` vidurkis | 5320.508 | 5096.366 |
 | `price_per_carat` mediana | 3374.259 | 3799.545 |
 
@@ -1231,8 +1232,8 @@ Po bazinių požymių validavimo trūkstamų reikšmių situacija buvo:
 | `price` | 60 | 1.50 % |
 | `price_per_carat` | 120 | 3.00 % |
 | `table_depth_ratio` | 40 | 1.00 % |
-| `carat_per_volume` | 63 | 1.57 % |
-| `price_per_volume` | 63 | 1.57 % |
+| `carat_per_volume` | 60 | 1.50 % |
+| `price_per_volume` | 60 | 1.50 % |
 
 Bazinių požymių trūkstamos reikšmės pagal klases buvo pasiskirsčiusios panašiai:
 
@@ -1592,7 +1593,7 @@ Jei modelis jautrus stipriai koreliuojantiems požymiams, požymių atranka ar m
 | Ideal | 2000 |
 | Premium | 2000 |
 | Dublikatai | 0 |
-| Likę NA | 6 |
+| Likę NA | 0 |
 | Tiksliai atkurtos sugadintos bazinės reikšmės | 89 |
 | Pagal galimų kainų vidurkį įvertintos `price` reikšmės | 11 |
 | Asimetriški skaitiniai požymiai | 13 iš 19 |

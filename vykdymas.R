@@ -90,20 +90,24 @@ range(suppressWarnings(as.numeric(deimantai_original$depth)), na.rm = TRUE)
 summary(deimantai[, c("x", "y", "z")])
 
 # =========================================================
-# 3. PIRMINĖ APRAŠOMOJI STATISTIKA
+# 3. PIRMINĖ APRAŠOMOJI STATISTIKA IR VIZUALI ANALIZĖ
+#    (atliekama PO duomenų tipų sutvarkymo, BET PRIEŠ bet kokį
+#    fiziškai nelogiškų reikšmių taisymą ir palyginimą su
+#    originalia ggplot2::diamonds baze)
 # =========================================================
 
-# Ši statistika skaičiuojama jau sutvarkius duomenų tipus,
-# bet dar prieš taisant nelogiškas reikšmes.
+deimantai_pries_taisymo <- deimantai
 
-numeric_cols_pries <- names(deimantai)[
-  sapply(deimantai, is.numeric)
+numeric_cols_pries <- names(deimantai_pries_taisymo)[
+  sapply(deimantai_pries_taisymo, is.numeric)
 ]
 
+# ---------------------------------------------------------
+# 3.1. Aprašomoji statistika
+# ---------------------------------------------------------
+
 aprasomoji_funkcija <- function(x) {
-  
   x_valid <- x[!is.na(x)]
-  
   c(
     n = length(x_valid),
     NA_kiekis = sum(is.na(x)),
@@ -118,129 +122,234 @@ aprasomoji_funkcija <- function(x) {
 }
 
 aprasomoji_pries <- t(
-  sapply(
-    deimantai[numeric_cols_pries],
-    aprasomoji_funkcija
-  )
+  sapply(deimantai_pries_taisymo[numeric_cols_pries], aprasomoji_funkcija)
 )
-
 aprasomoji_pries <- as.data.frame(aprasomoji_pries)
-
 aprasomoji_pries$pozymis <- rownames(aprasomoji_pries)
-
 aprasomoji_pries <- aprasomoji_pries[
-  ,
-  c(
-    "pozymis",
-    "n",
-    "NA_kiekis",
-    "vidurkis",
-    "mediana",
-    "standartinis_nuokrypis",
-    "minimumas",
-    "Q1",
-    "Q3",
-    "maksimumas"
-  )
+  , c("pozymis", "n", "NA_kiekis", "vidurkis", "mediana",
+      "standartinis_nuokrypis", "minimumas", "Q1", "Q3", "maksimumas")
 ]
-
-aprasomoji_pries[, -1] <- round(
-  aprasomoji_pries[, -1],
-  3
-)
-
+aprasomoji_pries[, -1] <- round(aprasomoji_pries[, -1], 3)
 aprasomoji_pries
 
-# Paprasta R suvestinė papildomai
-summary(deimantai)
+summary(deimantai_pries_taisymo)
 
+# ---------------------------------------------------------
+# 3.2. Asimetrija (skewness)
+# ---------------------------------------------------------
 
-numeric_cols_pries0 <- names(deimantai)[sapply(deimantai, is.numeric)]
-
-#asimetrija
-asimetrija_pries <- sapply(deimantai[numeric_cols_pries0], skewness, na.rm = TRUE)
+asimetrija_pries <- sapply(
+  deimantai_pries_taisymo[numeric_cols_pries],
+  skewness,
+  na.rm = TRUE
+)
 sort(round(asimetrija_pries, 2), decreasing = TRUE)
 
-numeric_cols <- names(deimantai)[
-  sapply(deimantai, is.numeric)
-]
-#histogramos
-for (col in numeric_cols) {
-  
+# ---------------------------------------------------------
+# 3.3. Histogramos
+# ---------------------------------------------------------
+
+for (col in numeric_cols_pries) {
   hist(
-    deimantai[[col]],
+    deimantai_pries_taisymo[[col]],
     main = col,
     xlab = col,
     col = "lightblue",
     border = "white"
   )
 }
-#kiek isskirciu
-count_outliers <- function(x) {
-  
-  qnt <- quantile(
-    x,
-    probs = c(0.25, 0.75),
-    na.rm = TRUE
-  )
-  
-  H <- 1.5 * IQR(
-    x,
-    na.rm = TRUE
-  )
-  
-  apacia <- qnt[1] - H
-  virsus <- qnt[2] + H
-  
-  sum(
-    x < apacia |
-      x > virsus,
-    na.rm = TRUE
+
+# ---------------------------------------------------------
+# 3.4. Boxplot diagramos
+# ---------------------------------------------------------
+
+for (col in numeric_cols_pries) {
+  boxplot(
+    deimantai_pries_taisymo[[col]],
+    main = col,
+    ylab = col,
+    col = "lightgreen"
   )
 }
 
-outlier_counts <- sapply(
-  deimantai[numeric_cols],
-  count_outliers
+# ---------------------------------------------------------
+# 3.5. Išskirtys pagal 1.5 x IQR
+# ---------------------------------------------------------
+
+count_outliers <- function(x) {
+  qnt <- quantile(x, probs = c(0.25, 0.75), na.rm = TRUE)
+  H <- 1.5 * IQR(x, na.rm = TRUE)
+  apacia <- qnt[1] - H
+  virsus <- qnt[2] + H
+  sum(x < apacia | x > virsus, na.rm = TRUE)
+}
+
+isskirciu_suvestine <- function(data, cols) {
+  outlier_counts <- sapply(data[cols], count_outliers)
+  valid_counts <- sapply(data[cols], function(x) sum(!is.na(x)))
+  res <- data.frame(
+    pozymis = names(outlier_counts),
+    iskirciu_kiekis = outlier_counts,
+    procentas = round(outlier_counts / valid_counts * 100, 2)
+  )
+  res[order(-res$iskirciu_kiekis), ]
+}
+
+rezultatai_isskirtys_pries <- isskirciu_suvestine(
+  deimantai_pries_taisymo,
+  numeric_cols_pries
 )
+rezultatai_isskirtys_pries
 
-valid_counts <- sapply(
-  deimantai[numeric_cols],
-  function(x) {
-    sum(!is.na(x))
-  }
+# ---------------------------------------------------------
+# 3.6. Variacijos koeficientas ir reikšmių diapazonas
+# ---------------------------------------------------------
+
+variacijos_koef <- sapply(
+  deimantai_pries_taisymo[numeric_cols_pries],
+  function(x) sd(x, na.rm = TRUE) / abs(mean(x, na.rm = TRUE))
 )
-
-outlier_percent <- round(
-  outlier_counts /
-    valid_counts *
-    100,
-  2
-)
-
-rezultatai_isskirtys1 <- data.frame(
-  pozymis = names(outlier_counts),
-  iskirciu_kiekis = outlier_counts,
-  procentas = outlier_percent
-)
-
-rezultatai_isskirtys1 <-
-  rezultatai_isskirtys[
-    order(
-      -rezultatai_isskirtys$iskirciu_kiekis1),
-  ]
-
-rezultatai_isskirtys1
-
-variacijos_koef <- sapply(deimantai[numeric_cols_pries0], function(x) {
-  sd(x, na.rm = TRUE) / abs(mean(x, na.rm = TRUE))
-})
 sort(round(variacijos_koef, 3))
 
-diapazonas <- sapply(deimantai[numeric_cols_pries0], function(x) {
-  diff(range(x, na.rm = TRUE))
-})
+diapazonas <- sapply(
+  deimantai_pries_taisymo[numeric_cols_pries],
+  function(x) diff(range(x, na.rm = TRUE))
+)
 sort(round(diapazonas, 2), decreasing = TRUE)
+# ---------------------------------------------------------
+# 3.7. Klasių (Ideal/Premium) palyginimas boxplot diagramomis
+#      (prieš bet kokį taisymą)
+# ---------------------------------------------------------
+
+deimantai_ideal_pries <- deimantai_pries_taisymo %>%
+  filter(class == "Ideal")
+
+deimantai_premium_pries <- deimantai_pries_taisymo %>%
+  filter(class == "Premium")
+
+boxplot(
+  carat ~ class,
+  data = deimantai_pries_taisymo,
+  main = "Carat pagal klasę (prieš taisymą)",
+  xlab = "Klasė",
+  ylab = "Carat"
+)
+
+boxplot(
+  price ~ class,
+  data = deimantai_pries_taisymo,
+  main = "Price pagal klasę (prieš taisymą)",
+  xlab = "Klasė",
+  ylab = "Price"
+)
+
+boxplot(
+  depth ~ class,
+  data = deimantai_pries_taisymo,
+  main = "Depth pagal klasę (prieš taisymą)",
+  xlab = "Klasė",
+  ylab = "Depth"
+)
+
+boxplot(
+  table ~ class,
+  data = deimantai_pries_taisymo,
+  main = "Table pagal klasę (prieš taisymą)",
+  xlab = "Klasė",
+  ylab = "Table"
+)
+
+boxplot(
+  volume_xyz ~ class,
+  data = deimantai_pries_taisymo,
+  main = "Volume_xyz pagal klasę (prieš taisymą)",
+  xlab = "Klasė",
+  ylab = "Volume_xyz"
+)
+
+# ---------------------------------------------------------
+# 3.8. Ryšiai tarp požymių - taškinės diagramos
+#      (prieš bet kokį taisymą)
+# ---------------------------------------------------------
+
+plot(
+  deimantai_pries_taisymo$carat,
+  deimantai_pries_taisymo$price,
+  main = "Carat ir Price ryšys (prieš taisymą)",
+  xlab = "Carat",
+  ylab = "Price",
+  pch = 19,
+  cex = 0.5
+)
+
+plot(
+  deimantai_pries_taisymo$volume_xyz,
+  deimantai_pries_taisymo$price,
+  main = "Volume_xyz ir Price ryšys (prieš taisymą)",
+  xlab = "Volume_xyz",
+  ylab = "Price",
+  pch = 19,
+  cex = 0.5
+)
+
+plot(
+  deimantai_pries_taisymo$carat,
+  deimantai_pries_taisymo$volume_xyz,
+  main = "Carat ir Volume_xyz ryšys (prieš taisymą)",
+  xlab = "Carat",
+  ylab = "Volume_xyz",
+  pch = 19,
+  cex = 0.5
+)
+
+# ---------------------------------------------------------
+# 3.9. Koreliacijų analizė (Pearson ir Spearman)
+#      (prieš bet kokį taisymą)
+# ---------------------------------------------------------
+
+numeric_data_pries <- deimantai_pries_taisymo[
+  sapply(deimantai_pries_taisymo, is.numeric)
+]
+
+cor_pearson_pries <- cor(
+  numeric_data_pries,
+  use = "pairwise.complete.obs",
+  method = "pearson"
+)
+
+cor_spearman_pries <- cor(
+  numeric_data_pries,
+  use = "pairwise.complete.obs",
+  method = "spearman"
+)
+
+pagrindiniu_rysiu_palyginimas_pries <- data.frame(
+  pora = c("carat - price", "volume_xyz - price", "carat - volume_xyz"),
+  Pearson = c(
+    cor(deimantai_pries_taisymo$carat, deimantai_pries_taisymo$price,
+        use = "complete.obs", method = "pearson"),
+    cor(deimantai_pries_taisymo$volume_xyz, deimantai_pries_taisymo$price,
+        use = "complete.obs", method = "pearson"),
+    cor(deimantai_pries_taisymo$carat, deimantai_pries_taisymo$volume_xyz,
+        use = "complete.obs", method = "pearson")
+  ),
+  Spearman = c(
+    cor(deimantai_pries_taisymo$carat, deimantai_pries_taisymo$price,
+        use = "complete.obs", method = "spearman"),
+    cor(deimantai_pries_taisymo$volume_xyz, deimantai_pries_taisymo$price,
+        use = "complete.obs", method = "spearman"),
+    cor(deimantai_pries_taisymo$carat, deimantai_pries_taisymo$volume_xyz,
+        use = "complete.obs", method = "spearman")
+  )
+)
+
+pagrindiniu_rysiu_palyginimas_pries$Pearson <-
+  round(pagrindiniu_rysiu_palyginimas_pries$Pearson, 3)
+pagrindiniu_rysiu_palyginimas_pries$Spearman <-
+  round(pagrindiniu_rysiu_palyginimas_pries$Spearman, 3)
+
+pagrindiniu_rysiu_palyginimas_pries
 # =========================================================
 # 4. DUOMENŲ KOKYBĖS TIKRINIMAS
 # =========================================================
@@ -686,14 +795,21 @@ sum(deimantai$z <= 0, na.rm = TRUE)
 i_z0 <- which(deimantai$z <= 0)
 length(i_z0)
 
+# Patikra PRIEŠ priskiriant - ar apskaičiuotos reikšmės patenka
+# į tikėtiną deimanto z matmens intervalą (paprastai 2-6 mm)?
+range(z_implied)
+all(z_implied > 1 & z_implied < 8)   
+deimantai$depth[i_z0]                          
+deimantai$depth[i_z0] >= 43 & deimantai$depth[i_z0] <= 66.7 
+deimantai$x[i_z0]
+deimantai$y[i_z0]
+
 # atkuriame z iš depth (nepriklausomas, nesugadintas požymis)
 z_implied <- deimantai$depth[i_z0] * (deimantai$x[i_z0] + deimantai$y[i_z0]) / 200
 z_implied
 
-# Patikra PRIEŠ priskiriant - ar apskaičiuotos reikšmės patenka
-# į tikėtiną deimanto z matmens intervalą (paprastai 2-6 mm)?
 range(z_implied)
-all(z_implied > 1 & z_implied < 8)   # jei FALSE, reikia peržiūrėti i_z0 objektus atskirai
+all(z_implied > 1 & z_implied < 8)
 
 deimantai$z[i_z0] <- z_implied
 
@@ -1146,7 +1262,7 @@ rezultatai_isskirtys2 <- data.frame(
 rezultatai_isskirtys2 <-
   rezultatai_isskirtys[
     order(
-      -rezultatai_isskirtys$iskirciu_kiekis2
+      -rezultatai_isskirtys2$iskirciu_kiekis
     ),
   ]
 
@@ -1260,6 +1376,7 @@ depth_match <- itartinas_depth %>%
       "class"
     )
   )
+
 
 depth_match
 
