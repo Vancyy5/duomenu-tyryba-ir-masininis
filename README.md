@@ -1318,7 +1318,7 @@ Po visų korekcijų ir medianos pildymo gauti šie svarbiausi rezultatai:
 | `depth` | 61.470 | 61.700 | 1.020 | 43.000 | 61.000 | 62.200 | 65.100 |
 | `price` | 4103.792 | 2364.500 | 4241.079 | 348.000 | 971.750 | 5708.500 | 18784.000 |
 | `price_per_carat` | 4148.863 | 3528.382 | 2220.793 | 617.143 | 2586.019 | 5139.918 | 24827.143 |
-| `price_per_volume` | 25.228 | 21.538 | 12.995 | 6.938 | 15.599 | 31.284 | 131.045 |
+| `price_per_volume` | 25.233 | 21.543 | 12.996 | 6.938 | 15.601 31.287 | 131.045 |
 | `table_depth_ratio` | 0.933 | 0.929 | 0.040 | 0.684 | 0.905 | 0.959 | 1.256 |
 
 `price`, `price_per_carat`, `price_per_volume`, `carat` ir dalis geometrinių išvestinių požymių išlieka asimetriški, tačiau nebėra ankstesnių aiškiai sugadintų ekstremalių `price` ir `depth` reikšmių.
@@ -1335,8 +1335,8 @@ Po medianos pildymo IQR analizė pakartota su pilnai sutvarkytais duomenimis.
 | `price_per_carat` | 136 | 3.40 % |
 | `price_per_volume` | 132 | 3.30 % |
 | `dimension_cv` | 115 | 2.88 % |
-| `depth_ratio` | 112 | 2.80 % |
 | `depth` | 113 | 2.83 % |
+| `depth_ratio` | 112 | 2.80 % |
 | `carat_per_volume` | 112 | 2.80 % |
 | `carat` | 66 | 1.65 % |
 | `volume_xyz` | 61 | 1.52 % |
@@ -1344,8 +1344,8 @@ Po medianos pildymo IQR analizė pakartota su pilnai sutvarkytais duomenimis.
 | `area_xy` | 10 | 0.25 % |
 | `area_xz` | 8 | 0.20 % |
 | `area_yz` | 7 | 0.18 % |
-| `z` | 3 | 0.07 % |
 | `length_width_ratio` | 4 | 0.10 % |
+| `z` | 3 | 0.07 % |
 | `x` | 2 | 0.05 % |
 | `y` | 2 | 0.05 % |
 | `mean_dimension` | 2 | 0.05 % |
@@ -1354,6 +1354,7 @@ Po medianos pildymo IQR analizė pakartota su pilnai sutvarkytais duomenimis.
 IQR metodu nustatytos reikšmės **nėra automatiškai laikomos klaidomis**. Po sugadintų bazinių reikšmių validavimo likusios statistinės išskirtys šiame laboratoriniame darbe tik identifikuojamos ir aprašomos. Pagal dėstytojos pastabą jų šalinimas bus nagrinėjamas kitame darbe.
 
 Palyginus su ankstesniu skaičiavimu, z, depth_ratio ir dimension_cv išskirčių sumažėjo — tai z = 0 atvejų atkūrimo pagal formulę z = depth × (x+y) / 200 pasekmė.
+
 ---
 
 ## 26. Pasiskirstymų asimetrijos analizė
@@ -1422,8 +1423,8 @@ Pearson geriau aprašo tiesinį ryšį, o Spearman – monotonišką ryšį ir y
 | Požymių pora | Pearson | Spearman |
 |---|---:|---:|
 | `carat` – `price` | 0.912 | 0.948 |
-| `volume_xyz` – `price` | 0.916 | 0.951 |
-| `carat` – `volume_xyz` | 0.989 | 0.988 |
+| `volume_xyz` – `price` | 0.920 | 0.954 |
+| `carat` – `volume_xyz` | 0.992 | 0.991 |
 
 `carat` ir `price` bei `volume_xyz` ir `price` turi labai stiprų teigiamą monotonišką ryšį. `carat` ir `volume_xyz` ryšys yra beveik tobulas ir pagal Pearson, ir pagal Spearman.
 
@@ -1436,13 +1437,14 @@ Stipriausių pavyzdžiai:
 | Požymis 1 | Požymis 2 | Spearman |
 |---|---|---:|
 | `dimension_cv` | `depth_ratio` | -1.000 |
+| `mean_dimension` | `volume_xyz` | 1.000 |
 | `area_xy` | `y` | 1.000 |
 | `area_xy` | `x` | 1.000 |
 | `area_yz` | `area_xz` | 0.999 |
 | `area_xz` | `volume_xyz` | 0.999 |
 | `area_yz` | `volume_xyz` | 0.999 |
 | `mean_dimension` | `area_xy` | 0.999 |
-| `mean_dimension` | `volume_xyz` | 0.999 |
+
 
 ### 28.3. Stipriai koreliuojančių požymių grupės
 
@@ -1474,7 +1476,7 @@ Abiejose klasėse yra po 2000 objektų.
 | `depth` | 61.800 | 61.400 |
 | `table` | 56.000 | 59.000 |
 | `price` | 1841.500 | 3025.500 |
-| `volume_xyz` | 89.609 | 140.983 |
+| `volume_xyz` | 89.650 | 141.372 |
 | `price_per_carat` | 3336.055 | 3773.255 |
 
 Papildomai vidutinės reikšmės:
