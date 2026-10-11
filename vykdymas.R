@@ -288,3 +288,69 @@ deimantai_robust[numeric_cols] <- lapply(
     (x - median(x, na.rm = TRUE)) / IQR(x, na.rm = TRUE)
   }
 )
+
+# =========================================================
+# 13. TRYS DUOMENŲ AIBĖS
+# =========================================================
+
+# ---------------------------------------------------------
+# 13.1. Visa sutvarkyta aibė
+# ---------------------------------------------------------
+
+deimantai_pilna <- deimantai
+
+
+# ---------------------------------------------------------
+# 13.2. Be stipriai koreliuojančių požymių
+#       (požymiai, atrinkti 1-ame darbe)
+# ---------------------------------------------------------
+
+pasalinti_pozymiai <- c(
+  "x", "y", "z",
+  "volume_xyz", "area_xy", "area_xz", "area_yz", "mean_dimension",
+  "depth_ratio", "dimension_cv",
+  "price_per_carat", "price_per_volume",
+  "table_depth_ratio"
+)
+
+deimantai_be_koreliuotu <- deimantai[
+  , !(names(deimantai) %in% pasalinti_pozymiai)
+]
+
+
+# ---------------------------------------------------------
+# 13.3. Be ekstremumų (už 3 × IQR ribų)
+#       Eilutė šalinama, jei bent vieno skaitinio požymio
+#       reikšmė yra už [Q1 - 3*IQR ; Q3 + 3*IQR]
+# ---------------------------------------------------------
+
+ar_ekstremumas <- function(x) {
+  q <- quantile(x, c(0.25, 0.75), na.rm = TRUE)
+  h <- 3 * IQR(x, na.rm = TRUE)
+  !is.na(x) & (x < q[1] - h | x > q[2] + h)
+}
+
+skaitiniai <- names(deimantai)[sapply(deimantai, is.numeric)]
+
+ekstremumu_matrica <- sapply(deimantai[skaitiniai], ar_ekstremumas)
+
+eilutes_su_ekstremumais <- rowSums(ekstremumu_matrica) > 0
+
+deimantai_be_ekstremumu <- deimantai[!eilutes_su_ekstremumais, ]
+
+ekstremumu_lentele <- data.frame(
+  pozymis = skaitiniai,
+  ekstremumu_kiekis = colSums(ekstremumu_matrica),
+  procentas = round(colMeans(ekstremumu_matrica) * 100, 2)
+)
+
+ekstremumu_lentele <- ekstremumu_lentele[
+  order(-ekstremumu_lentele$ekstremumu_kiekis),
+]
+ekstremumu_lentele
+
+# Bendri skaičiai
+nrow(deimantai_pilna)                  # eilučių pilnoje aibėje
+sum(eilutes_su_ekstremumais)           # kiek eilučių pašalinta
+nrow(deimantai_be_ekstremumu)          # kiek liko
+round(mean(eilutes_su_ekstremumais) * 100, 2)  # % pašalintų
