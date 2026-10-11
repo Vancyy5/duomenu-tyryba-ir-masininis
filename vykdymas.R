@@ -32,8 +32,6 @@ dim(deimantai)
 
 # Išsaugome visiškai pradinę nuskaitytų duomenų kopiją
 deimantai_original <- deimantai
-
-
 # =========================================================
 # 2. DUOMENŲ TIPŲ IR FORMATO TVARKYMAS
 # =========================================================
@@ -796,7 +794,8 @@ sum(deimantai$z <= 0, na.rm = TRUE)
 
 i_z0 <- which(deimantai$z <= 0)
 length(i_z0)
-
+z_implied <- deimantai$depth[i_z0] * (deimantai$x[i_z0] + deimantai$y[i_z0]) / 200
+z_implied
 # Patikra PRIEŠ priskiriant - ar apskaičiuotos reikšmės patenka
 # į tikėtiną deimanto z matmens intervalą (paprastai 2-6 mm)?
 range(z_implied)
@@ -807,8 +806,6 @@ deimantai$x[i_z0]
 deimantai$y[i_z0]
 
 # atkuriame z iš depth (nepriklausomas, nesugadintas požymis)
-z_implied <- deimantai$depth[i_z0] * (deimantai$x[i_z0] + deimantai$y[i_z0]) / 200
-z_implied
 
 range(z_implied)
 all(z_implied > 1 & z_implied < 8)
@@ -3457,7 +3454,6 @@ galutine_logikos_patikra
 # =========================================================
 # 58. GALUTINĖ SUVESTINĖ
 # =========================================================
-
 cat("\n===== SUVESTINĖ =====\n")
 
 cat(
