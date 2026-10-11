@@ -240,69 +240,31 @@ deimantai$carat_per_volume[is.infinite(deimantai$carat_per_volume)] <- NA
 deimantai$price_per_volume[is.infinite(deimantai$price_per_volume)] <- NA
 
 # =========================================================
-# 12. MASTELIO KEITIMAS
-#     (kiekvienas metodas kuria atskirą kopiją,
-#      `deimantai` lieka nepakeistas)
+# 12. EILUČIŲ ID
+#     (reikalingas A prieš C palyginimui: bendriems objektams rasti)
 # =========================================================
 
-numeric_cols <- names(deimantai)[sapply(deimantai, is.numeric)]
+deimantai$id <- seq_len(nrow(deimantai))
 
-
-# ---------------------------------------------------------
-# 12.1. Standardizavimas: (x - vidurkis) / SD
-# ---------------------------------------------------------
-
-deimantai_standard <- deimantai
-
-deimantai_standard[numeric_cols] <- lapply(
-  deimantai_standard[numeric_cols],
-  function(x) (x - mean(x, na.rm = TRUE)) / sd(x, na.rm = TRUE)
+pozymiai_visi <- setdiff(
+  names(deimantai)[sapply(deimantai, is.numeric)],
+  "id"
 )
 
 
-# ---------------------------------------------------------
-# 12.2. Min-Max normalizavimas: (x - min) / (max - min)
-# ---------------------------------------------------------
-
-deimantai_minmax <- deimantai
-
-deimantai_minmax[numeric_cols] <- lapply(
-  deimantai_minmax[numeric_cols],
-  function(x) {
-    xmin <- min(x, na.rm = TRUE)
-    xmax <- max(x, na.rm = TRUE)
-    (x - xmin) / (xmax - xmin)
-  }
-)
-
-
-# ---------------------------------------------------------
-# 12.3. Robust Scaling: (x - mediana) / IQR
-# ---------------------------------------------------------
-
-deimantai_robust <- deimantai
-
-deimantai_robust[numeric_cols] <- lapply(
-  deimantai_robust[numeric_cols],
-  function(x) {
-    (x - median(x, na.rm = TRUE)) / IQR(x, na.rm = TRUE)
-  }
-)
-
 # =========================================================
-# 13. TRYS DUOMENŲ AIBĖS
+# 13. TRYS DUOMENŲ AIBĖS (dar be mastelio keitimo)
 # =========================================================
 
 # ---------------------------------------------------------
-# 13.1. Visa sutvarkyta aibė
+# 13.1. A: pilna sutvarkyta aibė
 # ---------------------------------------------------------
 
 deimantai_pilna <- deimantai
 
 
 # ---------------------------------------------------------
-# 13.2. Be stipriai koreliuojančių požymių
-#       (požymiai, atrinkti 1-ame darbe)
+# 13.2. B: be stipriai koreliuojančių požymių
 # ---------------------------------------------------------
 
 pasalinti_pozymiai <- c(
@@ -319,9 +281,9 @@ deimantai_be_koreliuotu <- deimantai[
 
 
 # ---------------------------------------------------------
-# 13.3. Be ekstremumų (už 3 × IQR ribų)
-#       Eilutė šalinama, jei bent vieno skaitinio požymio
-#       reikšmė yra už [Q1 - 3*IQR ; Q3 + 3*IQR]
+# 13.3. C: be ekstremumų (už [Q1 - 3*IQR ; Q3 + 3*IQR])
+#       Eilutė šalinama, jei ekstremumas yra bent viename
+#       skaitiniame požymyje.
 # ---------------------------------------------------------
 
 ar_ekstremumas <- function(x) {
@@ -330,27 +292,80 @@ ar_ekstremumas <- function(x) {
   !is.na(x) & (x < q[1] - h | x > q[2] + h)
 }
 
-skaitiniai <- names(deimantai)[sapply(deimantai, is.numeric)]
-
-ekstremumu_matrica <- sapply(deimantai[skaitiniai], ar_ekstremumas)
-
+ekstremumu_matrica <- sapply(deimantai[pozymiai_visi], ar_ekstremumas)
 eilutes_su_ekstremumais <- rowSums(ekstremumu_matrica) > 0
 
 deimantai_be_ekstremumu <- deimantai[!eilutes_su_ekstremumais, ]
 
+# Ekstremumų suvestinė pagal požymį (README lentelei)
 ekstremumu_lentele <- data.frame(
-  pozymis = skaitiniai,
+  pozymis = pozymiai_visi,
   ekstremumu_kiekis = colSums(ekstremumu_matrica),
   procentas = round(colMeans(ekstremumu_matrica) * 100, 2)
 )
-
 ekstremumu_lentele <- ekstremumu_lentele[
   order(-ekstremumu_lentele$ekstremumu_kiekis),
 ]
-ekstremumu_lentele
 
-# Bendri skaičiai
-nrow(deimantai_pilna)                  # eilučių pilnoje aibėje
-sum(eilutes_su_ekstremumais)           # kiek eilučių pašalinta
-nrow(deimantai_be_ekstremumu)          # kiek liko
-round(mean(eilutes_su_ekstremumais) * 100, 2)  # % pašalintų
+dim(deimantai_be_ekstremumu)
+
+# =========================================================
+# 14. MASTELIO KEITIMAS: ROBUST SCALING (x - mediana) / IQR
+#     Taikomas kiekvienai aibei ATSKIRAI, tik skaitiniams
+#     požymiams. `id` ir `class` nekeičiami.
+# =========================================================
+
+robust_scale <- function(df) {
+  cols <- setdiff(names(df)[sapply(df, is.numeric)], "id")
+  for (col in cols) {
+    iqr <- IQR(df[[col]])
+    if (iqr == 0) stop(paste("IQR = 0 požymiui:", col))
+    df[[col]] <- (df[[col]] - median(df[[col]])) / iqr
+  }
+  df
+}
+
+aibe_A <- robust_scale(deimantai_pilna)
+aibe_B <- robust_scale(deimantai_be_koreliuotu)
+aibe_C <- robust_scale(deimantai_be_ekstremumu)
+
+
+# =========================================================
+# 15. ĮĖJIMAI PROJEKCIJOMS
+#     Tik skaitiniai požymiai: be `class` ir be `id`.
+#     `class` ir `id` laikomi atskirai (spalvoms, kNN tikslumui,
+#     bendriems objektams rasti).
+# =========================================================
+
+paruosti_iejima <- function(df) {
+  X <- as.matrix(df[, setdiff(names(df), c("id", "class"))])
+  stopifnot(!anyNA(X), all(is.finite(X)))
+  X
+}
+
+X_A <- paruosti_iejima(aibe_A)
+X_B <- paruosti_iejima(aibe_B)
+X_C <- paruosti_iejima(aibe_C)
+
+klase_A <- aibe_A$class
+klase_C <- aibe_C$class
+
+id_A <- aibe_A$id
+id_C <- aibe_C$id
+
+# Bendri A ir C objektai (C yra A poaibis)
+bendri_id <- intersect(id_A, id_C)
+length(bendri_id)    
+
+dim(X_A)   
+dim(X_B)   
+dim(X_C)   
+
+
+# =========================================================
+# 16. IŠSAUGOJIMAS (kad visi trys naudotų tuos pačius įėjimus)
+# =========================================================
+
+write.csv(aibe_A, "aibe_A.csv", row.names = FALSE)
+write.csv(aibe_B, "aibe_B.csv", row.names = FALSE)
+write.csv(aibe_C, "aibe_C.csv", row.names = FALSE)

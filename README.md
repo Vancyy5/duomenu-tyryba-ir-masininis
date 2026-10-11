@@ -35,15 +35,19 @@ Duomenų būklė po pirmojo darbo:
 
 ---
 
-# 3 skirtingos aibės
+## Trys duomenų aibės
 
-## Originali
+| Aibė | Failas | Eilučių | Požymių | Aprašymas |
+|---|---|---:|---|---|
+| A. Pagrindinė | `aibe_A.csv` | 4000 | 19 skaitinių + `class` | Visi sutvarkyti požymiai ir objektai |
+| B. Be koreliuotų požymių | `aibe_B.csv` | 4000 | 6 skaitiniai + `class` | Pašalinti perteklinais laikomi koreliuoti požymiai, objektų skaičius nesikeičia |
+| C. Be ekstremumų | `aibe_C.csv` | 3928 | 19 skaitinių + `class` | Pašalintos 72 eilutės su ekstremumais |
 
-Palikta aibė po pirmojo darbo, sutvarkius duomenis(tipų taisymas, nelogiškų reikšmių atkūrimas pagal
-originalią `ggplot2::diamonds` bazę, trūkstamų reikšmių užpildymas mediana,
-išvestinių požymių perskaičiavimas).
+Kiekviename faile yra papildomas stulpelis `id` (eilutės numeris A aibėje).
+Pagal jį randami bendri A ir C objektai. `id` ir `class` į projekcijų
+įėjimą nepatenka.
 
-## Be koreliuotų požymių
+### B aibė: pašalinti koreliuoti požymiai
 
 Šalinimo kriterijus: |Spearman r| ≥ 0,90 su paliekamu požymiu, o šalinamas
 požymis neneša naujos informacijos (yra to paties požymio perskaičiavimas arba
@@ -51,7 +55,7 @@ matuoja tą patį dalyką). Naudotas Spearman koeficientas, nes požymiai
 asimetriški.
 
 | Pašalintas požymis | Paliktas požymis | Spearman r | Pagrindimas |
-|---|---|---|---|
+|---|---|---:|---|
 | `x` | `carat` | 0,991 | Matmuo, matuoja deimanto dydį kaip ir `carat` |
 | `y` | `carat` | 0,990 | Tas pats |
 | `z` | `carat` | 0,988 | Tas pats |
@@ -66,23 +70,23 @@ asimetriški.
 | `price_per_volume` | `price` | 0,947 | Išvestas iš `price / volume_xyz`; su `price_per_carat` r = 0,996 |
 | `table_depth_ratio` | `table` | 0,941 | Išvestas iš `table / depth` |
 
-Palikti 7 požymiai: `carat`, `depth`, `table`, `price`, `length_width_ratio`,
-`carat_per_volume`, `class`.
+Palikti požymiai (6 skaitiniai + `class`): `carat`, `depth`, `table`,
+`price`, `length_width_ratio`, `carat_per_volume`, `class`.
 
-Deimanto formą ir toliau nusako `length_width_ratio` (x/y), kuris su kitais
-požymiais koreliuoja silpnai (didžiausia |r| ≈ 0,32).
+- Deimanto formą ir toliau nusako `length_width_ratio` (x/y), kuris su kitais
+  požymiais koreliuoja silpnai (didžiausia |r| ≈ 0,32).
+- `carat` ir `price` (r = 0,948) palikti abu: tai pagrindinis ryšys duomenyse,
+  o `price` nėra išvedamas iš `carat` taip, kaip tūris iš `x`, `y`, `z`. Koreliacija tarp jų yra tikras
+  duomenų ryšys, bet ne perteklius.
 
-`carat` ir `price` (r = 0,948) palikti abu: tai pagrindinis ryšys duomenyse,
-o `price` nėra išvedamas iš `carat` taip, kaip tūris iš `x`, `y`, `z`.
-
-## Be ektremumų
+### C aibė: pašalinti ekstremumai
 
 Ekstremumu laikoma reikšmė už ribų [Q1 − 3·IQR ; Q3 + 3·IQR]. Ekstremumai
 ieškomi visuose 19 skaitinių požymių, o eilutė šalinama, jei ekstremumas yra
 bent viename iš jų.
 
 | Požymis | Ekstremumų kiekis | % |
-|---|---|---|
+|---|---:|---:|
 | `carat_per_volume` | 61 | 1,52 |
 | `price_per_carat` | 15 | 0,38 |
 | `price_per_volume` | 8 | 0,20 |
@@ -96,11 +100,37 @@ bent viename iš jų.
 | `price`, `x`, `y`, `z`, `area_xy`, `area_xz`, `area_yz`, `length_width_ratio`, `mean_dimension` | 0 | 0,00 |
 
 Ekstremumų kiekių suma (100) didesnė už pašalintų eilučių skaičių (72), nes
-vienoje eilutėje ekstremumų gali būti keliuose požymiuose iš karto (pvz.,
-`carat`, `volume_xyz` ir `depth_ratio` ekstremumai dažnai sutampa toje pačioje eilutėje).
+vienoje eilutėje ekstremumų gali būti keliuose požymiuose iš karto.
 
 **Rezultatas:** pašalinta 72 eilutės (1,80 %), liko 3928 iš 4000.
 
 Daugiausia ekstremumų (61 iš 100) yra išvestiniame požymyje `carat_per_volume`.
 Baziniuose požymiuose `price`, `x`, `y`, `z` ekstremumų nėra, todėl pašalintos
 eilutės daugiausia išsiskiria santykiniais, o ne pagrindiniais matmenimis ar kaina.
+
+---
+
+## Mastelio keitimas
+
+Visi dimensijos mažinimo metodai remiasi atstumais tarp objektų, todėl
+požymiai turi būti vienodo mastelio. Naudojamas **Robust Scaling**:
+
+`x' = (x − mediana) / IQR`
+
+Pasirinkimo pagrindimas: po sutvarkymo daugelis požymių yra asimetriški ir
+turi realių išskirčių, kurių pirmoje užduotyje nešalinome. Mediana ir IQR į
+kraštines reikšmes reaguoja silpnai, todėl mastelis nustatomas pagal didžiąją
+duomenų dalį. Min-Max ir standartizavimas (vidurkis, SD) yra jautrūs
+išskirtims.
+
+Mastelis skaičiuojamas kiekvienai aibei atskirai (A, B ir C), tik
+skaitiniams požymiams. Failuose `aibe_A.csv`, `aibe_B.csv`, `aibe_C.csv`
+požymiai jau yra pakeisti.
+
+## Įėjimas projekcijoms
+
+- Į projekcijas patenka tik skaitiniai požymiai (A: 19, B: 6, C: 19).
+- `class` projekcijai kurti nenaudojama. Ji naudojama tik spalvoms ir kNN
+  tikslumui.
+- `id` naudojamas tik bendriems A ir C objektams (3928) rasti.
+- Visi metodai gauna tą pačią paruoštą duomenų versiją.
