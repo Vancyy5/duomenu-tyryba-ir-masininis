@@ -395,3 +395,206 @@ plot(
   xlab = "Pagrindinė komponentė",
   ylab = "Paaiškinta dispersija (%)"
 )
+
+# =========================================================
+# 18. PCA KOMPONENČIŲ INTERPRETACIJA
+# =========================================================
+
+# Pirmųjų trijų komponenčių požymių svoriai
+svoriai <- pca_A$rotation[, 1:3]
+
+# Suapvaliname iki 3 skaičių po kablelio
+round(svoriai, 3)
+
+# =========================================================
+# 19. PCA 2D PROJEKCIJA – A AIBĖ
+# =========================================================
+
+# Pirmųjų dviejų komponenčių koordinatės
+pca_2d <- as.data.frame(pca_A$x[, 1:2])
+
+# Pridedame deimantų klases
+pca_2d$class <- aibe_A$class
+
+# Braižome grafiką
+library(ggplot2)
+
+ggplot(pca_2d, aes(x = PC1, y = PC2, color = class)) +
+  geom_point(alpha = 0.5, size = 1) +
+  labs(
+    title = "PCA 2D projekcija – A aibė",
+    x = "PC1 (65,30 %)",
+    y = "PC2 (18,13 %)",
+    color = "Deimanto klasė"
+  ) +
+  coord_equal() +
+  theme_minimal()
+
+# =========================================================
+# 20. PCA 3D PROJEKCIJA – A AIBĖ
+# =========================================================
+
+# Jei neturi paketo, įdiek vieną kartą:
+install.packages("plotly")
+
+library(plotly)
+
+# Pirmųjų trijų komponenčių koordinatės
+pca_3d <- as.data.frame(pca_A$x[, 1:3])
+
+# Pridedame klases
+pca_3d$class <- aibe_A$class
+
+# Interaktyvus 3D grafikas
+plot_ly(
+  data = pca_3d,
+  x = ~PC1,
+  y = ~PC2,
+  z = ~PC3,
+  color = ~class,
+  type = "scatter3d",
+  mode = "markers",
+  marker = list(size = 2, opacity = 0.5)
+) %>%
+  layout(
+    title = "PCA 3D projekcija – A aibė",
+    scene = list(
+      xaxis = list(title = "PC1 (65,30 %)"),
+      yaxis = list(title = "PC2 (18,13 %)"),
+      zaxis = list(title = "PC3 (9,99 %)")
+    )
+  )
+
+# =========================================================
+# 21. PCA ANALIZĖ – B AIBĖ
+# =========================================================
+
+# Atliekame PCA
+pca_B <- prcomp(X_B, center = TRUE, scale. = FALSE)
+
+# Paaiškinta dispersija
+summary(pca_B)
+
+# Kiekvienos komponentės dispersija procentais
+dispersija_B <- 100 * pca_B$sdev^2 / sum(pca_B$sdev^2)
+
+# Grafikas
+plot(
+  dispersija_B,
+  type = "b",
+  pch = 19,
+  main = "PCA – B aibės paaiškinta dispersija",
+  xlab = "Pagrindinė komponentė",
+  ylab = "Paaiškinta dispersija (%)"
+)
+# =========================================================
+# 22. PCA B AIBĖS KOMPONENČIŲ INTERPRETACIJA
+# =========================================================
+
+# Pirmųjų trijų komponenčių svoriai
+svoriai_B <- pca_B$rotation[, 1:3]
+
+round(svoriai_B, 3)
+# =========================================================
+# 23. PCA 2D PROJEKCIJA – B AIBĖ
+# =========================================================
+
+pca_2d_B <- as.data.frame(pca_B$x[, 1:2])
+
+pca_2d_B$class <- aibe_B$class
+
+library(ggplot2)
+
+ggplot(pca_2d_B, aes(x = PC1, y = PC2, color = class)) +
+  geom_point(alpha = 0.5, size = 1) +
+  labs(
+    title = "PCA 2D projekcija – B aibė",
+    x = "PC1 (87,18 %)",
+    y = "PC2 (6,00 %)",
+    color = "Deimanto klasė"
+  ) +
+  coord_equal() +
+  theme_minimal()
+
+# =========================================================
+# 24. PCA 3D PROJEKCIJA – B AIBĖ
+# =========================================================
+
+library(plotly)
+
+pca_3d_B <- as.data.frame(pca_B$x[, 1:3])
+pca_3d_B$class <- aibe_B$class
+
+plot_ly(
+  data = pca_3d_B,
+  x = ~PC1,
+  y = ~PC2,
+  z = ~PC3,
+  color = ~class,
+  type = "scatter3d",
+  mode = "markers",
+  marker = list(size = 2, opacity = 0.5)
+) %>%
+  layout(
+    title = "PCA 3D projekcija – B aibė",
+    scene = list(
+      xaxis = list(title = "PC1 (87,18 %)"),
+      yaxis = list(title = "PC2 (6,00 %)"),
+      zaxis = list(title = "PC3 (3,67 %)")
+    )
+  )
+
+# =========================================================
+# 25. PCA ANALIZĖ – C AIBĖ
+# =========================================================
+
+# Atliekame PCA
+pca_C <- prcomp(X_C, center = TRUE, scale. = FALSE)
+
+# Peržiūrime paaiškintą dispersiją
+summary(pca_C)
+
+# Kiekvienos komponentės paaiškinta dispersija (%)
+dispersija_C <- 100 * pca_C$sdev^2 / sum(pca_C$sdev^2)
+
+# Braižome paaiškintos dispersijos grafiką
+plot(
+  dispersija_C,
+  type = "b",
+  pch = 19,
+  main = "PCA – C aibės paaiškinta dispersija",
+  xlab = "Pagrindinė komponentė",
+  ylab = "Paaiškinta dispersija (%)"
+)
+# =========================================================
+# 26. PCA C AIBĖS KOMPONENČIŲ INTERPRETACIJA
+# =========================================================
+
+# Pirmųjų trijų komponenčių svoriai
+svoriai_C <- pca_C$rotation[, 1:3]
+
+# Peržiūrime rezultatus
+round(svoriai_C, 3)
+# =========================================================
+# 27. PCA 2D PROJEKCIJA – C AIBĖ
+# =========================================================
+
+# Pirmųjų dviejų komponenčių koordinatės
+pca_2d_C <- as.data.frame(pca_C$x[, 1:2])
+
+# Pridedame deimantų klases
+pca_2d_C$class <- aibe_C$class
+
+# Braižome grafiką
+library(ggplot2)
+
+ggplot(pca_2d_C, aes(x = PC1, y = PC2, color = class)) +
+  geom_point(alpha = 0.5, size = 1) +
+  labs(
+    title = "PCA 2D projekcija – C aibė",
+    x = "PC1 (55,77 %)",
+    y = "PC2 (24,34 %)",
+    color = "Deimanto klasė"
+  ) +
+  coord_equal() +
+  theme_minimal()
