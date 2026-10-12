@@ -134,3 +134,65 @@ požymiai jau yra pakeisti.
   tikslumui.
 - `id` naudojamas tik bendriems A ir C objektams (3928) rasti.
 - Visi metodai gauna tą pačią paruoštą duomenų versiją.
+
+
+## PCA analizė – A aibė
+
+Pagrindinių komponenčių analizė (PCA) atlikta su pagrindine A duomenų aibe, kurią sudaro **4000 objektų ir 19 skaitinių požymių**.
+
+Duomenims jau buvo pritaikytas **Robust Scaling** metodas, todėl papildomas standartizavimas neatliktas. PCA metu duomenys centruojami pagal vidurkį.
+
+### PCA atlikimas
+
+```r
+pca_A <- prcomp(X_A, center = TRUE, scale. = FALSE)
+
+summary(pca_A)
+```
+
+### Paaiškinta dispersija
+
+Gauti rezultatai:
+
+| Komponentė | Paaiškinta dispersija | Sukaupta dispersija |
+|---|---:|---:|
+| PC1 | 65,30 % | 65,30 % |
+| PC2 | 18,13 % | 83,43 % |
+| PC3 | 9,99 % | 93,42 % |
+| PC4 | 2,87 % | 96,29 % |
+| PC5 | 1,57 % | 97,86 % |
+
+Pirmoji pagrindinė komponentė (PC1) paaiškina **65,30 %** visos duomenų dispersijos. Antroji komponentė (PC2) paaiškina papildomus **18,13 %**, o trečioji (PC3) – **9,99 %**.
+
+Pirmosios dvi komponentės kartu paaiškina **83,43 %**, o pirmosios trys – **93,42 %** visos dispersijos.
+
+### Paaiškintos dispersijos vizualizavimas
+
+```r
+dispersija <- 100 * pca_A$sdev^2 / sum(pca_A$sdev^2)
+
+plot(
+  dispersija,
+  type = "b",
+  pch = 19,
+  main = "PCA – paaiškinta dispersija",
+  xlab = "Pagrindinė komponentė",
+  ylab = "Paaiškinta dispersija (%)"
+)
+```
+
+
+![PCA paaiškintos dispersijos grafikas](grafikai/pca_paaiskinta_dispersija.png)
+
+**1 pav.** A aibės PCA pagrindinių komponenčių paaiškinta dispersija (%).
+
+
+Grafike matyti, kad didžiausią dispersijos dalį paaiškina pirmoji komponentė. Antrosios ir trečiosios komponenčių indėlis mažesnis, o nuo ketvirtosios komponentės paaiškintos dispersijos dalis tampa nedidelė.
+
+### Preliminari išvada
+
+PCA rezultatai rodo, kad sumažinus A aibės dimensiją nuo 19 iki 3 galima išsaugoti **93,42 %** pradinės duomenų dispersijos.
+
+Pasirinkus 2 dimensijas, išsaugoma **83,43 %** dispersijos, todėl 2D projekcija taip pat gali būti naudinga duomenų vizualizavimui.
+
+Tolimesniame tyrime bus nagrinėjamos 2D projekcijos, o 3D vertinama kaip alternatyva, leidžianti išsaugoti didesnę dispersijos dalį. Galutinis pasirinkimas bus pagrįstas kitų dimensijos mažinimo metodų rezultatais ir projekcijų kokybės metrikomis.

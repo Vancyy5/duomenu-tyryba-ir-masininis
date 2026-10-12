@@ -369,3 +369,29 @@ dim(X_C)
 write.csv(aibe_A, "aibe_A.csv", row.names = FALSE)
 write.csv(aibe_B, "aibe_B.csv", row.names = FALSE)
 write.csv(aibe_C, "aibe_C.csv", row.names = FALSE)
+
+# =========================================================
+# 17. PCA ANALIZĖ – A AIBĖ
+# =========================================================
+
+pca_A <- prcomp(X_A, center = TRUE, scale. = FALSE)
+
+summary(pca_A)
+
+# PCA paaiškintos dispersijos grafikas
+
+plot(
+  pca_A,
+  main = "PCA – A aibės komponenčių dispersija"
+)
+# Kiekvienos komponentės paaiškinta dispersija (%)
+dispersija <- 100 * pca_A$sdev^2 / sum(pca_A$sdev^2)
+
+plot(
+  dispersija,
+  type = "b",
+  pch = 19,
+  main = "PCA – paaiškinta dispersija",
+  xlab = "Pagrindinė komponentė",
+  ylab = "Paaiškinta dispersija (%)"
+)
