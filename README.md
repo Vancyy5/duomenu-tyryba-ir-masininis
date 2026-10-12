@@ -610,6 +610,23 @@ Nors `Ideal` ir `Premium` klasių objektai vis dar persidengia, pastebima, kad `
 
 Tai leidžia manyti, kad geometrinės deimanto proporcijos gali padėti iš dalies atskirti klases, tačiau aiškaus jų atsiskyrimo nėra.
 
+
+### PCA 3D projekcija
+
+Siekiant įvertinti trečiosios komponentės teikiamą papildomą informaciją, sudaryta C aibės trimatė PCA projekcija.
+
+![C aibės PCA 3D projekcija](grafikai/pca_3d_projekcija_C.png)
+
+**Pav. C aibės PCA 3D projekcija.**
+
+Pirmosios trys pagrindinės komponentės kartu paaiškina **89,56 %** C aibės dispersijos, t. y. 9,46 procentinio punkto daugiau nei 2D projekcija.
+
+Grafike matyti, kad pašalinus ekstremalius objektus deimantų išsidėstymas yra aiškiau matomas nei A ir B aibių projekcijose.
+
+`Ideal` ir `Premium` klasės vis dar persidengia, tačiau pastebima dalinio atsiskyrimo tendencija pagal trečiąją komponentę. Tai leidžia manyti, kad PC3 suteikia papildomos informacijos, naudingos klasių išsidėstymui interpretuoti.
+
+Vis dėlto vizualaus atsiskyrimo nepakanka projekcijos kokybei nustatyti, todėl vėliau bus vertinamos kiekybinės kokybės metrikos.
+
 ### Preliminari išvada
 
 Pašalinus 72 ekstremalius objektus ir iš naujo pritaikius Robust Scaling, PCA rezultatai pastebimai pasikeitė.

@@ -598,3 +598,35 @@ ggplot(pca_2d_C, aes(x = PC1, y = PC2, color = class)) +
   ) +
   coord_equal() +
   theme_minimal()
+
+# =========================================================
+# PCA 3D PROJEKCIJA – C AIBĖ
+# =========================================================
+
+library(plotly)
+
+# Pirmųjų trijų komponenčių koordinatės
+pca_3d_C <- as.data.frame(pca_C$x[, 1:3])
+
+# Pridedame klases
+pca_3d_C$class <- aibe_C$class
+
+# 3D grafikas
+plot_ly(
+  data = pca_3d_C,
+  x = ~PC1,
+  y = ~PC2,
+  z = ~PC3,
+  color = ~class,
+  type = "scatter3d",
+  mode = "markers",
+  marker = list(size = 2, opacity = 0.5)
+) %>%
+  layout(
+    title = "PCA 3D projekcija – C aibė",
+    scene = list(
+      xaxis = list(title = "PC1 (55,77 %)"),
+      yaxis = list(title = "PC2 (24,34 %)"),
+      zaxis = list(title = "PC3 (9,46 %)")
+    )
+  )
