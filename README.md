@@ -619,3 +619,59 @@ Pirmoji komponentė nebedominuojama vien `carat_per_volume` požymio, o apibendr
 C aibės 2D projekcija paaiškina **80,11 %** dispersijos, o 3D projekcija teoriškai paaiškintų **89,56 %**. Nors paaiškintos dispersijos dalis mažesnė nei A ir B aibėse, C aibės 2D grafike bendras objektų išsidėstymas yra aiškiau matomas.
 
 Galutiniam projekcijų kokybės palyginimui reikės apskaičiuoti struktūros išsaugojimo metrikas ir palyginti tuos pačius objektus prieš ekstremalių reikšmių pašalinimą ir po jo.
+
+
+## PCA rezultatų palyginimas
+
+Siekiant įvertinti duomenų paruošimo poveikį PCA rezultatams, palygintos trys duomenų aibės:
+
+- **A** – pagrindinė sutvarkyta aibė (4000 objektų, 19 skaitinių požymių).
+- **B** – aibė be 13 stipriai koreliuojančių požymių (4000 objektų, 6 skaitiniai požymiai).
+- **C** – aibė be 72 ekstremalių objektų (3928 objektai, 19 skaitinių požymių).
+
+### Paaiškintos dispersijos palyginimas
+
+| Rodiklis | A aibė | B aibė | C aibė |
+|---|---:|---:|---:|
+| PC1 | 65,30 % | 87,18 % | 55,77 % |
+| PC1 + PC2 | 83,43 % | 93,17 % | 80,11 % |
+| PC1 + PC2 + PC3 | 93,42 % | 96,85 % | 89,56 % |
+| Komponenčių skaičius 90 % ribai | 3 | 2 | 4 |
+
+B aibėje pirmosios dvi komponentės paaiškina didžiausią dispersijos dalį (93,17 %), o C aibėje – mažiausią (80,11 %).
+
+Vis dėlto šie procentai apskaičiuoti kiekvienai aibei atskirai, todėl didesnė paaiškintos dispersijos dalis savaime nereiškia geresnio pradinės A aibės struktūros išsaugojimo.
+
+### Komponenčių interpretacijos palyginimas
+
+| Komponentė | A aibė | B aibė | C aibė |
+|---|---|---|---|
+| PC1 | Masės ir tūrio santykis | Masės ir tūrio santykis | Dydis ir kaina |
+| PC2 | Dydis ir kaina | Dydis ir kaina | Geometrinės proporcijos |
+| PC3 | Geometrinės proporcijos | Geometrinės proporcijos | Masės ir tūrio santykis bei proporcijos |
+
+A ir B aibėse pirmąją komponentę beveik visiškai lemia `carat_per_volume` požymis, kurio svoriai atitinkamai yra -0,990 ir -1,000.
+
+C aibėje pirmoji komponentė pasikeičia: didžiausią svorį turi `price` (-0,374), o reikšmingus svorius taip pat turi deimanto masės, tūrio ir kainos santykiniai rodikliai.
+
+Tai rodo, kad pašalinus ekstremalius objektus ir iš naujo pritaikius Robust Scaling, pasikeičia dispersijos pasiskirstymas ir pagrindinių komponenčių interpretacija.
+
+### 2D projekcijų palyginimas
+
+A ir B aibių PCA 2D projekcijose didžioji dalis objektų susitelkusi vienoje siauroje srityje. Matomi keli stipriai nutolę taškai, dėl kurių projekcijos ištemptos pagal PC1.
+
+C aibėje objektai pasiskirstę tolygiau, todėl bendrą duomenų struktūrą galima įžiūrėti aiškiau.
+
+Visose trijose projekcijose `Ideal` ir `Premium` klasės persidengia. C aibėje pastebima dalinio atsiskyrimo pagal PC2 tendencija, tačiau aiškios ribos tarp klasių nėra.
+
+### PCA palyginimo išvada
+
+PCA rezultatai parodė, kad duomenų paruošimo sprendimai turi įtakos dimensijos mažinimui.
+
+Pašalinus stipriai koreliuojančius požymius (B aibė), pirmosiose komponentėse sutelkiama didesnė likusios dispersijos dalis, tačiau `carat_per_volume` dominavimas išlieka.
+
+Pašalinus ekstremalius objektus (C aibė), pasikeičia pagrindinių komponenčių svoriai ir jų interpretacija. C aibės 2D projekcijoje duomenų pasiskirstymas vizualiai aiškiau matomas.
+
+Tačiau vien PCA paaiškintos dispersijos ir vizualizacijų nepakanka nuspręsti, kuri projekcija geriausiai išsaugo pradinę duomenų struktūrą.
+
+Tolimesniame tyrime bus skaičiuojamos Trustworthiness, Continuity, Spearman koreliacijos ir Normalized Stress metrikos, taip pat atliekamas bendrų objektų palyginimas.
