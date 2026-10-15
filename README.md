@@ -692,3 +692,423 @@ Pašalinus ekstremalius objektus (C aibė), pasikeičia pagrindinių komponenči
 Tačiau vien PCA paaiškintos dispersijos ir vizualizacijų nepakanka nuspręsti, kuri projekcija geriausiai išsaugo pradinę duomenų struktūrą.
 
 Tolimesniame tyrime bus skaičiuojamos Trustworthiness, Continuity, Spearman koreliacijos ir Normalized Stress metrikos, taip pat atliekamas bendrų objektų palyginimas.
+
+
+
+## MDS analizė
+
+MDS (*Multidimensional Scaling*) – daugiamačių skalių metodas, kuriuo siekiama sumažinti duomenų dimensiją išsaugant atstumus tarp objektų.
+
+Skirtingai nuo PCA, kurio pagrindinis tikslas – išsaugoti kuo daugiau dispersijos, MDS remiasi objektų tarpusavio atstumais.
+
+### Klasikinis MDS – A aibė
+
+Pirmiausia klasikinis MDS pritaikytas pagrindinei A aibei, kurią sudaro 4000 objektų ir 19 skaitinių požymių.
+
+Apskaičiuoti Euklido atstumai tarp objektų, o tada duomenų dimensija sumažinta nuo 19 iki 2.
+
+```r
+atstumai_A <- dist(X_A, method = "euclidean")
+
+mds_A <- cmdscale(atstumai_A, k = 2)
+
+dim(mds_A)
+# [1] 4000 2
+```
+
+### MDS 2D projekcija
+
+```r
+mds_2d_A <- as.data.frame(mds_A)
+colnames(mds_2d_A) <- c("MDS1", "MDS2")
+mds_2d_A$class <- aibe_A$class
+
+ggplot(mds_2d_A, aes(x = MDS1, y = MDS2, color = class)) +
+  geom_point(alpha = 0.5, size = 1) +
+  labs(
+    title = "Klasikinio MDS 2D projekcija – A aibė",
+    x = "MDS1",
+    y = "MDS2",
+    color = "Deimanto klasė"
+  ) +
+  coord_equal() +
+  theme_minimal()
+```
+
+![Klasikinio MDS 2D projekcija – A aibė](grafikai/mds_2d_projekcija_A.png)
+
+**10 pav.** Klasikinio MDS 2D projekcija su A aibe.
+
+Grafike matyti, kad didžioji dalis deimantų susitelkusi siauroje srityje, o pavieniai stipriai nutolę objektai ištempia projekciją horizontalia kryptimi.
+
+`Ideal` ir `Premium` klasių objektai stipriai persidengia, todėl aiškaus klasių atsiskyrimo nepastebėta.
+
+Gauta projekcija labai panaši į PCA 2D projekciją. Tai paaiškinama tuo, kad klasikinis MDS su Euklido atstumais matematiškai atitinka PCA, kai naudojamos tos pačios centruotos duomenų koordinatės.
+
+**Preliminari išvada:** klasikinis MDS leidžia sumažinti A aibės dimensiją nuo 19 iki 2, tačiau ekstremalūs objektai stipriai veikia projekcijos vaizdą. Projekcijos kokybė bus vertinama skaičiuojant atstumų ir kaimynystės išsaugojimo metrikas.
+
+
+### Klasikinio MDS ir PCA palyginimas
+
+Siekiant patikrinti klasikinio MDS ir PCA rezultatų atitikimą, apskaičiuotos pirmųjų dviejų komponenčių koordinatės koreliacijos.
+
+```r
+cor(pca_A$x[, 1:2], mds_A)
+```
+
+Gauti rezultatai:
+
+| | MDS1 | MDS2 |
+|---|---:|---:|
+| PC1 | -1,000 | 0,000 |
+| PC2 | 0,000 | -1,000 |
+
+Pirmosios PCA ir MDS koordinatės koreliacija lygi -1, kaip ir antrosios. Tai rodo, kad abiejų metodų rezultatai sutampa, tik koordinačių kryptys yra priešingos.
+
+Šis rezultatas patvirtina teorinį klasikinio MDS su Euklido atstumais ir PCA ryšį.
+
+Kadangi gautos projekcijos yra lygiavertės, klasikinis MDS šiuo atveju neatskleidžia papildomos duomenų struktūros, palyginti su PCA.
+
+### Klasikinis MDS – B aibė
+
+Toliau klasikinis MDS pritaikytas B aibei, kurią sudaro 4000 objektų ir 6 skaitiniai požymiai.
+
+Apskaičiuoti Euklido atstumai tarp objektų, o tada dimensija sumažinta iki 2.
+
+```r
+atstumai_B <- dist(X_B, method = "euclidean")
+
+mds_B <- cmdscale(atstumai_B, k = 2)
+
+dim(mds_B)
+# [1] 4000 2
+```
+
+### MDS 2D projekcija
+
+```r
+mds_2d_B <- as.data.frame(mds_B)
+colnames(mds_2d_B) <- c("MDS1", "MDS2")
+mds_2d_B$class <- aibe_B$class
+
+ggplot(mds_2d_B, aes(x = MDS1, y = MDS2, color = class)) +
+  geom_point(alpha = 0.5, size = 1) +
+  labs(
+    title = "Klasikinio MDS 2D projekcija – B aibė",
+    x = "MDS1",
+    y = "MDS2",
+    color = "Deimanto klasė"
+  ) +
+  coord_equal() +
+  theme_minimal()
+```
+
+![Klasikinio MDS 2D projekcija – B aibė](grafikai/mds_2d_projekcija_B.png)
+
+**11 pav.** Klasikinio MDS 2D projekcija su B aibe.
+
+Grafike matyti, kad didžioji dalis objektų susitelkusi centrinėje projekcijos dalyje, tačiau keli stipriai nutolę objektai ištempia projekciją horizontalia kryptimi.
+
+`Ideal` ir `Premium` klasių objektai stipriai persidengia, todėl aiškaus klasių atsiskyrimo nepastebėta.
+
+### Klasikinio MDS ir PCA palyginimas – B aibė
+
+Siekiant patikrinti klasikinio MDS ir PCA rezultatų atitikimą, apskaičiuotos pirmųjų dviejų koordinačių koreliacijos.
+
+```r
+cor(pca_B$x[, 1:2], mds_B)
+```
+
+Gauti rezultatai:
+
+| | MDS1 | MDS2 |
+|---|---:|---:|
+| PC1 | -1,000 | 0,000 |
+| PC2 | 0,000 | 1,000 |
+
+Rezultatai rodo, kad klasikinio MDS ir PCA projekcijos sutampa: pirmoji koordinatė atitinka pirmąją PCA komponentę su priešingu ženklu, o antroji koordinatė sutampa su antrąja PCA komponente.
+
+Tai patvirtina, kad ir B aibės atveju klasikinis MDS su Euklido atstumais neatskleidžia papildomos struktūros, palyginti su PCA.
+
+
+### Klasikinis MDS – C aibė
+
+Klasikinis MDS pritaikytas C aibei, kurią sudaro 3928 objektai ir 19 skaitinių požymių. Palyginti su A aibe, iš C aibės pašalinti 72 ekstremalias reikšmes turėję objektai.
+
+Apskaičiuoti Euklido atstumai tarp objektų, o duomenų dimensija sumažinta nuo 19 iki 2.
+
+```r
+atstumai_C <- dist(X_C, method = "euclidean")
+
+mds_C <- cmdscale(atstumai_C, k = 2)
+
+dim(mds_C)
+# [1] 3928 2
+```
+
+#### MDS 2D projekcija
+
+```r
+mds_2d_C <- as.data.frame(mds_C)
+colnames(mds_2d_C) <- c("MDS1", "MDS2")
+mds_2d_C$class <- aibe_C$class
+
+ggplot(mds_2d_C, aes(x = MDS1, y = MDS2, color = class)) +
+  geom_point(alpha = 0.5, size = 1) +
+  labs(
+    title = "Klasikinio MDS 2D projekcija – C aibė",
+    x = "MDS1",
+    y = "MDS2",
+    color = "Deimanto klasė"
+  ) +
+  coord_equal() +
+  theme_minimal()
+```
+
+![Klasikinio MDS 2D projekcija – C aibė](grafikai/mds_2d_projekcija_C.png)
+
+**12 pav.** Klasikinio MDS 2D projekcija su C aibe.
+
+C aibės projekcijoje objektai pasiskirstę tolygiau nei A ir B aibėse. Pašalinus ekstremalius objektus ir iš naujo pritaikius Robust Scaling, pagrindinė objektų sankaupa nebėra taip stipriai suspausta.
+
+`Ideal` ir `Premium` klasės vis dar persidengia, tačiau pastebima dalinio atsiskyrimo tendencija pagal antrąją MDS koordinatę. `Ideal` objektai dažniau išsidėstę aukštesnėje MDS2 dalyje, o `Premium` – žemesnėje.
+
+#### Klasikinio MDS ir PCA palyginimas – C aibė
+
+Siekiant patikrinti MDS ir PCA projekcijų atitikimą, apskaičiuotos koordinačių koreliacijos.
+
+```r
+cor(pca_C$x[, 1:2], mds_C)
+```
+
+Gauti rezultatai:
+
+| | MDS1 | MDS2 |
+|---|---:|---:|
+| PC1 | -1,000 | 0,000 |
+| PC2 | 0,000 | -1,000 |
+
+Rezultatai rodo, kad klasikinio MDS ir PCA pirmosios dvi koordinatės visiškai atitinka, tik jų kryptys priešingos.
+
+Taigi ir C aibėje klasikinis MDS su Euklido atstumais duoda tokią pačią dvimatę konfigūraciją kaip PCA.
+
+### Klasikinio MDS rezultatų palyginimas
+
+| Rodiklis | A aibė | B aibė | C aibė |
+|---|---|---|---|
+| Objektų skaičius | 4000 | 4000 | 3928 |
+| Skaitinių požymių skaičius | 19 | 6 | 19 |
+| Duomenų pasiskirstymas | Stipriai suspausta pagrindinė sankaupa | Stipriai suspausta pagrindinė sankaupa | Tolygiau matoma struktūra |
+| Ekstremalių objektų įtaka | Ryški | Ryški | Sumažėjusi |
+| Klasių atsiskyrimas | Didelis persidengimas | Didelis persidengimas | Dalinis atsiskyrimas, bet persidengimas išlieka |
+| MDS ir PCA atitikimas | Sutampa | Sutampa | Sutampa |
+
+Klasikinio MDS rezultatai parodė, kad duomenų paruošimas turi įtakos projekcijos vaizdui.
+
+A ir B aibių projekcijose matomi pavieniai stipriai nutolę objektai, o C aibėje bendras objektų išsidėstymas yra lengviau įžiūrimas.
+
+Visose trijose aibėse klasikinio MDS projekcijos atitinka PCA projekcijas. Tai patvirtina teorinį šių metodų ryšį, kai klasikiniam MDS naudojami Euklido atstumai.
+
+Vis dėlto vizualaus projekcijų palyginimo nepakanka nustatyti, kuris duomenų paruošimo variantas geriausiai išsaugo objektų tarpusavio ryšius. Tam reikalingos kiekybinės kokybės metrikos.
+
+
+### Metrinis MDS (SMACOF) – A aibė
+
+Papildomai išbandytas metrinis MDS, naudojant SMACOF algoritmą. Šis algoritmas iteracijomis optimizuoja dvimatę objektų konfigūraciją, siekdamas sumažinti atstumų neatitikimą (Stress).
+
+Analizei naudota A aibė, kurią sudaro 4000 objektų ir 19 skaitinių požymių. Pradinis taškų išdėstymas gautas klasikiniu MDS.
+
+#### Stress rezultatai
+
+| Optimizavimo etapas | Stress |
+|---|---:|
+| Po pirmųjų 100 iteracijų | 0,1128 |
+| Po papildomų iteracijų | 0,1028 |
+
+Papildomai optimizuojant projekciją, Stress sumažėjo nuo 0,1128 iki 0,1028. Tai rodo geresnį pradinių atstumų atkūrimą pagal naudojamą Stress kriterijų.
+
+Pirmojo etapo metu buvo pasiektas iteracijų limitas, todėl rezultatas po papildomų iteracijų laikomas geriausiu iki šiol gautu rezultatu, nepatvirtinus galutinės konvergencijos.
+
+#### SMACOF 2D projekcija
+
+![Metrinio MDS (SMACOF) 2D projekcija – A aibė](grafikai/mds_smacof_2d_A.png)
+
+**13 pav.** Metrinio MDS (SMACOF) 2D projekcija su A aibe.
+
+Grafike matyti, kad didžioji dalis deimantų susitelkusi centrinėje srityje, tačiau išlieka keli stipriai nutolę objektai.
+
+`Ideal` ir `Premium` klasės vis dar stipriai persidengia, todėl aiškaus jų atsiskyrimo nepastebėta.
+
+Palyginti su klasikiniu MDS, taškų išsidėstymas pasikeitė, nes SMACOF tiesiogiai optimizuoja atstumų neatitikimą. Vis dėlto vien iš grafiko negalima nustatyti, kiek pagerėjo atstumų išsaugojimas.
+
+
+
+### Klasikinio MDS ir SMACOF kokybės palyginimas – A aibė
+
+Siekiant objektyviai palyginti klasikinio MDS ir metrinio MDS (SMACOF) rezultatus, abiem metodams apskaičiuotas normalizuotas Stress rodiklis.
+
+Skaičiuojant naudoti tie patys pradiniai Euklido atstumai ir vienoda Stress formulė. Kad skirtingas projekcijų mastelis neturėtų įtakos rezultatams, prieš apskaičiuojant Stress parinktas optimalus bendras mastelio koeficientas.
+
+| Metodas | Normalizuotas Stress |
+|---|---:|
+| Klasikinis MDS | 0,1866 |
+| Metrinis MDS (SMACOF) | 0,1028 |
+
+SMACOF Stress yra maždaug 45 % mažesnis nei klasikinio MDS.
+
+Tai rodo, kad SMACOF algoritmas geriau išsaugojo pradinius objektų tarpusavio atstumus dvimatėje projekcijoje.
+
+Klasikinis MDS siekia atkurti atstumų geometriją, remdamasis spektriniu skaidymu, o SMACOF tiesiogiai optimizuoja Stress kriterijų.
+
+**Išvada:** pagal normalizuotą Stress metriką SMACOF su A aibe pasiekė geresnį rezultatą nei klasikinis MDS. Tačiau galutiniam metodų palyginimui taip pat reikės įvertinti lokalių kaimynysčių išsaugojimą.
+
+
+### Metrinis MDS (SMACOF) – B aibė
+
+Metrinis MDS su SMACOF algoritmu pritaikytas B aibei, kurią sudaro 4000 objektų ir 6 skaitiniai požymiai.
+
+Algoritmas pradėtas nuo klasikinio MDS projekcijos ir optimizuotas siekiant sumažinti Stress rodiklį.
+
+```r
+mds_smacof_B <- smacofSym(
+  delta = atstumai_B,
+  ndim = 2,
+  init = mds_B,
+  type = "ratio",
+  itmax = 100
+)
+
+mds_smacof_B2 <- smacofSym(
+  delta = atstumai_B,
+  ndim = 2,
+  init = mds_smacof_B$conf,
+  type = "ratio",
+  itmax = 200
+)
+```
+
+#### Stress rezultatai
+
+| Optimizavimo etapas | Stress |
+|---|---:|
+| Po 100 iteracijų | 0,08139493 |
+| Po papildomų iteracijų | 0,08138936 |
+
+Papildomų iteracijų metu Stress sumažėjo labai nežymiai, todėl tolimesnei analizei pasirinkta antroji SMACOF projekcija.
+
+#### SMACOF 2D projekcija
+
+![Metrinio MDS (SMACOF) 2D projekcija – B aibė](grafikai/mds_smacof_2d_B.png)
+
+**Pav.** B aibės metrinio MDS (SMACOF) 2D projekcija.
+
+Grafike matyti, kad didžioji dalis deimantų susitelkusi centrinėje srityje, tačiau išlieka pavienių stipriai nutolusių objektų.
+
+`Ideal` ir `Premium` klasės stipriai persidengia, todėl aiškaus klasių atsiskyrimo nėra.
+
+#### Klasikinio MDS ir SMACOF palyginimas
+
+Abiem projekcijoms apskaičiuotas normalizuotas Stress pagal tą pačią formulę ir tuos pačius pradinius Euklido atstumus.
+
+```r
+c(
+  klasikinis_MDS = stress1(atstumai_B, mds_B),
+  SMACOF = stress1(atstumai_B, mds_smacof_B2$conf)
+)
+```
+
+| Metodas | Normalizuotas Stress |
+|---|---:|
+| Klasikinis MDS | 0,13920 |
+| Metrinis MDS (SMACOF) | 0,08139 |
+
+SMACOF sumažino normalizuotą Stress maždaug 41,5 %, palyginti su klasikiniu MDS.
+
+Tai rodo, kad metrinis MDS geriau atkūrė B aibės objektų tarpusavio atstumus dvimatėje erdvėje.
+
+Vis dėlto projekcijoje abi deimantų klasės išlieka persidengusios. Geresnis atstumų išsaugojimas nebūtinai reiškia geresnį klasių atskyrimą.
+
+
+
+### Metrinis MDS (SMACOF) – C aibė
+
+Metrinis MDS su SMACOF algoritmu pritaikytas C aibei, kurią sudaro 3928 objektai ir 19 skaitinių požymių. Šioje aibėje pašalinti 72 ekstremalių reikšmių turėję objektai.
+
+Kaip ir A bei B aibėse, SMACOF pradėtas nuo klasikinio MDS projekcijos, siekiant sumažinti atstumų neatitikimą dvimatėje erdvėje.
+
+```r
+mds_smacof_C <- smacofSym(
+  delta = atstumai_C,
+  ndim = 2,
+  init = mds_C,
+  type = "ratio",
+  itmax = 100
+)
+
+mds_smacof_C2 <- smacofSym(
+  delta = atstumai_C,
+  ndim = 2,
+  init = mds_smacof_C$conf,
+  type = "ratio",
+  itmax = 200
+)
+```
+
+#### Stress rezultatai
+
+| Optimizavimo etapas | Stress |
+|---|---:|
+| Po 100 iteracijų | 0,1346586 |
+| Po papildomų iteracijų | 0,1346553 |
+
+Papildomų iteracijų metu Stress sumažėjo labai nežymiai, todėl tolesnei analizei pasirinkta antroji SMACOF projekcija.
+
+#### SMACOF 2D projekcija
+
+![Metrinio MDS (SMACOF) 2D projekcija – C aibė](grafikai/mds_smacof_2d_C.png)
+
+**Pav.** C aibės metrinio MDS (SMACOF) 2D projekcija.
+
+Grafike matyti, kad objektai pasiskirstę tolygiau nei A ir B aibių projekcijose. Pagrindinė duomenų sankaupa nebėra taip stipriai suspausta, todėl lengviau įžiūrėti bendrą objektų išsidėstymą.
+
+`Ideal` ir `Premium` klasės vis dar persidengia, tačiau matoma dalinio atsiskyrimo tendencija pagal MDS2 koordinatę. `Ideal` objektai dažniau išsidėsto aukštesnėje projekcijos dalyje, o `Premium` – žemesnėje.
+
+#### Klasikinio MDS ir SMACOF palyginimas
+
+Abiem metodams apskaičiuotas normalizuotas Stress, naudojant tuos pačius pradinius Euklido atstumus ir vienodą skaičiavimo formulę.
+
+```r
+c(
+  klasikinis_MDS = stress1(atstumai_C, mds_C),
+  SMACOF = stress1(atstumai_C, mds_smacof_C2$conf)
+)
+```
+
+| Metodas | Normalizuotas Stress |
+|---|---:|
+| Klasikinis MDS | 0,15669 |
+| Metrinis MDS (SMACOF) | 0,13466 |
+
+SMACOF sumažino Stress maždaug 14,1 %, palyginti su klasikiniu MDS.
+
+Tai rodo, kad SMACOF geriau atkūrė C aibės objektų tarpusavio atstumus dvimatėje projekcijoje.
+
+### Bendras MDS rezultatų palyginimas
+
+| Aibė | Klasikinio MDS Stress | SMACOF Stress | Pagerėjimas |
+|---|---:|---:|---:|
+| A | 0,18655 | 0,10279 | 44,9 % |
+| B | 0,13920 | 0,08139 | 41,5 % |
+| C | 0,15669 | 0,13466 | 14,1 % |
+
+Visose trijose aibėse metrinis MDS su SMACOF algoritmu pasiekė mažesnį normalizuotą Stress nei klasikinis MDS.
+
+Didžiausias santykinis Stress sumažėjimas gautas A aibėje, mažiausias – C aibėje.
+
+A ir B aibių projekcijose didžioji dalis objektų išlieka susitelkusi siauroje srityje, o pavieniai nutolę objektai stipriai veikia bendrą projekcijos vaizdą.
+
+C aibėje objektai pasiskirstę tolygiau, taip pat pastebima ryškesnė dalinio klasių atsiskyrimo tendencija. Vis dėlto aiškios ribos tarp `Ideal` ir `Premium` klasių nėra.
+
+**Išvada:** SMACOF geriau nei klasikinis MDS išsaugojo atstumus visose trijose aibėse pagal pasirinktą Stress rodiklį. Tačiau skirtingų aibių Stress reikšmės nėra tiesioginis jų kokybės palyginimas, nes skiriasi pradinės duomenų erdvės.
+
+Galutiniame metodų vertinime papildomai bus nagrinėjamas lokalių kaimynysčių išsaugojimas ir kitų dimensijos mažinimo metodų rezultatai.

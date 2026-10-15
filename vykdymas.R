@@ -630,3 +630,292 @@ plot_ly(
       zaxis = list(title = "PC3 (9,46 %)")
     )
   )
+
+# =========================================================
+# 28. KLASIKINIS MDS – A AIBĖ (2D)
+# =========================================================
+
+# Apskaičiuojame atstumus tarp deimantų
+atstumai_A <- dist(X_A, method = "euclidean")
+
+# Sumažiname dimensiją iki 2
+mds_A <- cmdscale(atstumai_A, k = 2)
+
+# Patikriname rezultato dydį
+dim(mds_A)
+
+# =========================================================
+# 29. KLASIKINIO MDS 2D PROJEKCIJA – A AIBĖ
+# =========================================================
+
+# Paruošiame MDS koordinates
+mds_2d_A <- as.data.frame(mds_A)
+
+# Suteikiame stulpeliams pavadinimus
+colnames(mds_2d_A) <- c("MDS1", "MDS2")
+
+# Pridedame deimantų klases
+mds_2d_A$class <- aibe_A$class
+
+# Braižome grafiką
+library(ggplot2)
+
+ggplot(mds_2d_A, aes(x = MDS1, y = MDS2, color = class)) +
+  geom_point(alpha = 0.5, size = 1) +
+  labs(
+    title = "Klasikinio MDS 2D projekcija – A aibė",
+    x = "MDS1",
+    y = "MDS2",
+    color = "Deimanto klasė"
+  ) +
+  coord_equal() +
+  theme_minimal()
+
+#patikrinam kiek panasu i PCA
+cor(pca_A$x[, 1:2], mds_A)
+
+# =========================================================
+# 30. KLASIKINIS MDS – B AIBĖ
+# =========================================================
+
+# Apskaičiuojame atstumus
+atstumai_B <- dist(X_B, method = "euclidean")
+
+# Atliekame klasikinį MDS
+mds_B <- cmdscale(atstumai_B, k = 2)
+
+# Patikriname rezultatą
+dim(mds_B)
+
+mds_2d_B <- as.data.frame(mds_B)
+colnames(mds_2d_B) <- c("MDS1", "MDS2")
+mds_2d_B$class <- aibe_B$class
+
+ggplot(mds_2d_B, aes(x = MDS1, y = MDS2, color = class)) +
+  geom_point(alpha = 0.5, size = 1) +
+  labs(
+    title = "Klasikinio MDS 2D projekcija – B aibė",
+    x = "MDS1",
+    y = "MDS2",
+    color = "Deimanto klasė"
+  ) +
+  coord_equal() +
+  theme_minimal()
+
+cor(pca_B$x[, 1:2], mds_B)
+
+# =========================================================
+# 31. KLASIKINIS MDS – C AIBĖ
+# =========================================================
+
+# Apskaičiuojame atstumus
+atstumai_C <- dist(X_C, method = "euclidean")
+
+# Atliekame klasikinį MDS
+mds_C <- cmdscale(atstumai_C, k = 2)
+
+# Patikriname rezultatą
+dim(mds_C)
+
+mds_2d_C <- as.data.frame(mds_C)
+colnames(mds_2d_C) <- c("MDS1", "MDS2")
+mds_2d_C$class <- aibe_C$class
+
+ggplot(mds_2d_C, aes(x = MDS1, y = MDS2, color = class)) +
+  geom_point(alpha = 0.5, size = 1) +
+  labs(
+    title = "Klasikinio MDS 2D projekcija – C aibė",
+    x = "MDS1",
+    y = "MDS2",
+    color = "Deimanto klasė"
+  ) +
+  coord_equal() +
+  theme_minimal()
+
+cor(pca_C$x[, 1:2], mds_C)
+
+# =========================================================
+# 32. METRINIS MDS (SMACOF) – A AIBĖ
+# =========================================================
+
+library(smacof)
+
+# Naudojame jau apskaičiuotus A aibės atstumus
+# ir klasikinio MDS koordinates kaip pradinį išdėstymą
+
+mds_smacof_A <- smacofSym(
+  delta = atstumai_A,
+  ndim = 2,
+  init = mds_A,
+  type = "ratio",
+  itmax = 100
+)
+
+# Peržiūrime rezultatą
+mds_smacof_A$stress
+
+# Tęsiame SMACOF nuo ankstesnio rezultato
+mds_smacof_A2 <- smacofSym(
+  delta = atstumai_A,
+  ndim = 2,
+  init = mds_smacof_A$conf,
+  type = "ratio",
+  itmax = 200
+)
+
+# Palyginame Stress reikšmes
+c(
+  po_100_iteraciju = mds_smacof_A$stress,
+  po_papildomu_iteraciju = mds_smacof_A2$stress
+)
+
+# =========================================================
+# 33. SMACOF MDS 2D PROJEKCIJA – A AIBĖ
+# =========================================================
+
+# Imame galutinę SMACOF konfigūraciją
+mds_smacof_2d_A <- as.data.frame(mds_smacof_A2$conf)
+colnames(mds_smacof_2d_A) <- c("MDS1", "MDS2")
+
+# Pridedame klases
+mds_smacof_2d_A$class <- aibe_A$class
+
+# Braižome grafiką
+library(ggplot2)
+
+ggplot(mds_smacof_2d_A, aes(x = MDS1, y = MDS2, color = class)) +
+  geom_point(alpha = 0.5, size = 1) +
+  labs(
+    title = "Metrinio MDS (SMACOF) 2D projekcija – A aibė",
+    x = "MDS1",
+    y = "MDS2",
+    color = "Deimanto klasė"
+  ) +
+  coord_equal() +
+  theme_minimal()
+
+# Stress-1 apskaičiavimas pagal pradinius Euklido atstumus
+
+stress1 <- function(pradiniai_atstumai, projekcija) {
+  d <- as.vector(pradiniai_atstumai)
+  dhat <- as.vector(dist(projekcija))
+  
+  # Optimaliai pritaikome bendrą projekcijos mastelį
+  mastelis <- sum(d * dhat) / sum(dhat^2)
+  
+  sqrt(sum((d - mastelis * dhat)^2) / sum(d^2))
+}
+
+c(
+  klasikinis_MDS = stress1(atstumai_A, mds_A),
+  SMACOF = stress1(atstumai_A, mds_smacof_A2$conf)
+)
+
+# =========================================================
+# 34. METRINIS MDS (SMACOF) – B AIBĖ
+# =========================================================
+
+library(smacof)
+
+mds_smacof_B <- smacofSym(
+  delta = atstumai_B,
+  ndim = 2,
+  init = mds_B,
+  type = "ratio",
+  itmax = 100
+)
+
+mds_smacof_B$stress
+# =========================================================
+# 35. SMACOF 2D PROJEKCIJA – B AIBĖ
+# =========================================================
+
+# Paimame SMACOF koordinates
+mds_smacof_2d_B <- as.data.frame(mds_smacof_B2$conf)
+
+colnames(mds_smacof_2d_B) <- c("MDS1", "MDS2")
+
+# Pridedame deimantų klases
+mds_smacof_2d_B$class <- aibe_B$class
+
+# Braižome grafiką
+library(ggplot2)
+
+ggplot(mds_smacof_2d_B, aes(x = MDS1, y = MDS2, color = class)) +
+  geom_point(alpha = 0.5, size = 1) +
+  labs(
+    title = "Metrinio MDS (SMACOF) 2D projekcija – B aibė",
+    x = "MDS1",
+    y = "MDS2",
+    color = "Deimanto klasė"
+  ) +
+  coord_equal() +
+  theme_minimal()
+
+c(
+  klasikinis_MDS = stress1(atstumai_B, mds_B),
+  SMACOF = stress1(atstumai_B, mds_smacof_B2$conf)
+)
+
+# =========================================================
+# 36. METRINIS MDS (SMACOF) – C AIBĖ
+# =========================================================
+
+mds_smacof_C <- smacofSym(
+  delta = atstumai_C,
+  ndim = 2,
+  init = mds_C,
+  type = "ratio",
+  itmax = 100
+)
+
+mds_smacof_C$stress
+
+# =========================================================
+# 37. SMACOF C AIBĖ – PAPILDOMOS ITERACIJOS
+# =========================================================
+
+mds_smacof_C2 <- smacofSym(
+  delta = atstumai_C,
+  ndim = 2,
+  init = mds_smacof_C$conf,
+  type = "ratio",
+  itmax = 200
+)
+
+# Palyginame Stress reikšmes
+c(
+  po_100_iteraciju = mds_smacof_C$stress,
+  po_papildomu_iteraciju = mds_smacof_C2$stress
+)
+
+# =========================================================
+# 38. SMACOF 2D PROJEKCIJA – C AIBĖ
+# =========================================================
+
+# Paimame SMACOF koordinates
+mds_smacof_2d_C <- as.data.frame(mds_smacof_C2$conf)
+
+colnames(mds_smacof_2d_C) <- c("MDS1", "MDS2")
+
+# Pridedame deimantų klases
+mds_smacof_2d_C$class <- aibe_C$class
+
+# Braižome grafiką
+library(ggplot2)
+
+ggplot(mds_smacof_2d_C, aes(x = MDS1, y = MDS2, color = class)) +
+  geom_point(alpha = 0.5, size = 1) +
+  labs(
+    title = "Metrinio MDS (SMACOF) 2D projekcija – C aibė",
+    x = "MDS1",
+    y = "MDS2",
+    color = "Deimanto klasė"
+  ) +
+  coord_equal() +
+  theme_minimal()
+
+c(
+  klasikinis_MDS = stress1(atstumai_C, mds_C),
+  SMACOF = stress1(atstumai_C, mds_smacof_C2$conf)
+)
