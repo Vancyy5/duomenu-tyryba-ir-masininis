@@ -177,7 +177,7 @@ skaiciuoti_tinkleli <- function(X, rangai_X, d_X, klase, aibes_pav) {
     geom_point(alpha = 0.6, size = 0.5) +
     facet_grid(min_dist ~ n_neighbors, labeller = label_both) +
     labs(title = sprintf("UMAP parametrų tyrimas – %s aibė", aibes_pav), 
-         subtitle = "Sėkla = 42", x = "UMAP 1", y = "UMAP 2", color = "Klasė") +
+         subtitle = "Sėkla = 42", x = "UMAP 1", y = "UMAP 2", color = "Klasė") + coord_equal() +
     theme_minimal() + theme(legend.position = "bottom")
   
   ggsave(sprintf("grafikai/umap_%s_parametru_tinklelis.png", aibes_pav), 
@@ -193,7 +193,7 @@ skaiciuoti_tinkleli <- function(X, rangai_X, d_X, klase, aibes_pav) {
     geom_point(alpha = 0.6, size = 0.8) +
     facet_wrap(~n_neighbors, nrow = 1, labeller = label_both) +
     labs(title = sprintf("n_neighbors poveikis – %s aibė", aibes_pav),
-         subtitle = "min_dist = 0.1 (fiksuota)", x = "UMAP 1", y = "UMAP 2", color = "Klasė") +
+         subtitle = "min_dist = 0.1 (fiksuota)", x = "UMAP 1", y = "UMAP 2", color = "Klasė") + coord_equal() +
     theme_minimal() + theme(legend.position = "bottom")
   
   ggsave(sprintf("grafikai/umap_%s_n_poveikis.png", aibes_pav),
@@ -259,7 +259,7 @@ sekl_duomenys_B <- do.call(rbind, lapply(seq_along(seklos), function(i) {
              class = aibe_B$class, sekla = factor(seklos[i]))
 }))
 g_stab_B <- ggplot(sekl_duomenys_B, aes(UMAP1, UMAP2, color = class)) +
-  geom_point(alpha = 0.6, size = 0.5) + facet_wrap(~sekla, nrow = 1) +
+  geom_point(alpha = 0.6, size = 0.5) + facet_wrap(~sekla, nrow = 1) + coord_equal() +
   labs(title = "UMAP stabilumas – B aibė", subtitle = "spectral inicializacija",
        x = "UMAP 1", y = "UMAP 2", color = "Klasė") +
   theme_minimal() + theme(legend.position = "bottom")
@@ -358,7 +358,7 @@ sekl_duomenys_C <- do.call(rbind, lapply(seq_along(seklos), function(i) {
              class = aibe_C$class, sekla = factor(seklos[i]))
 }))
 g_stab_C <- ggplot(sekl_duomenys_C, aes(UMAP1, UMAP2, color = class)) +
-  geom_point(alpha = 0.6, size = 0.5) + facet_wrap(~sekla, nrow = 1) +
+  geom_point(alpha = 0.6, size = 0.5) + facet_wrap(~sekla, nrow = 1) + coord_equal() +
   labs(title = "UMAP stabilumas – C aibė", subtitle = "spectral inicializacija",
        x = "UMAP 1", y = "UMAP 2", color = "Klasė") +
   theme_minimal() + theme(legend.position = "bottom")
@@ -397,7 +397,7 @@ braizyti_2d <- function(Y, klase, pav, paantr, failas) {
   g <- ggplot(df, aes(UMAP1, UMAP2, color = class)) +
     geom_point(alpha = 0.6, size = 0.8) +
     coord_equal() +
-    labs(title = pav, subtitle = paantr, x = "UMAP 1", y = "UMAP 2", color = "Klasė") +
+    labs(title = pav, subtitle = paantr, x = "UMAP 1", y = "UMAP 2", color = "Klasė") +  coord_equal() +
     theme_minimal(base_size = 11) + theme(legend.position = "bottom")
   ggsave(failas, g, width = 10, height = 8, dpi = 200)
 }
@@ -408,7 +408,7 @@ braizyti_2d(rezultatai_A_list[["42"]]$Y, aibe_A$class, "UMAP 2D – A aibė (pag
             parametrai_tekstas, "grafikai/umap_2d_A_seed42.png")
 
 g_stab <- ggplot(sekl_duomenys_A, aes(UMAP1, UMAP2, color = class)) +
-  geom_point(alpha = 0.6, size = 0.5) + facet_wrap(~sekla, nrow = 1) +
+  geom_point(alpha = 0.6, size = 0.5) + facet_wrap(~sekla, nrow = 1) + coord_equal() +
   labs(title = "UMAP stabilumas – A aibė", subtitle = "spectral inicializacija", 
        x = "UMAP 1", y = "UMAP 2", color = "Klasė") +
   theme_minimal() + theme(legend.position = "bottom")

@@ -2305,3 +2305,175 @@ Papildomam A aibės 2D ir 3D palyginimui naudota sėkla 42.
 3. van der Maaten, L. (2014).
    Accelerating t-SNE using Tree-Based Algorithms.
    Journal of Machine Learning Research, 15, 3221–3245.
+   
+# UMAP 
+## Nustatymai
+
+- **Metodas:** `uwot::umap`, euklido metrika, `spectral` inicializacija, 250 epochų 
+- **Atkuriamumas:** `set.seed` ir vienas thread (`n_threads = 1`, `n_sgd_threads = 1`). Sėklos: 42, 123, 2026, 7, 99 (tos pačios kaip t-SNE dalyje).
+- **Parametrų tinklelis:** `n_neighbors` ∈ {5, 15, 50}, `min_dist` ∈ {0,01; 0,1; 0,5}, sėkla 42.
+- **Darbiniai parametrai:** `n_neighbors = 15`, `min_dist = 0,1`.
+- **Stabilumas:** 5 sėklos, tik `spectral` inicializacija.
+
+## Metrikos
+
+Lokalios metrikos skaičiuojamos su k = 5, 15, 50.
+
+- **Trustworthiness (T)** ir **Continuity (C)** – kiek netikrų kaimynų atsirado ir kiek tikrų dingo. Gera projekcija, kai |T − C| < 0,05.
+- **Kaimynų išsaugojimas** – kokia dalis k artimiausių kaimynų sutampa pradinėje erdvėje ir projekcijoje.
+- **Neighborhood Hit (NH)** – kokia k kaimynų projekcijoje dalis turi tą pačią klasę.
+- **Spearman ρ** – porinių atstumų rangų koreliacija tarp pradinės erdvės ir projekcijos.
+- **Normalizuotas Stress** – Stress-1 su optimaliu masteliu.
+- **Silhouette** – pagal klases projekcijos erdvėje.
+
+Žodiniai vertinimai (T, C, NH) pagal paskaitos skaidrių skales. Silhouette ≈ 0–0,3 reiškia persidengiančias grupes.
+
+Atskaitos taškas: klasių NH pačioje pradinėje A erdvėje yra 0,842 (k = 5), 0,825 (k = 15), 0,799 (k = 50).
+
+## Rezultatai
+
+### 1. Parametrų tinklelis (A aibė, sėkla 42, k = 15)
+
+| n_neighbors | min_dist | T | C | \|T−C\| | Kaimynų išsaug. | NH | Spearman | Stress | Silhouette |
+|---|---|---|---|---|---|---|---|---|---|
+| 5 | 0,01 | 0,985 | 0,966 | 0,019 | 0,453 | 0,802 | 0,627 | 0,739 | 0,105 |
+| 15 | 0,01 | 0,983 | 0,970 | 0,013 | 0,443 | 0,777 | 0,683 | 0,729 | 0,063 |
+| 50 | 0,01 | 0,976 | 0,977 | 0,002 | 0,388 | 0,776 | 0,689 | 0,735 | 0,100 |
+| 5 | 0,1 | 0,984 | 0,967 | 0,017 | 0,452 | 0,801 | 0,615 | 0,740 | 0,109 |
+| **15** | **0,1** | 0,980 | 0,977 | 0,003 | 0,435 | 0,777 | 0,671 | **0,707** | 0,114 |
+| 50 | 0,1 | 0,972 | 0,980 | 0,008 | 0,376 | 0,760 | 0,694 | 0,751 | 0,094 |
+| 5 | 0,5 | 0,966 | 0,974 | 0,009 | 0,375 | 0,751 | 0,656 | 0,750 | 0,084 |
+| 15 | 0,5 | 0,960 | 0,983 | 0,024 | 0,351 | 0,744 | 0,719 | 0,736 | 0,120 |
+| 50 | 0,5 | 0,955 | 0,983 | 0,028 | 0,303 | 0,745 | 0,725 | 0,764 | 0,110 |
+
+![Parametrų tinklelis](grafikai/umap_A_parametru_tinklelis.png)
+A aibė, sėkla 42. Stulpeliai – n_neighbors (5, 15, 50), eilutės – min_dist (0,01; 0,1; 0,5). Su n_neighbors = 5 projekcija suskyla į kelias mažesnes grupes, su 50 grupės susilieja į vieną masyvą. Didėjant min_dist taškai išsisklaido plačiau ir grupių ribos nyksta. Pasirinkta 15 / 0,1 (vidurinė skiltis).
+
+Kodėl pasirinkta 15 / 0,1:
+
+- mažas `n_neighbors` (5) geriausiai išlaiko artimiausius kaimynus ir NH, bet turi blogiausią Spearman (0,62);
+- didelis `n_neighbors` (50) ir didelis `min_dist` (0,5) šiek tiek pagerina Spearman (iki 0,72), bet krenta T ir kaimynų išsaugojimas;
+- 15 / 0,1 yra kompromisas: mažiausias Stress (0,707), T ir C apie 0,98, mažas |T−C| ir viena didžiausių Silhouette reikšmių.
+
+Tinklelis padarytas tik su viena sėkla, todėl skirtumai tarp gretimų parametrų yra orientacinio pobūdžio.
+
+### 2. Stabilumas (A aibė, 15 / 0,1, 5 sėklos, vidurkis ± SD)
+
+| k | Trustworthiness | Continuity | \|T−C\| | Kaimynų išsaug. | NH |
+|---|---|---|---|---|---|
+| 5 | 0,984 ± 0,0004 | 0,987 ± 0,001 | 0,003 | 0,350 ± 0,003 | 0,793 ± 0,004 |
+| 15 | 0,980 ± 0,0002 | 0,976 ± 0,002 | 0,005 | 0,436 ± 0,001 | 0,777 ± 0,002 |
+| 50 | 0,970 ± 0,0007 | 0,954 ± 0,003 | 0,016 | 0,497 ± 0,002 | 0,746 ± 0,002 |
+
+Globalūs matai: Spearman 0,665 ± 0,023, Stress 0,722 ± 0,010, Silhouette 0,106 ± 0,014.
+
+- Lokalios metrikos tarp sėklų beveik nesikeičia (SD ≤ 0,003), T ir C vertinami kaip „labai gerai" / „labai gera".
+- Globalūs matai svyruoja daugiau (Spearman SD 0,023), todėl bendras grupių išsidėstymas priklauso nuo sėklos.
+- T ir C skirtumas didėja su k (nuo 0,003 iki 0,016), bet visada < 0,05.
+- Klasių NH projekcijoje (0,79 / 0,78 / 0,75) yra mažesnis už NH pradinėje erdvėje (0,84 / 0,82 / 0,80), o Silhouette apie 0,1, todėl klasės persidengia.
+
+![A aibė, 2D](grafikai/umap_2d_A_seed42.png)
+Pagrindinė A aibės projekcija (15 / 0,1, sėkla 42). Matomos keturios didelės grupės: viršutinėje dešinėje daugiausia Ideal, apatinėse Ideal ir Premium susimaišę. Du maži atsiskyrę taškų telkiniai (kairėje ir viršuje) greičiausiai yra ekstremalūs objektai, nes C aibės projekcijoje jų nėra. Jie ištempia ašis. Klasės persidengia (NH 0,777 su k = 15, Silhouette 0,114).
+
+![Sėklų palyginimas, A](grafikai/umap_A_seklu_palyginimas.png)
+A aibė su penkiomis sėklomis (42, 123, 2026, 7, 99). Visose projekcijose matyti tos pačios grupės ir tie patys du maži atsiskyrę telkiniai, o grupių vieta ir orientacija šiek tiek skiriasi (labiausiai sėkloje 2026). Tai atitinka metrikas: lokalios beveik nesikeičia (T SD ≤ 0,0007), globalios svyruoja daugiau (Spearman SD 0,023).
+
+### 3. 2D ir 3D (A aibė, 5 sėklos, vidurkis)
+
+| Matas | k | 2D | 3D |
+|---|---|---|---|
+| Trustworthiness | 5 / 15 / 50 | 0,984 / 0,980 / 0,970 | 0,993 / 0,988 / 0,980 |
+| Continuity | 5 / 15 / 50 | 0,987 / 0,976 / 0,954 | 0,992 / 0,985 / 0,969 |
+| Kaimynų išsaug. | 5 / 15 / 50 | 0,350 / 0,436 / 0,497 | 0,457 / 0,508 / 0,541 |
+| NH | 5 / 15 / 50 | 0,793 / 0,777 / 0,746 | 0,821 / 0,799 / 0,765 |
+| Spearman | – | 0,665 ± 0,023 | 0,713 ± 0,002 |
+| Stress | – | 0,722 ± 0,010 | 0,692 ± 0,009 |
+| Silhouette | – | 0,106 ± 0,014 | 0,103 ± 0,002 |
+
+3D išsaugo struktūrą geriau pagal visus lokalius ir globalius matus, o sėklų sklaida mažesnė. Silhouette nesikeičia. 2D yra paprasčiau skaityti, todėl 2D tinka vizualizacijai, o 3D – kai svarbiau išsaugoti kaimynystes.
+
+![A aibė, 3D](grafikai/umap_3d_A_seed42.png)
+A aibės 3D projekcija (sėkla 42). Tai statinis vaizdas, todėl ašių santykis neišlaikytas, o klasės matomos kaip susimaišiusios dėmės. Atsiskyręs mažas telkinys kairėje ištempia UMAP 1 ašį. Todėl 3D vertinama pagal metrikas (T su k = 15: 0,988 prieš 0,980 2D), o ne pagal paveikslą.
+
+### 4. B aibė (be koreliuotų požymių)
+
+Pačios pradinės erdvės (be projekcijos), A ir B palyginimas:
+
+| k | Kaimynysčių sutapimas A ir B |
+|---|---|
+| 5 | 0,536 |
+| 15 | 0,588 |
+| 50 | 0,635 |
+
+Atstumų rangų koreliacija ρ(D_A, D_B) = 0,926, Stress = 0,218.
+
+B projekcijos (15 / 0,1, 5 sėklos, vidurkis):
+
+| Atskaitos erdvė | T (5 / 15 / 50) | C (5 / 15 / 50) | Kaimynų išsaug. (5 / 15 / 50) | Spearman | Stress |
+|---|---|---|---|---|---|
+| B | 0,982 / 0,978 / 0,971 | 0,989 / 0,980 / 0,960 | 0,363 / 0,428 / 0,483 | 0,344 ± 0,036 | 0,849 ± 0,013 |
+| A | 0,965 / 0,958 / 0,947 | 0,971 / 0,952 / 0,914 | 0,264 / 0,334 / 0,393 | 0,271 ± 0,040 | 0,771 ± 0,019 |
+
+NH (0,801 / 0,791 / 0,769) ir Silhouette (0,169) skaičiuojami projekcijoje, todėl nepriklauso nuo atskaitos erdvės.
+
+- Pašalinus koreliuotus požymius kaimynystės pasikeitė gana stipriai (sutampa tik 54–64 % kaimynų), nors atstumų tvarka išliko panaši (ρ = 0,93). Pagal užduoties kriterijų didelis pokytis reiškia, kad požymių atranka pakeitė duomenų struktūrą.
+- B projekcija savo paties erdvę išlaiko gerai (T ir C apie 0,98), bet A erdvės struktūrą išlaiko prasčiau (T 0,965, C 0,971 su k = 5).
+- B projekcijoje klasių NH ir Silhouette (0,169 prieš 0,106) šiek tiek geresni, bet tai yra klasių atskyrimas, o ne struktūros išsaugojimas.
+
+![B aibė, 2D](grafikai/umap_2d_B_seed42.png)
+B aibės projekcija (6 požymiai, 15 / 0,1, sėkla 42). Matomi du dideli kūnai, sujungti siaura jungtimi: viršutinis kairėje beveik vien Ideal, apatinis dešinėje daugiausia Premium. Klasės atsiskiria aiškiau nei A aibėje, tai atitinka didesnį Silhouette (0,169 prieš 0,106), bet tai yra klasių atskyrimas, o ne struktūros išsaugojimo įrodymas. Du maži atsiskyrę telkiniai išliko.
+
+### 5. C aibė (be 72 ekstremalių objektų)
+
+Pradinės erdvės (be projekcijos), A tik bendriems objektams ir C:
+
+| k | Kaimynysčių sutapimas |
+|---|---|
+| 5 | 0,990 |
+| 15 | 0,991 |
+| 50 | 0,993 |
+
+Spearman ρ = 0,99999, Stress = 0,0022. Likusių objektų pradinė geometrija beveik nepasikeitė. 
+
+Lokali kokybė (bendri objektai, vidurkis iš 5 sėklų):
+
+| Palyginimas | T (5 / 15 / 50) | C (5 / 15 / 50) | Kaimynų išsaug. (5 / 15 / 50) |
+|---|---|---|---|
+| A projekcija, A erdvė | 0,985 / 0,982 / 0,976 | 0,986 / 0,976 / 0,956 | 0,347 / 0,432 / 0,499 |
+| C projekcija, A erdvė | 0,986 / 0,983 / 0,976 | 0,987 / 0,977 / 0,959 | 0,350 / 0,432 / 0,501 |
+| C projekcija, C erdvė | 0,985 / 0,983 / 0,976 | 0,987 / 0,976 / 0,959 | 0,350 / 0,432 / 0,500 |
+
+Globalūs matai:
+
+| Palyginimas | Spearman | Stress |
+|---|---|---|
+| A erdvė ir A projekcija (bendri) | 0,663 ± 0,024 | 0,367 ± 0,017 |
+| A erdvė ir C projekcija (bendri) | 0,667 ± 0,003 | 0,354 ± 0,001 |
+| C erdvė ir C projekcija | 0,666 ± 0,003 | 0,354 ± 0,001 |
+| A projekcija ir C projekcija (bendri) | 0,935 ± 0,038 | 0,162 ± 0,053 |
+
+Projekcijų kaimynų sutapimas (A projekcija ir C projekcija, bendri objektai): 0,513 (k = 5), 0,692 (k = 15), 0,805 (k = 50), SD apie 0,04.
+
+- **Vidutinė lokali kokybė nepasikeitė.** T, C ir kaimynų išsaugojimas A ir C projekcijose beveik vienodi.
+- **Išskirtys didina sklaidą tarp sėklų.** Su C projekcija Spearman SD sumažėja nuo 0,024 iki 0,003, Stress SD nuo 0,017 iki 0,001, todėl C projekcija stabilesnė.
+- **Išskirtys didina Stress.** A aibėje visiems 4000 objektų Stress yra 0,722, o tik bendriems objektams 0,367. Spearman beveik nesikeičia (0,665 ir 0,663), nes jis rangų pagrindu, o Stress jautrus dideliems atstumams. Todėl didelę A aibės Stress dalį sukuria 72 ekstremalūs objektai.
+- **Projekcijų detalės skiriasi.** Tik 51 % artimiausių 5 kaimynų sutampa tarp A ir C projekcijų, bet bendras išdėstymas panašus (Spearman 0,935).
+
+![C aibė, 2D](grafikai/umap_2d_C_seed42.png)
+C aibės projekcija be 72 ekstremalių objektų (15 / 0,1, sėkla 42). Atsiskyrusių mažų telkinių nebėra, todėl ašys neištemptos ir grupės užima visą plotą. Grupių išsidėstymas panašus į A aibės: viršuje dešinėje daugiausia Ideal, kairėje ir apačioje daug Premium, klasės vis tiek persidengia.
+
+![Sėklų palyginimas, C](grafikai/umap_C_seklu_palyginimas.png)
+C aibė su penkiomis sėklomis. Visose projekcijose išdėstymas beveik vienodas (viršuje dešinėje Ideal grupė, vidurinė viršutinė grupė ir didelė apatinė dalis). Tai atitinka mažesnę globalių metrikų sklaidą (Spearman SD 0,003 prieš 0,024 A aibėje).
+
+## Išvados
+
+- UMAP gerai išsaugo lokalią struktūrą: T ≥ 0,95 ir C ≥ 0,95 visais k, |T−C| < 0,05, rezultatai stabilūs tarp sėklų.
+- Globali geometrija išsaugoma silpnai (Spearman apie 0,67, Stress apie 0,72), todėl atstumų tarp grupių projekcijoje interpretuoti negalima.
+- Klasės persidengia (Silhouette apie 0,1, NH žemiau nei pradinėje erdvėje), todėl UMAP čia tinka kaimynystėms ir vizualizacijai, bet ne klasių atskyrimui.
+- 3D išsaugo struktūrą geriau nei 2D, 2D patogesnis vizualizacijai.
+- Koreliuotų požymių pašalinimas pakeitė kaimynystes. Ekstremalių objektų pašalinimas lokalios kokybės nekeičia, bet sumažina sklaidą tarp sėklų ir Stress.
+
+## Apribojimai
+
+- Parametrai parinkti pagal vieną sėklą (42).
+- Naudota 250 epochų, o uwot numatytoji reikšmė yra 500.
