@@ -695,6 +695,209 @@ Tolimesniame tyrime bus skaičiuojamos Trustworthiness, Continuity, Spearman kor
 
 
 
+### PCA A aibės lokalios kokybės vertinimas
+
+Siekiant įvertinti, kaip PCA dvimatė projekcija išsaugo pradinės 19 požymių erdvės lokalią struktūrą, apskaičiuoti trys kokybės rodikliai: Trustworthiness (T), Continuity (C) ir artimiausių kaimynų išsaugojimas.
+
+Rodikliai įvertinti trims kaimynystės dydžiams: k = 5, 15 ir 50.
+
+| k | Trustworthiness | Continuity | Kaimynų išsaugojimas |
+|---|---:|---:|---:|
+| 5 | 0,837064 | 0,975592 | 0,063800 |
+| 15 | 0,838886 | 0,966115 | 0,109683 |
+| 50 | 0,841538 | 0,952137 | 0,187950 |
+
+**Rezultatų interpretacija**
+
+Trustworthiness reikšmės siekia apie 0,84, todėl dalis projekcijoje artimais tapusių objektų nebuvo artimiausi kaimynai pradinėje erdvėje.
+
+Continuity reikšmės yra aukštos (0,95–0,98), tačiau tikslus pradinių kaimynų išsaugojimas siekia tik apie 6–19 %, priklausomai nuo k.
+
+Tai rodo, kad PCA 2D projekcija nepakankamai tiksliai išlaiko artimiausias objektų kaimynystes, nors dalis platesnės kaimynysčių struktūros pagal rangus išsaugoma.
+
+Palyginti su t-SNE A aibės projekcija (perplexity = 30, sėkla = 42), PCA pasiekė mažesnį Trustworthiness ir kaimynų išsaugojimą visais trimis tirtais k dydžiais.
+
+
+### PCA A aibės globalios kokybės vertinimas
+
+Papildomai įvertinta, kaip PCA dvimatė projekcija išsaugo pradinės 19 požymių erdvės globalią struktūrą.
+
+Tam apskaičiuoti du rodikliai:
+- **Spearman koreliacija**, vertinanti pradinių ir projekcijos porinių atstumų rangų atitikimą.
+- **Normalizuotas Stress**, vertinantis pradinių ir projekcijos atstumų neatitikimą, optimaliai suderinus bendrą projekcijos mastelį.
+
+| Rodiklis | Reikšmė |
+|---|---:|
+| Spearman koreliacija | 0,8441271 |
+| Normalizuotas Stress | 0,1865530 |
+
+**Rezultatų interpretacija**
+
+Spearman koreliacija (0,8441) rodo gana stiprų pradinių ir projekcijos atstumų tvarkos išsaugojimą.
+
+Normalizuotas Stress (0,1866) rodo, kad dalis atstumų iškraipoma, tačiau bendras atstumų neatitikimas yra gerokai mažesnis nei t-SNE A aibės projekcijoje.
+
+PCA ir klasikinio MDS normalizuoto Stress reikšmės sutampa (0,1865530), nes su Euklido atstumais klasikinio MDS dvimatė projekcija atitinka PCA dvimatę projekciją iki pasukimo arba atspindėjimo.
+
+Taigi PCA gerai išsaugo bendrą atstumų struktūrą, tačiau ankstesni lokalios kokybės rezultatai parodė, kad tikslus artimiausių kaimynų išsaugojimas yra gerokai silpnesnis.
+
+
+### PCA B aibės kokybės vertinimas
+
+B aibę sudaro 4000 deimantų ir 6 skaitiniai požymiai. Siekiant įvertinti PCA 2D projekcijos kokybę, apskaičiuoti Trustworthiness, Continuity, kaimynų išsaugojimo, Spearman koreliacijos ir normalizuoto Stress rodikliai.
+
+#### Lokali kokybė
+
+| k | Trustworthiness | Continuity | Kaimynų išsaugojimas |
+|---|---:|---:|---:|
+| 5 | 0,837955 | 0,978762 | 0,081400 |
+| 15 | 0,839786 | 0,970315 | 0,132583 |
+| 50 | 0,842259 | 0,955973 | 0,215155 |
+
+Trustworthiness reikšmės siekia apie 0,84, o Continuity – 0,96–0,98. Tiksliai išsaugomų artimiausių kaimynų dalis priklausomai nuo k siekia 8–22 %.
+
+#### Globali kokybė
+
+| Rodiklis | Reikšmė |
+|---|---:|
+| Spearman koreliacija | 0,8352667 |
+| Normalizuotas Stress | 0,1391955 |
+
+Spearman koreliacija rodo gana gerą bendros atstumų tvarkos išsaugojimą, o normalizuotas Stress parodo likusį atstumų neatitikimą.
+
+
+### PCA C aibės kokybės vertinimas
+
+C aibę sudaro 3928 deimantai ir 19 skaitinių požymių. Palyginti su A aibe, pašalinti 72 ekstremalių reikšmių turėję objektai.
+
+PCA 2D projekcijos kokybė įvertinta naudojant Trustworthiness, Continuity, kaimynų išsaugojimo, Spearman koreliacijos ir normalizuoto Stress rodiklius.
+
+#### Lokali kokybė
+
+| k | Trustworthiness | Continuity | Kaimynų išsaugojimas |
+|---|---:|---:|---:|
+| 5 | 0,917749 | 0,986133 | 0,095570 |
+| 15 | 0,918641 | 0,981553 | 0,165190 |
+| 50 | 0,922042 | 0,975367 | 0,286431 |
+
+Trustworthiness reikšmės siekia apie 0,92, Continuity – apie 0,98. Tiksliai išsaugomų pradinių kaimynų dalis, priklausomai nuo k, siekia 9,56–28,64 %.
+
+#### Globali kokybė
+
+| Rodiklis | Reikšmė |
+|---|---:|
+| Spearman koreliacija | 0,9524614 |
+| Normalizuotas Stress | 0,1566906 |
+
+Spearman koreliacija rodo labai stiprų pradinių ir projekcijos atstumų tvarkos išsaugojimą. Normalizuotas Stress rodo, kad dalis pradinių atstumų projekcijoje vis dar iškraipoma.
+
+#### A, B ir C aibių palyginimas
+
+| Rodiklis | A | B | C |
+|---|---:|---:|---:|
+| Trustworthiness (k = 15) | 0,838886 | 0,839786 | 0,918641 |
+| Continuity (k = 15) | 0,966115 | 0,970315 | 0,981553 |
+| Kaimynų išsaugojimas (k = 15) | 0,109683 | 0,132583 | 0,165190 |
+| Spearman | 0,8441271 | 0,8352667 | 0,9524614 |
+| Normalizuotas Stress | 0,1865530 | 0,1391955 | 0,1566906 |
+
+C aibėje gauti aukščiausi lokalios kokybės rodikliai ir didžiausia Spearman koreliacija. Mažiausias normalizuotas Stress gautas B aibėje.
+
+Tačiau šie rezultatai apskaičiuoti skirtingų pradinių požymių erdvių atžvilgiu, todėl vien jų nepakanka nustatyti, ar požymių arba ekstremalių objektų pašalinimas pagerino originalios A aibės struktūros išsaugojimą.
+
+Tam papildomai reikia atlikti A/B palyginimą bendroje A erdvėje ir A/C palyginimą su tais pačiais 3928 objektais.
+
+
+### PCA A ir B projekcijų palyginimas bendroje A erdvėje
+
+Siekiant įvertinti koreliuotų požymių pašalinimo poveikį, PCA A ir PCA B projekcijos papildomai palygintos su ta pačia pradine A aibės erdve, kurią sudaro 4000 objektų ir 19 skaitinių požymių.
+
+Taip siekiama nustatyti, ar sumažinus požymių skaičių nuo 19 iki 6 išsaugoma originali objektų struktūra.
+
+#### Lokali kokybė
+
+| Projekcija | k | Trustworthiness | Continuity | Kaimynų išsaugojimas |
+|---|---:|---:|---:|---:|
+| PCA A | 5 | 0,837064 | 0,975592 | 0,063800 |
+| PCA A | 15 | 0,838886 | 0,966115 | 0,109683 |
+| PCA A | 50 | 0,841538 | 0,952137 | 0,187950 |
+| PCA B | 5 | 0,836560 | 0,967318 | 0,068850 |
+| PCA B | 15 | 0,838356 | 0,954816 | 0,115017 |
+| PCA B | 50 | 0,840861 | 0,936452 | 0,192265 |
+
+PCA A projekcija pasiekė šiek tiek aukštesnius Trustworthiness ir Continuity rodiklius visais trimis kaimynystės dydžiais.
+
+PCA B projekcijoje išsaugota nežymiai daugiau tų pačių artimiausių kaimynų, tačiau šis pagerėjimas nedidelis.
+
+Todėl pagal lokalios kokybės rodiklius vienareikšmiško B projekcijos pranašumo nenustatyta.
+
+#### Globali kokybė
+
+| Projekcija | Spearman | Normalizuotas Stress |
+|---|---:|---:|
+| PCA A | 0,844127 | 0,186553 |
+| PCA B | 0,807151 | 0,317733 |
+
+PCA B projekcijos Spearman koreliacija yra mažesnė, o normalizuotas Stress didesnis.
+
+Stress padidėjo apie 70,3 %, palyginti su PCA A projekcija.
+
+Tai rodo, kad sumažinus požymių skaičių B projekcija prasčiau atkuria originalios A aibės objektų tarpusavio atstumus.
+
+#### Išvada
+
+Koreliuotų požymių pašalinimas sumažino duomenų dimensiją nuo 19 iki 6, tačiau nepagerino originalios A aibės globalios struktūros išsaugojimo PCA 2D projekcijoje.
+
+Nors tikslus artimiausių kaimynų sutapimas šiek tiek padidėjo, Trustworthiness ir Continuity sumažėjo, o globalių atstumų neatitikimas išaugo.
+
+Taigi koreliuotų požymių pašalinimas nebūtinai padeda geriau išsaugoti originalią duomenų struktūrą.
+
+
+### PCA A ir C projekcijų palyginimas su bendrais objektais
+
+Siekiant įvertinti ekstremalių objektų pašalinimo poveikį PCA projekcijos kokybei, palygintos A ir C aibių projekcijos, naudojant tik 3928 bendrus objektus.
+
+Objektai sulygiuoti pagal `id`. Iš A aibės 2D projekcijos atrinkti C aibėje išlikę objektai, o C projekcija apskaičiuota iš naujo, pašalinus 72 ekstremalius objektus.
+
+Abi projekcijos įvertintos tos pačios pradinės A aibės požymių erdvės atžvilgiu.
+
+#### Lokali kokybė
+
+| Projekcija | k | Trustworthiness | Continuity | Kaimynų išsaugojimas |
+|---|---:|---:|---:|---:|
+| PCA A (bendri) | 5 | 0,832460 | 0,974886 | 0,051731 |
+| PCA A (bendri) | 15 | 0,834369 | 0,965071 | 0,097896 |
+| PCA A (bendri) | 50 | 0,837121 | 0,950654 | 0,178376 |
+| PCA C | 5 | 0,918013 | 0,986216 | 0,095876 |
+| PCA C | 15 | 0,918908 | 0,981654 | 0,165496 |
+| PCA C | 50 | 0,922321 | 0,975465 | 0,286782 |
+
+C projekcija pasiekė aukštesnius Trustworthiness, Continuity ir kaimynų išsaugojimo rodiklius visais trimis tirtais kaimynystės dydžiais.
+
+Kai k = 15, A projekcija išsaugojo 9,79 % pradinių kaimynų, o C projekcija – 16,55 %.
+
+Tai rodo, kad C projekcijoje geriau atkuriama bendrų objektų lokali struktūra.
+
+#### Globali kokybė
+
+| Projekcija | Spearman | Normalizuotas Stress |
+|---|---:|---:|
+| PCA A (bendri) | 0,830121 | 0,291000 |
+| PCA C | 0,952904 | 0,156411 |
+
+C projekcijos Spearman koreliacija yra didesnė, o normalizuotas Stress – mažesnis.
+
+Stress sumažėjo maždaug 46,3 %, todėl C projekcija geriau išsaugo bendrų objektų tarpusavio atstumus pagal pasirinktą metriką.
+
+#### Išvada
+
+Pašalinus 72 ekstremalius objektus ir iš naujo pritaikius Robust Scaling, gauta PCA C projekcija geriau išsaugo bendrų objektų lokalią ir globalią struktūrą nei A projekcija.
+
+Pagerėjimas nustatytas naudojant vienodą pradinių objektų rinkinį ir bendrą A atskaitos erdvę.
+
+Vis dėlto rezultato negalima priskirti vien ekstremalių objektų pašalinimui, nes kartu buvo perskaičiuotas požymių mastelis.
+
+
 ## MDS analizė
 
 MDS (*Multidimensional Scaling*) – daugiamačių skalių metodas, kuriuo siekiama sumažinti duomenų dimensiją išsaugant atstumus tarp objektų.
@@ -1112,6 +1315,260 @@ C aibėje objektai pasiskirstę tolygiau, taip pat pastebima ryškesnė dalinio 
 **Išvada:** SMACOF geriau nei klasikinis MDS išsaugojo atstumus visose trijose aibėse pagal pasirinktą Stress rodiklį. Tačiau skirtingų aibių Stress reikšmės nėra tiesioginis jų kokybės palyginimas, nes skiriasi pradinės duomenų erdvės.
 
 Galutiniame metodų vertinime papildomai bus nagrinėjamas lokalių kaimynysčių išsaugojimas ir kitų dimensijos mažinimo metodų rezultatai.
+
+
+
+#### Klasikinio MDS ir SMACOF kokybės palyginimas – A aibė
+
+Siekiant palyginti klasikinio MDS ir metrinio MDS (SMACOF) dvimačių projekcijų kokybę, apskaičiuoti Trustworthiness, Continuity, artimiausių kaimynų išsaugojimo, Spearman koreliacijos ir normalizuoto Stress rodikliai.
+
+Abu metodai vertinti tos pačios A aibės atžvilgiu: 4000 objektų ir 19 skaitinių požymių.
+
+##### Lokali kokybė
+
+| Metodas | k | Trustworthiness | Continuity | Kaimynų išsaugojimas |
+|---|---:|---:|---:|---:|
+| Klasikinis MDS | 5 | 0,837064 | 0,975592 | 0,063800 |
+| Klasikinis MDS | 15 | 0,838886 | 0,966115 | 0,109683 |
+| Klasikinis MDS | 50 | 0,841538 | 0,952137 | 0,187950 |
+| MDS SMACOF | 5 | 0,916502 | 0,973952 | 0,110100 |
+| MDS SMACOF | 15 | 0,915359 | 0,966368 | 0,183350 |
+| MDS SMACOF | 50 | 0,916074 | 0,956102 | 0,296250 |
+
+SMACOF pasiekė aukštesnius Trustworthiness rodiklius visais trimis tirtais kaimynystės dydžiais.
+
+Taip pat padidėjo tiksliai išsaugomų artimiausių kaimynų dalis. Kai k = 15, ji padidėjo nuo 10,97 % iki 18,34 %, o kai k = 50 – nuo 18,80 % iki 29,63 %.
+
+Continuity rodikliai išliko panašūs: kai k = 5, SMACOF reikšmė nežymiai mažesnė, tačiau kai k = 15 ir 50 – šiek tiek didesnė.
+
+##### Globali kokybė
+
+| Metodas | Spearman | Normalizuotas Stress |
+|---|---:|---:|
+| Klasikinis MDS | 0,844127 | 0,186553 |
+| MDS SMACOF | 0,939575 | 0,102790 |
+
+SMACOF Spearman koreliacija padidėjo nuo 0,8441 iki 0,9396, o normalizuotas Stress sumažėjo apie 44,9 %.
+
+Tai rodo, kad SMACOF geriau išsaugo pradinės A aibės porinių atstumų tvarką ir dydžius pagal naudotus vertinimo rodiklius.
+
+##### Išvada
+
+Metrinis MDS su SMACOF algoritmu A aibėje pasiekė geresnius globalios kokybės rezultatus nei klasikinis MDS.
+
+Taip pat pagerėjo Trustworthiness ir artimiausių kaimynų išsaugojimas, nors Continuity pokyčiai buvo nedideli.
+
+Klasikinio MDS kokybės rodikliai sutampa su PCA 2D projekcijos rodikliais, nes su Euklido atstumais abi projekcijos matematiškai atitinka viena kitą iki pasukimo ar atspindėjimo.
+
+
+#### Klasikinio MDS ir SMACOF kokybės palyginimas – B aibė
+
+B aibei, kurią sudaro 4000 deimantų ir 6 skaitiniai požymiai, papildomai įvertinta klasikinio MDS ir metrinio MDS (SMACOF) 2D projekcijų kokybė.
+
+Abu metodai vertinti pagal tuos pačius pradinius Euklido atstumus. Apskaičiuoti Trustworthiness, Continuity, kaimynų išsaugojimo, Spearman koreliacijos ir normalizuoto Stress rodikliai.
+
+##### Lokali kokybė
+
+| Metodas | k | Trustworthiness | Continuity | Kaimynų išsaugojimas |
+|---|---:|---:|---:|---:|
+| Klasikinis MDS | 5 | 0,837955 | 0,978762 | 0,081400 |
+| Klasikinis MDS | 15 | 0,839786 | 0,970315 | 0,132583 |
+| Klasikinis MDS | 50 | 0,842259 | 0,955973 | 0,215155 |
+| MDS SMACOF | 5 | 0,889156 | 0,978808 | 0,103350 |
+| MDS SMACOF | 15 | 0,889052 | 0,971560 | 0,164967 |
+| MDS SMACOF | 50 | 0,890973 | 0,960088 | 0,265070 |
+
+SMACOF pasiekė aukštesnius Trustworthiness ir kaimynų išsaugojimo rodiklius visais trimis kaimynystės dydžiais.
+
+Continuity rodikliai taip pat padidėjo, nors skirtumai buvo nedideli.
+
+Kai k = 15, išsaugomų artimiausių kaimynų dalis padidėjo nuo 13,26 % iki 16,50 %.
+
+##### Globali kokybė
+
+| Metodas | Spearman | Normalizuotas Stress |
+|---|---:|---:|
+| Klasikinis MDS | 0,835267 | 0,139196 |
+| MDS SMACOF | 0,906374 | 0,081389 |
+
+SMACOF padidino porinių atstumų Spearman koreliaciją nuo 0,8353 iki 0,9064.
+
+Normalizuotas Stress sumažėjo maždaug 41,5 %. Tai rodo, kad SMACOF projekcija tiksliau atkuria B aibės objektų tarpusavio atstumus.
+
+##### Išvada
+
+Metrinis MDS (SMACOF) B aibėje pasiekė geresnius lokalios ir globalios kokybės rodiklius nei klasikinis MDS.
+
+Didžiausi pagerėjimai matomi pagal Trustworthiness, kaimynų išsaugojimą ir globalių atstumų atitikimą.
+
+Klasikinio MDS rezultatai sutampa su PCA 2D projekcijos rodikliais, nes abu metodai su Euklido atstumais pateikia ekvivalenčias projekcijas.
+
+
+#### Klasikinio MDS ir SMACOF kokybės palyginimas – C aibė
+
+C aibėje, kurią sudaro 3928 deimantai ir 19 skaitinių požymių, įvertinta klasikinio MDS ir metrinio MDS (SMACOF) 2D projekcijų kokybė.
+
+Apskaičiuoti Trustworthiness, Continuity, kaimynų išsaugojimo, Spearman koreliacijos ir normalizuoto Stress rodikliai.
+
+##### Lokali kokybė
+
+| Metodas | k | Trustworthiness | Continuity | Kaimynų išsaugojimas |
+|---|---:|---:|---:|---:|
+| Klasikinis MDS | 5 | 0,917749 | 0,986133 | 0,095570 |
+| Klasikinis MDS | 15 | 0,918641 | 0,981553 | 0,165190 |
+| Klasikinis MDS | 50 | 0,922042 | 0,975367 | 0,286431 |
+| MDS SMACOF | 5 | 0,922501 | 0,983938 | 0,096741 |
+| MDS SMACOF | 15 | 0,924392 | 0,979115 | 0,167787 |
+| MDS SMACOF | 50 | 0,927963 | 0,973188 | 0,291772 |
+
+SMACOF pasiekė šiek tiek didesnes Trustworthiness ir kaimynų išsaugojimo reikšmes visais tirtais k dydžiais.
+
+Tačiau Continuity visais trimis atvejais nežymiai sumažėjo.
+
+Kai k = 15, išsaugomų artimiausių kaimynų dalis padidėjo nuo 16,52 % iki 16,78 %.
+
+Tai rodo, kad SMACOF poveikis C aibės lokaliai struktūrai buvo nedidelis.
+
+##### Globali kokybė
+
+| Metodas | Spearman | Normalizuotas Stress |
+|---|---:|---:|
+| Klasikinis MDS | 0,952461 | 0,156691 |
+| MDS SMACOF | 0,961254 | 0,134655 |
+
+SMACOF padidino Spearman koreliaciją nuo 0,9525 iki 0,9613, o normalizuotas Stress sumažėjo maždaug 14,1 %.
+
+Taigi metrinis MDS geriau išsaugojo C aibės porinių atstumų tvarką ir dydžius pagal naudotas globalios kokybės metrikas.
+
+##### Išvada
+
+C aibėje SMACOF pagerino globalios kokybės rodiklius, tačiau lokalios kokybės pokyčiai buvo nedideli.
+
+Trustworthiness ir tikslus kaimynų išsaugojimas šiek tiek padidėjo, o Continuity nežymiai sumažėjo.
+
+Palyginti su A ir B aibėmis, C aibėje SMACOF suteikė mažiausią santykinį Stress pagerėjimą.
+
+Tai leidžia daryti išvadą, kad SMACOF nauda priklauso nuo pradinės duomenų struktūros.
+
+
+### MDS A ir B projekcijų palyginimas bendroje A erdvėje
+
+Siekiant nustatyti koreliuotų požymių pašalinimo poveikį MDS projekcijų kokybei, palygintos keturios 2D projekcijos:
+
+- Klasikinis MDS A
+- Metrinis MDS (SMACOF) A
+- Klasikinis MDS B
+- Metrinis MDS (SMACOF) B
+
+Visos projekcijos įvertintos tos pačios pradinės A erdvės atžvilgiu, naudojant 4000 objektų ir 19 skaitinių požymių.
+
+#### Lokali kokybė
+
+| Projekcija | k | Trustworthiness | Continuity | Kaimynų išsaugojimas |
+|---|---:|---:|---:|---:|
+| Klasikinis MDS A | 5 | 0,837064 | 0,975592 | 0,063800 |
+| Klasikinis MDS A | 15 | 0,838886 | 0,966115 | 0,109683 |
+| Klasikinis MDS A | 50 | 0,841538 | 0,952137 | 0,187950 |
+| SMACOF A | 5 | 0,916502 | 0,973952 | 0,110100 |
+| SMACOF A | 15 | 0,915359 | 0,966368 | 0,183350 |
+| SMACOF A | 50 | 0,916074 | 0,956102 | 0,296250 |
+| Klasikinis MDS B | 5 | 0,836560 | 0,967318 | 0,068850 |
+| Klasikinis MDS B | 15 | 0,838356 | 0,954816 | 0,115017 |
+| Klasikinis MDS B | 50 | 0,840861 | 0,936452 | 0,192265 |
+| SMACOF B | 5 | 0,885893 | 0,971965 | 0,089950 |
+| SMACOF B | 15 | 0,885853 | 0,962099 | 0,152083 |
+| SMACOF B | 50 | 0,886940 | 0,948482 | 0,248125 |
+
+SMACOF A pasiekė aukščiausius Trustworthiness ir kaimynų išsaugojimo rodiklius visais trimis kaimynystės dydžiais.
+
+Kai k = 15, SMACOF A išsaugojo 18,34 % pradinių kaimynų, o SMACOF B – 15,21 %.
+
+Klasikinio MDS B projekcija išsaugojo nežymiai daugiau tų pačių artimiausių kaimynų nei klasikinio MDS A projekcija, tačiau jos Trustworthiness ir Continuity buvo mažesni.
+
+#### Globali kokybė
+
+| Projekcija | Spearman | Normalizuotas Stress |
+|---|---:|---:|
+| Klasikinis MDS A | 0,844127 | 0,186553 |
+| SMACOF A | 0,939575 | 0,102790 |
+| Klasikinis MDS B | 0,807151 | 0,317733 |
+| SMACOF B | 0,862803 | 0,241504 |
+
+Geriausi globalios kokybės rezultatai gauti SMACOF A projekcijoje: didžiausia Spearman koreliacija (0,939575) ir mažiausias normalizuotas Stress (0,102790).
+
+SMACOF B pasiekė geresnius rezultatus nei klasikinis MDS B, tačiau prasčiau atkūrė originalios A erdvės atstumus nei SMACOF A.
+
+#### Išvada
+
+Koreliuotų požymių pašalinimas sumažino požymių skaičių nuo 19 iki 6, tačiau nepagerino originalios A erdvės struktūros išsaugojimo taikant SMACOF.
+
+Vertinant visas keturias projekcijas pagal tą pačią A atskaitos erdvę, geriausi globalios kokybės rezultatai gauti SMACOF A projekcijoje.
+
+Tai rodo, kad koreliuotų požymių pašalinimas nebūtinai pagerina dimensijos mažinimo kokybę, ypač kai siekiama išsaugoti originalios duomenų erdvės atstumus.
+
+
+### MDS A ir C projekcijų palyginimas su bendrais objektais
+
+Siekiant įvertinti ekstremalių objektų pašalinimo poveikį MDS projekcijų kokybei, palygintos keturios 2D projekcijos:
+
+- Klasikinis MDS A
+- Metrinis MDS (SMACOF) A
+- Klasikinis MDS C
+- Metrinis MDS (SMACOF) C
+
+Kadangi A aibę sudaro 4000, o C aibę – 3928 objektai, palyginimui naudoti tik **3928 bendri objektai**, sulygiuoti pagal `id`.
+
+Iš A aibės projekcijų atrinkti C aibėje išlikę objektai. Visos keturios projekcijos vertintos pagal tuos pačius pradinius A erdvės atstumus.
+
+#### Lokali kokybė
+
+| Projekcija | k | Trustworthiness | Continuity | Kaimynų išsaugojimas |
+|---|---:|---:|---:|---:|
+| Klasikinis MDS A | 5 | 0,832460 | 0,974886 | 0,051731 |
+| Klasikinis MDS A | 15 | 0,834369 | 0,965071 | 0,097896 |
+| Klasikinis MDS A | 50 | 0,837121 | 0,950654 | 0,178376 |
+| SMACOF A | 5 | 0,915767 | 0,973271 | 0,099287 |
+| SMACOF A | 15 | 0,914695 | 0,965564 | 0,173846 |
+| SMACOF A | 50 | 0,916772 | 0,955632 | 0,294048 |
+| Klasikinis MDS C | 5 | 0,918013 | 0,986216 | 0,095876 |
+| Klasikinis MDS C | 15 | 0,918908 | 0,981654 | 0,165496 |
+| Klasikinis MDS C | 50 | 0,922321 | 0,975465 | 0,286782 |
+| SMACOF C | 5 | 0,922713 | 0,984001 | 0,096843 |
+| SMACOF C | 15 | 0,924604 | 0,979244 | 0,168092 |
+| SMACOF C | 50 | 0,928185 | 0,973292 | 0,291976 |
+
+SMACOF C pasiekė didžiausias Trustworthiness reikšmes visais trimis kaimynystės dydžiais.
+
+Tačiau didžiausios Continuity reikšmės gautos klasikinio MDS C projekcijoje.
+
+SMACOF A išsaugojo šiek tiek daugiau tų pačių artimiausių kaimynų nei SMACOF C. Kai k = 15, atitinkamos reikšmės buvo 17,38 % ir 16,81 %.
+
+Taigi C projekcijų lokalios kokybės rezultatai daugeliu atvejų geresni, tačiau ne pagal visus vertinimo rodiklius.
+
+#### Globali kokybė
+
+| Projekcija | Spearman | Normalizuotas Stress |
+|---|---:|---:|
+| Klasikinis MDS A | 0,830121 | 0,291000 |
+| SMACOF A | 0,933622 | 0,173656 |
+| Klasikinis MDS C | 0,952904 | 0,156411 |
+| SMACOF C | 0,961580 | 0,134462 |
+
+Geriausi globalios kokybės rezultatai gauti SMACOF C projekcijoje.
+
+Lyginant SMACOF A ir SMACOF C, Spearman koreliacija padidėjo nuo 0,9336 iki 0,9616, o normalizuotas Stress sumažėjo apie 22,6 %.
+
+Tai rodo, kad SMACOF C geriau atkuria bendrų objektų tarpusavio atstumus ir jų tvarką.
+
+#### Išvada
+
+Pašalinus 72 ekstremalius objektus ir perskaičiavus Robust Scaling, gautos C aibės MDS projekcijos pagal daugumą vertintų rodiklių geriau išsaugo bendrų objektų struktūrą.
+
+SMACOF C pasiekė geriausius globalios kokybės rodiklius, tačiau pagal tikslų artimiausių kaimynų išsaugojimą SMACOF A buvo šiek tiek geresnis.
+
+Todėl negalima vienareikšmiškai teigti, kad C projekcija geriausia pagal visus kriterijus.
+
+Be to, nustatytą skirtumą lėmė kartu pasikeitęs mokymo objektų rinkinys ir perskaičiuotas požymių mastelis, todėl jo negalima priskirti vien ekstremalių objektų pašalinimui.
 
 
 ## t-SNE analizė – A aibė

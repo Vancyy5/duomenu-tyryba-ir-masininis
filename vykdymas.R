@@ -919,3 +919,618 @@ c(
   klasikinis_MDS = stress1(atstumai_C, mds_C),
   SMACOF = stress1(atstumai_C, mds_smacof_C2$conf)
 )
+
+# =========================================================
+# 39. DIMENSIJOS MAZINIMO KOKYBES VERTINIMO FUNKCIJOS
+# =========================================================
+
+# Vertinsime tris kaimynysciu dydzius
+k_reiksmes <- c(5, 15, 50)
+
+
+# 1. APSKAICIUOJAME ATSTUMU RANGUS
+
+atstumu_rangai <- function(X) {
+  
+  D <- as.matrix(dist(X))
+  diag(D) <- Inf
+  
+  N <- nrow(D)
+  R <- matrix(0L, nrow = N, ncol = N)
+  
+  for (i in seq_len(N)) {
+    tvarka <- order(D[i, ], seq_len(N))
+    R[i, tvarka] <- seq_len(N)
+  }
+  
+  return(R)
+}
+
+
+# 2. TRUSTWORTHINESS IR CONTINUITY
+
+skaiciuoti_TC <- function(R_X, R_Y, k) {
+  
+  N <- nrow(R_X)
+  
+  bauda_T <- 0
+  bauda_C <- 0
+  
+  for (i in seq_len(N)) {
+    
+    kaimynai_X <- which(R_X[i, ] <= k)
+    kaimynai_Y <- which(R_Y[i, ] <= k)
+    
+    # Nauji kaimynai projekcijoje
+    netikri <- setdiff(kaimynai_Y, kaimynai_X)
+    
+    # Prarasti pradiniai kaimynai
+    prarasti <- setdiff(kaimynai_X, kaimynai_Y)
+    
+    bauda_T <- bauda_T + sum(R_X[i, netikri] - k)
+    bauda_C <- bauda_C + sum(R_Y[i, prarasti] - k)
+  }
+  
+  koeficientas <- 2 / (N * k * (2 * N - 3 * k - 1))
+  
+  data.frame(
+    k = k,
+    Trustworthiness = 1 - koeficientas * bauda_T,
+    Continuity = 1 - koeficientas * bauda_C
+  )
+}
+
+
+# 3. KAIMYNU ISSAUGOJIMAS
+
+kaimynysciu_sutapimas <- function(R_X, R_Y, k) {
+  
+  mean(vapply(
+    seq_len(nrow(R_X)),
+    function(i) {
+      
+      kaimynai_X <- which(R_X[i, ] <= k)
+      kaimynai_Y <- which(R_Y[i, ] <= k)
+      
+      length(intersect(kaimynai_X, kaimynai_Y)) / k
+    },
+    numeric(1)
+  ))
+}
+
+
+# 4. BENDRAS LOKALIOS KOKYBES VERTINIMAS
+
+vertinti_lokalia_kokybe <- function(X, Y) {
+  
+  R_X <- atstumu_rangai(X)
+  R_Y <- atstumu_rangai(Y)
+  
+  rezultatai <- do.call(
+    rbind,
+    lapply(k_reiksmes, function(k) {
+      
+      tc <- skaiciuoti_TC(R_X, R_Y, k)
+      
+      tc$kaimynu_issaugojimas <- kaimynysciu_sutapimas(
+        R_X, R_Y, k
+      )
+      
+      tc
+    })
+  )
+  
+  return(rezultatai)
+}
+
+# =========================================================
+# 40. PCA A AIBES LOKALIOS KOKYBES VERTINIMAS
+# =========================================================
+
+# PCA 2D projekcijos koordinates
+Y_pca_A <- pca_A$x[, 1:2]
+
+# Apskaiciuojame T, C ir kaimynu issaugojima
+pca_A_lokali_kokybe <- vertinti_lokalia_kokybe(
+  X_A,
+  Y_pca_A
+)
+
+# Rezultatai
+print(pca_A_lokali_kokybe, digits = 6)
+
+# =========================================================
+# 41. PCA A AIBES GLOBALIOS KOKYBES VERTINIMAS
+# =========================================================
+
+# Pradiniai atstumai
+d_X_A <- as.vector(dist(X_A))
+
+# PCA 2D projekcijos atstumai
+d_Y_pca_A <- as.vector(dist(Y_pca_A))
+
+# Spearman koreliacija
+spearman_pca_A <- cor(
+  d_X_A,
+  d_Y_pca_A,
+  method = "spearman"
+)
+
+# Normalizuotas Stress
+stress_pca_A <- stress1(
+  dist(X_A),
+  Y_pca_A
+)
+
+# Rezultatai
+c(
+  Spearman = spearman_pca_A,
+  Normalizuotas_Stress = stress_pca_A
+)
+
+# =========================================================
+# 42. PCA B AIBES KOKYBES VERTINIMAS
+# =========================================================
+
+# PCA B aibes 2D koordinates
+Y_pca_B <- pca_B$x[, 1:2]
+
+# Lokali kokybe: T, C ir kaimynu issaugojimas
+pca_B_lokali_kokybe <- vertinti_lokalia_kokybe(
+  X_B,
+  Y_pca_B
+)
+
+print(pca_B_lokali_kokybe, digits = 6)
+
+
+# Globali kokybe: Spearman ir Stress
+spearman_pca_B <- cor(
+  as.vector(dist(X_B)),
+  as.vector(dist(Y_pca_B)),
+  method = "spearman"
+)
+
+stress_pca_B <- stress1(
+  dist(X_B),
+  Y_pca_B
+)
+
+c(
+  Spearman = spearman_pca_B,
+  Normalizuotas_Stress = stress_pca_B
+)
+
+# =========================================================
+# 43. PCA C AIBES KOKYBES VERTINIMAS
+# =========================================================
+
+# PCA C aibes 2D koordinates
+Y_pca_C <- pca_C$x[, 1:2]
+
+# Lokali kokybe: T, C ir kaimynu issaugojimas
+pca_C_lokali_kokybe <- vertinti_lokalia_kokybe(
+  X_C,
+  Y_pca_C
+)
+
+print(pca_C_lokali_kokybe, digits = 6)
+
+
+# Globali kokybe: Spearman ir Stress
+spearman_pca_C <- cor(
+  as.vector(dist(X_C)),
+  as.vector(dist(Y_pca_C)),
+  method = "spearman"
+)
+
+stress_pca_C <- stress1(
+  dist(X_C),
+  Y_pca_C
+)
+
+c(
+  Spearman = spearman_pca_C,
+  Normalizuotas_Stress = stress_pca_C
+)
+
+# =========================================================
+# 44. PCA A IR B PALYGINIMAS BENDROJE A ERDVEJE
+# =========================================================
+
+# Patikriname, kad objektai vienodi ir ta pacia tvarka
+stopifnot(identical(aibe_A$id, aibe_B$id))
+
+# A projekcija vertinama A erdves atzvilgiu
+pca_A_palyginimas <- vertinti_lokalia_kokybe(
+  X_A,
+  Y_pca_A
+)
+
+# B projekcija taip pat vertinama A erdves atzvilgiu
+pca_B_palyginimas <- vertinti_lokalia_kokybe(
+  X_A,
+  Y_pca_B
+)
+
+# Sujungiame rezultatus
+pca_AB_lokali_kokybe <- rbind(
+  data.frame(projekcija = "PCA A", pca_A_palyginimas),
+  data.frame(projekcija = "PCA B", pca_B_palyginimas)
+)
+
+print(pca_AB_lokali_kokybe, digits = 6)
+
+
+# Globali kokybe bendroje A erdveje
+
+pca_AB_globali_kokybe <- data.frame(
+  projekcija = c("PCA A", "PCA B"),
+  
+  Spearman = c(
+    cor(as.vector(dist(X_A)),
+        as.vector(dist(Y_pca_A)),
+        method = "spearman"),
+    
+    cor(as.vector(dist(X_A)),
+        as.vector(dist(Y_pca_B)),
+        method = "spearman")
+  ),
+  
+  Stress = c(
+    stress1(dist(X_A), Y_pca_A),
+    stress1(dist(X_A), Y_pca_B)
+  )
+)
+
+print(pca_AB_globali_kokybe, digits = 6)
+
+# =========================================================
+# 45. PCA A IR C PALYGINIMAS SU BENDRAIS OBJEKTAIS
+# =========================================================
+
+# Randame C objektu vietas A aibeje pagal id
+indeksai_A <- match(aibe_C$id, aibe_A$id)
+
+# Patikriname, ar visi objektai rasti
+stopifnot(!anyNA(indeksai_A))
+
+# Pradine A erdve, paliekant tik C objektus
+X_A_bendri <- X_A[indeksai_A, , drop = FALSE]
+
+# PCA A projekcija, paliekant tuos pacius objektus
+Y_pca_A_bendri <- Y_pca_A[indeksai_A, , drop = FALSE]
+
+# PCA C projekcija
+Y_pca_C <- pca_C$x[, 1:2]
+
+
+# =========================================================
+# LOKALI KOKYBE BENDROJE A ERDVEJE
+# =========================================================
+
+pca_A_bendri_kokybe <- vertinti_lokalia_kokybe(
+  X_A_bendri,
+  Y_pca_A_bendri
+)
+
+pca_C_bendri_kokybe <- vertinti_lokalia_kokybe(
+  X_A_bendri,
+  Y_pca_C
+)
+
+pca_AC_lokali_kokybe <- rbind(
+  data.frame(
+    projekcija = "PCA A (bendri)",
+    pca_A_bendri_kokybe
+  ),
+  data.frame(
+    projekcija = "PCA C",
+    pca_C_bendri_kokybe
+  )
+)
+
+print(pca_AC_lokali_kokybe, digits = 6)
+
+
+# =========================================================
+# GLOBALI KOKYBE BENDROJE A ERDVEJE
+# =========================================================
+
+d_A_bendri <- as.vector(dist(X_A_bendri))
+
+pca_AC_globali_kokybe <- data.frame(
+  projekcija = c("PCA A (bendri)", "PCA C"),
+  
+  Spearman = c(
+    cor(
+      d_A_bendri,
+      as.vector(dist(Y_pca_A_bendri)),
+      method = "spearman"
+    ),
+    cor(
+      d_A_bendri,
+      as.vector(dist(Y_pca_C)),
+      method = "spearman"
+    )
+  ),
+  
+  Stress = c(
+    stress1(dist(X_A_bendri), Y_pca_A_bendri),
+    stress1(dist(X_A_bendri), Y_pca_C)
+  )
+)
+
+print(pca_AC_globali_kokybe, digits = 6)
+
+# =========================================================
+# 46. KLASIKINIO MDS IR SMACOF KOKYBES VERTINIMAS – A AIBE
+# =========================================================
+
+# Abieju MDS variantu 2D koordinates
+Y_mds_A <- mds_A
+Y_smacof_A <- mds_smacof_A2$conf
+
+
+# =========================================================
+# 1. LOKALI KOKYBE: T, C IR KAIMYNU ISSAUGOJIMAS
+# =========================================================
+
+# Klasikinis MDS
+mds_A_lokali_kokybe <- vertinti_lokalia_kokybe(
+  X_A,
+  Y_mds_A
+)
+
+# MDS su SMACOF
+smacof_A_lokali_kokybe <- vertinti_lokalia_kokybe(
+  X_A,
+  Y_smacof_A
+)
+
+# Sujungiame rezultatus
+mds_A_lokali_palyginimas <- rbind(
+  data.frame(
+    metodas = "Klasikinis MDS",
+    mds_A_lokali_kokybe
+  ),
+  data.frame(
+    metodas = "MDS SMACOF",
+    smacof_A_lokali_kokybe
+  )
+)
+
+print(mds_A_lokali_palyginimas, digits = 6)
+
+
+# =========================================================
+# 2. GLOBALI KOKYBE: SPEARMAN IR NORMALIZUOTAS STRESS
+# =========================================================
+
+mds_A_globali_palyginimas <- data.frame(
+  metodas = c("Klasikinis MDS", "MDS SMACOF"),
+  
+  Spearman = c(
+    cor(
+      as.vector(dist(X_A)),
+      as.vector(dist(Y_mds_A)),
+      method = "spearman"
+    ),
+    cor(
+      as.vector(dist(X_A)),
+      as.vector(dist(Y_smacof_A)),
+      method = "spearman"
+    )
+  ),
+  
+  Stress = c(
+    stress1(dist(X_A), Y_mds_A),
+    stress1(dist(X_A), Y_smacof_A)
+  )
+)
+
+print(mds_A_globali_palyginimas, digits = 6)
+
+# =========================================================
+# 47. KLASIKINIO MDS IR SMACOF KOKYBES VERTINIMAS – B AIBE
+# =========================================================
+
+# Abieju MDS variantu 2D koordinates
+Y_mds_B <- mds_B
+Y_smacof_B <- mds_smacof_B2$conf
+
+
+# =========================================================
+# 1. LOKALI KOKYBE
+# =========================================================
+
+# Klasikinis MDS
+mds_B_lokali_kokybe <- vertinti_lokalia_kokybe(
+  X_B,
+  Y_mds_B
+)
+
+# MDS su SMACOF
+smacof_B_lokali_kokybe <- vertinti_lokalia_kokybe(
+  X_B,
+  Y_smacof_B
+)
+
+# Sujungiame rezultatus
+mds_B_lokali_palyginimas <- rbind(
+  data.frame(
+    metodas = "Klasikinis MDS",
+    mds_B_lokali_kokybe
+  ),
+  data.frame(
+    metodas = "MDS SMACOF",
+    smacof_B_lokali_kokybe
+  )
+)
+
+print(mds_B_lokali_palyginimas, digits = 6)
+
+
+# =========================================================
+# 2. GLOBALI KOKYBE
+# =========================================================
+
+mds_B_globali_palyginimas <- data.frame(
+  metodas = c("Klasikinis MDS", "MDS SMACOF"),
+  
+  Spearman = c(
+    cor(
+      as.vector(dist(X_B)),
+      as.vector(dist(Y_mds_B)),
+      method = "spearman"
+    ),
+    cor(
+      as.vector(dist(X_B)),
+      as.vector(dist(Y_smacof_B)),
+      method = "spearman"
+    )
+  ),
+  
+  Stress = c(
+    stress1(dist(X_B), Y_mds_B),
+    stress1(dist(X_B), Y_smacof_B)
+  )
+)
+
+print(mds_B_globali_palyginimas, digits = 6)
+
+# =========================================================
+# 48. KLASIKINIO MDS IR SMACOF KOKYBES VERTINIMAS – C AIBE
+# =========================================================
+
+# Abieju MDS variantu 2D koordinates
+Y_mds_C <- mds_C
+Y_smacof_C <- mds_smacof_C2$conf
+
+
+# 1. LOKALI KOKYBE
+
+mds_C_lokali_kokybe <- vertinti_lokalia_kokybe(
+  X_C,
+  Y_mds_C
+)
+
+smacof_C_lokali_kokybe <- vertinti_lokalia_kokybe(
+  X_C,
+  Y_smacof_C
+)
+
+mds_C_lokali_palyginimas <- rbind(
+  data.frame(
+    metodas = "Klasikinis MDS",
+    mds_C_lokali_kokybe
+  ),
+  data.frame(
+    metodas = "MDS SMACOF",
+    smacof_C_lokali_kokybe
+  )
+)
+
+print(mds_C_lokali_palyginimas, digits = 6)
+
+
+# 2. GLOBALI KOKYBE
+
+mds_C_globali_palyginimas <- data.frame(
+  metodas = c("Klasikinis MDS", "MDS SMACOF"),
+  
+  Spearman = c(
+    cor(
+      as.vector(dist(X_C)),
+      as.vector(dist(Y_mds_C)),
+      method = "spearman"
+    ),
+    cor(
+      as.vector(dist(X_C)),
+      as.vector(dist(Y_smacof_C)),
+      method = "spearman"
+    )
+  ),
+  
+  Stress = c(
+    stress1(dist(X_C), Y_mds_C),
+    stress1(dist(X_C), Y_smacof_C)
+  )
+)
+
+print(mds_C_globali_palyginimas, digits = 6)
+
+# =========================================================
+# 50. MDS A IR C PALYGINIMAS SU BENDRAIS OBJEKTAIS
+# =========================================================
+
+# Randame bendrus objektus pagal ID
+indeksai_A <- match(aibe_C$id, aibe_A$id)
+
+stopifnot(
+  !anyNA(indeksai_A),
+  identical(aibe_A$id[indeksai_A], aibe_C$id)
+)
+
+# Pradine A erdve, tik 3928 bendri objektai
+X_A_bendri <- X_A[indeksai_A, , drop = FALSE]
+
+# Paruosiame keturias MDS projekcijas
+mds_AC_projekcijos <- list(
+  "Klasikinis MDS A" = mds_A[indeksai_A, , drop = FALSE],
+  "SMACOF A" = mds_smacof_A2$conf[indeksai_A, , drop = FALSE],
+  "Klasikinis MDS C" = mds_C,
+  "SMACOF C" = mds_smacof_C2$conf
+)
+
+
+# =========================================================
+# 1. LOKALI KOKYBE BENDROJE A ERDVEJE
+# =========================================================
+
+mds_AC_lokali <- do.call(
+  rbind,
+  lapply(names(mds_AC_projekcijos), function(pav) {
+    
+    Y <- mds_AC_projekcijos[[pav]]
+    
+    data.frame(
+      projekcija = pav,
+      vertinti_lokalia_kokybe(X_A_bendri, Y)
+    )
+  })
+)
+
+print(mds_AC_lokali, digits = 6)
+
+
+# =========================================================
+# 2. GLOBALI KOKYBE BENDROJE A ERDVEJE
+# =========================================================
+
+d_A_bendri <- as.vector(dist(X_A_bendri))
+
+mds_AC_globali <- do.call(
+  rbind,
+  lapply(names(mds_AC_projekcijos), function(pav) {
+    
+    Y <- mds_AC_projekcijos[[pav]]
+    
+    data.frame(
+      projekcija = pav,
+      
+      Spearman = cor(
+        d_A_bendri,
+        as.vector(dist(Y)),
+        method = "spearman"
+      ),
+      
+      Stress = stress1(
+        dist(X_A_bendri),
+        Y
+      )
+    )
+  })
+)
+
+print(mds_AC_globali, digits = 6)
