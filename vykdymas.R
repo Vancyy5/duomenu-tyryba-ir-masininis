@@ -826,6 +826,19 @@ mds_smacof_B <- smacofSym(
 )
 
 mds_smacof_B$stress
+
+# Papildomas B aibės SMACOF optimizavimas
+
+mds_smacof_B2 <- smacofSym(
+  delta = atstumai_B,
+  ndim = 2,
+  init = mds_smacof_B$conf,
+  type = "ratio",
+  itmax = 200
+)mds_smacof_B2$stress
+
+mds_smacof_B2$stress
+
 # =========================================================
 # 35. SMACOF 2D PROJEKCIJA – B AIBĖ
 # =========================================================
