@@ -444,3 +444,4 @@ braizyti_3d <- function(Y, klase, pav, failas) {
 braizyti_3d(rez_3D_A[["42"]]$Y, aibe_A$class, "UMAP 3D – A aibė", "grafikai/umap_3d_A_seed42.png")
 braizyti_3d(Y_B_3d, aibe_B$class, "UMAP 3D – B aibė", "grafikai/umap_3d_B_seed42.png")
 braizyti_3d(Y_C_3d, aibe_C$class, "UMAP 3D – C aibė", "grafikai/umap_3d_C_seed42.png")
+
