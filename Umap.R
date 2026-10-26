@@ -434,9 +434,9 @@ braizyti_3d <- function(Y, klase, pav, failas) {
   spalvos <- adjustcolor(palete[as.character(klase)], alpha.f = 0.6)
   
   png(failas, width = 1200, height = 900, res = 150)
-  s3d <- scatterplot3d(Y[, 1], Y[, 2], Y[, 3], color = spalvos, pch = 16, cex.symbols = 0.6,
+  s3d <- scatterplot3d(Y[, 1], Y[, 2], Y[, 3], color = spalvos, pch = 16, cex.symbols = 0.5,
                        main = pav, xlab = "UMAP 1", ylab = "UMAP 2", zlab = "UMAP 3", 
-                       angle = 55, scale.y = 0.7, grid = TRUE, box = TRUE)
+                       angle = 10, scale.y = 1, grid = TRUE, box = TRUE)
   legend("topright", legend = lygiai, col = palete, pch = 16, cex = 0.8, title = "Klasė")
   dev.off()
 }
@@ -444,3 +444,4 @@ braizyti_3d <- function(Y, klase, pav, failas) {
 braizyti_3d(rez_3D_A[["42"]]$Y, aibe_A$class, "UMAP 3D – A aibė", "grafikai/umap_3d_A_seed42.png")
 braizyti_3d(Y_B_3d, aibe_B$class, "UMAP 3D – B aibė", "grafikai/umap_3d_B_seed42.png")
 braizyti_3d(Y_C_3d, aibe_C$class, "UMAP 3D – C aibė", "grafikai/umap_3d_C_seed42.png")
+
