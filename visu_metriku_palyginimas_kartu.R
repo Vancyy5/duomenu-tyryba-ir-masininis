@@ -51,6 +51,21 @@ skaiciuoti_silhouette <- function(Y, klase) {
   mean(silhouette(as.integer(factor(klase)), dist(Y))[, 3])
 }
 
+knn_tikslumas <- function(R_Y, klase, k) {
+  klase <- as.character(klase)
+  N <- length(klase)
+  teisingi <- vapply(seq_len(N), function(i) {
+    kaim <- which(R_Y[i, ] <= k)
+    kaim <- kaim[order(R_Y[i, kaim])]      # nuo artimiausio
+    dazniai <- table(klase[kaim])
+    kandidatai <- names(dazniai)[dazniai == max(dazniai)]
+    # lygiųjų atveju laimi artimiausio kaimyno klasė
+    pred <- klase[kaim][klase[kaim] %in% kandidatai][1]
+    pred == klase[i]
+  }, logical(1))
+  mean(teisingi)
+}
+
 skaiciuoti_cluster_purity <- function(Y, klase) {
   n_klasiu <- length(unique(klase))
   set.seed(42)
@@ -88,6 +103,7 @@ generuoti_metoda <- function(Y, X, klase, metodo_pavadinimas) {
     tc <- skaiciuoti_TC(R_X, R_Y, k)
     ki <- kaimynysciu_sutapimas(R_X, R_Y, k)
     nh <- klases_NH(R_Y, klase, k)
+    knn <- knn_tikslumas(R_Y, klase, k)
     
     data.frame(
       Metodas = metodo_pavadinimas,
@@ -100,7 +116,8 @@ generuoti_metoda <- function(Y, X, klase, metodo_pavadinimas) {
       Stress = round(stresas, 4),
       Silhouette = round(sil, 4),
       Cluster_Purity = round(purity, 4),
-      NH = round(nh, 4)
+      NH = round(nh, 4),
+      kNN_tikslumas = round(knn, 4)
     )
   }))
 }
