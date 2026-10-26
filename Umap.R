@@ -434,9 +434,9 @@ braizyti_3d <- function(Y, klase, pav, failas) {
   spalvos <- adjustcolor(palete[as.character(klase)], alpha.f = 0.6)
   
   png(failas, width = 1200, height = 900, res = 150)
-  s3d <- scatterplot3d(Y[, 1], Y[, 2], Y[, 3], color = spalvos, pch = 16, cex.symbols = 0.6,
+  s3d <- scatterplot3d(Y[, 1], Y[, 2], Y[, 3], color = spalvos, pch = 16, cex.symbols = 0.5,
                        main = pav, xlab = "UMAP 1", ylab = "UMAP 2", zlab = "UMAP 3", 
-                       angle = 55, scale.y = 0.7, grid = TRUE, box = TRUE)
+                       angle = 10, scale.y = 1, grid = TRUE, box = TRUE)
   legend("topright", legend = lygiai, col = palete, pch = 16, cex = 0.8, title = "Klasė")
   dev.off()
 }
