@@ -122,23 +122,50 @@ generuoti_metoda <- function(Y, X, klase, metodo_pavadinimas) {
   }))
 }
 
+vidurkis_per_seklas <- function(Y_sarasas, X, klase, pavadinimas) {
+  visi <- do.call(rbind, lapply(names(Y_sarasas), function(s) {
+    message(pavadinimas, ": sėkla ", s)
+    cbind(sekla = s, generuoti_metoda(Y_sarasas[[s]], X, klase, pavadinimas))
+  }))
+  
+  rodikliai <- setdiff(names(visi), c("sekla", "Metodas", "k"))
+  
+  vid <- aggregate(visi[rodikliai], by = list(Metodas = visi$Metodas, k = visi$k), FUN = mean)
+  sd_ <- aggregate(visi[rodikliai], by = list(Metodas = visi$Metodas, k = visi$k), FUN = sd)
+  
+  list(vidurkis = vid, sd = sd_, visi = visi)
+}
 # =========================================================
 # 3. METODŲ APJUNGIMAS (A aibės pagrindu)
 # =========================================================
 
 klase <- aibe_A$class
+seklos <- c(42, 123, 2026, 7, 99)
 
+# t-SNE: 5 sėklų projekcijos (iš t-SNE_5_seklu_skaiciavimai.R)
+tsne_Y_sarasas <- readRDS("rezultatai/tsne_A_5seklos_Y.rds")
+tsne_Y_sarasas <- tsne_Y_sarasas[as.character(seklos)]
+
+# UMAP: 5 sėklų projekcijos iš rezultatai_A_list
+umap_Y_sarasas <- lapply(rezultatai_A_list[as.character(seklos)], function(r) r$Y)
+
+tsne_rez <- vidurkis_per_seklas(tsne_Y_sarasas, X_A, klase, "t-SNE")
+umap_rez <- vidurkis_per_seklas(umap_Y_sarasas, X_A, klase, "UMAP")
+
+# PCA, MDS ir SMACOF lieka kaip buvo (deterministiniai)
 galutine_suvestine <- rbind(
   generuoti_metoda(pca_A$x[, 1:2], X_A, klase, "PCA"),
   generuoti_metoda(mds_A, X_A, klase, "Klasikinis MDS"),
   generuoti_metoda(mds_smacof_A2$conf, X_A, klase, "MDS SMACOF"),
-  generuoti_metoda(tsne_A_variantai[["30"]]$Y, X_A, klase, "t-SNE"),
-  generuoti_metoda(rezultatai_A_list[["42"]]$Y, X_A, klase, "UMAP")
+  tsne_rez$vidurkis,
+  umap_rez$vidurkis
 )
 
-# Rezultatų išvedimas
-print(galutine_suvestine)
+galutine_suvestine[sapply(galutine_suvestine, is.numeric)] <-
+  round(galutine_suvestine[sapply(galutine_suvestine, is.numeric)], 4)
 
-# Išsaugome į failą
-write.csv(galutine_suvestine, "rezultatai/visi_lenteles_parametrai.csv", row.names = FALSE)
-cat("\nFailas sėkmingai išsaugotas: rezultatai/visi_lenteles_parametrai.csv\n")
+print(galutine_suvestine)
+write.csv(galutine_suvestine, "rezultatai/visi_lenteles_parametrai_5seklu_vidurkis.csv", row.names = FALSE)
+
+# Papildomai: SD tarp sėklų (pravers stabilumo lentelei)
+write.csv(rbind(tsne_rez$sd, umap_rez$sd), "rezultatai/visi_parametrai_5seklu_SD.csv", row.names = FALSE)
