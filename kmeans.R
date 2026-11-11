@@ -1197,4 +1197,582 @@ write.csv(
 cat("\n23 skyrius baigtas: sukurti 3 grafikai ir medianu lentele.\n")
 
 
+# =====================================================
+# 24. K-MEANS PARAMETRU PARINKIMAS t-SNE 2D AIBEJE
+# =====================================================
+
+# 24.1. Nuskaitome t-SNE 2D aibe
+tsne_duomenys <- read.csv("aibes/aibe_tSNE_2D.csv")
+
+# 24.2. Suderiname objektus pagal originalios aibes ID
+indeksai_tsne <- match(duomenys$id, tsne_duomenys$id)
+
+# Patikriname, ar visi objektai rasti
+stopifnot(!anyNA(indeksai_tsne))
+
+# 24.3. Pasirenkame tik t-SNE koordinates
+# ID ir class nenaudojami klasterizavimui
+X_tsne <- as.matrix(
+  tsne_duomenys[indeksai_tsne, c("TSNE1", "TSNE2")]
+)
+
+cat("t-SNE aibes matmenys:", dim(X_tsne), "\n")
+
+# 24.4. Nustatome tikrinamu k reiksmiu intervala
+k_reiksmes_tsne <- 2:10
+
+# 24.5. Apskaiciuojame Elbow WSS
+wss_tsne <- sapply(k_reiksmes_tsne, function(k) {
+  set.seed(42)
+  modelis <- kmeans(
+    X_tsne,
+    centers = k,
+    nstart = 25
+  )
+  modelis$tot.withinss
+})
+
+# 24.6. Apskaiciuojame vidutini Silhouette
+atstumai_tsne <- dist(X_tsne)
+
+sil_tsne <- sapply(k_reiksmes_tsne, function(k) {
+  set.seed(42)
+  modelis <- kmeans(
+    X_tsne,
+    centers = k,
+    nstart = 25
+  )
+  
+  sil <- cluster::silhouette(
+    modelis$cluster,
+    atstumai_tsne
+  )
+  
+  mean(sil[, "sil_width"])
+})
+
+# 24.7. Sukuriame rezultatu lentele
+rezultatai_tsne <- data.frame(
+  k = k_reiksmes_tsne,
+  WSS = wss_tsne,
+  silhouette = sil_tsne
+)
+
+print(rezultatai_tsne)
+
+cat(
+  "\nDidziausias t-SNE Silhouette, kai k =",
+  rezultatai_tsne$k[which.max(rezultatai_tsne$silhouette)],
+  "\n"
+)
+
+# 24.8. Elbow grafikas
+grafikas_elbow_tsne <- ggplot(
+  rezultatai_tsne,
+  aes(x = k, y = WSS)
+) +
+  geom_line() +
+  geom_point(size = 2) +
+  scale_x_continuous(breaks = k_reiksmes_tsne) +
+  labs(
+    title = "K-means: Elbow metodas",
+    subtitle = "t-SNE 2D aibe",
+    x = "Klasteriu skaicius (k)",
+    y = "WSS"
+  ) +
+  theme_minimal()
+
+print(grafikas_elbow_tsne)
+
+# 24.9. Silhouette grafikas
+grafikas_sil_tsne <- ggplot(
+  rezultatai_tsne,
+  aes(x = k, y = silhouette)
+) +
+  geom_line() +
+  geom_point(size = 2) +
+  scale_x_continuous(breaks = k_reiksmes_tsne) +
+  labs(
+    title = "K-means: Silhouette metodas",
+    subtitle = "t-SNE 2D aibe",
+    x = "Klasteriu skaicius (k)",
+    y = "Vidutinis silueto koeficientas"
+  ) +
+  theme_minimal()
+
+print(grafikas_sil_tsne)
+
+# 24.10. Issaugome grafikus ir rezultatus
+dir.create("grafikai", showWarnings = FALSE)
+dir.create("rezultatai", showWarnings = FALSE)
+
+ggsave(
+  "grafikai/kmeans_elbow_tsne.png",
+  plot = grafikas_elbow_tsne,
+  width = 8,
+  height = 5,
+  dpi = 300
+)
+
+ggsave(
+  "grafikai/kmeans_silhouette_tsne.png",
+  plot = grafikas_sil_tsne,
+  width = 8,
+  height = 5,
+  dpi = 300
+)
+
+write.csv(
+  rezultatai_tsne,
+  "rezultatai/kmeans_parametrai_tsne.csv",
+  row.names = FALSE
+)
+
+# =====================================================
+# 25. K-MEANS EKSPERIMENTAI t-SNE 2D AIBEJE
+# =====================================================
+
+# 25.1. Parenkame parametrų derinius
+eksperimentai_tsne <- data.frame(
+  k = c(2, 3, 4, 5, 2, 2),
+  nstart = c(25, 25, 25, 25, 10, 25),
+  seed = c(42, 42, 42, 42, 42, 123)
+)
+
+# 25.2. Funkcija vienam eksperimentui
+vykdyti_tsne_eksperimenta <- function(k, nstart, seed) {
+  
+  # Užfiksuojame atsitiktinę sėklą
+  set.seed(seed)
+  
+  # K-means atliekame t-SNE 2D erdvėje
+  modelis <- kmeans(
+    X_tsne,
+    centers = k,
+    nstart = nstart
+  )
+  
+  # Apskaičiuojame vidutinį Silhouette
+  sil <- cluster::silhouette(
+    modelis$cluster,
+    atstumai_tsne
+  )
+  
+  # Grąžiname eksperimento rezultatus
+  data.frame(
+    aibe = "t-SNE 2D",
+    dimensija = ncol(X_tsne),
+    k = k,
+    nstart = nstart,
+    seed = seed,
+    WSS = modelis$tot.withinss,
+    silhouette = mean(sil[, "sil_width"]),
+    klasteriu_dydziai = paste(modelis$size, collapse = ";")
+  )
+}
+
+# 25.3. Vykdome visus eksperimentus
+rez_eksperimentai_tsne <- do.call(
+  rbind,
+  lapply(seq_len(nrow(eksperimentai_tsne)), function(i) {
+    vykdyti_tsne_eksperimenta(
+      eksperimentai_tsne$k[i],
+      eksperimentai_tsne$nstart[i],
+      eksperimentai_tsne$seed[i]
+    )
+  })
+)
+
+# 25.4. Parodome eksperimentų lentelę
+print(rez_eksperimentai_tsne)
+
+# 25.5. Išsaugome rezultatus
+dir.create("rezultatai", showWarnings = FALSE)
+
+write.csv(
+  rez_eksperimentai_tsne,
+  "rezultatai/kmeans_eksperimentai_tsne.csv",
+  row.names = FALSE
+)
+
+# =====================================================
+# 26. K-MEANS KLASTERIZAVIMAS t-SNE 2D AIBEJE
+# =====================================================
+
+# 26.1. Pasirenkame parametrus
+K_TSNE <- 2
+NSTART_TSNE <- 25
+SEED_TSNE <- 42
+
+# 26.2. Atliekame K-means t-SNE 2D erdveje
+set.seed(SEED_TSNE)
+
+modelis_tsne <- kmeans(
+  X_tsne,
+  centers = K_TSNE,
+  nstart = NSTART_TSNE
+)
+
+# 26.3. Priskiriame kiekvienam objektui klasteri
+# t-SNE eilutes jau suderintos su originalios C aibes ID
+klasterizuoti_tsne <- tsne_duomenys[indeksai_tsne, ]
+
+klasterizuoti_tsne$klasteris <- modelis_tsne$cluster
+
+# 26.4. Patikriname klasteriu dydzius
+cat("\nt-SNE 2D klasteriu dydziai:\n")
+print(table(klasterizuoti_tsne$klasteris))
+
+# 26.5. Klasteriu sudetis pagal Ideal ir Premium
+klasiu_lentele_tsne <- table(
+  Klasteris = klasterizuoti_tsne$klasteris,
+  Klase = klasterizuoti_tsne$class
+)
+
+cat("\nt-SNE 2D klasteriu sudetis pagal klases:\n")
+print(klasiu_lentele_tsne)
+
+# 26.6. Apskaiciuojame klasiu proporcijas
+klasiu_procentai_tsne <- round(
+  prop.table(klasiu_lentele_tsne, margin = 1) * 100,
+  2
+)
+
+cat("\nt-SNE 2D klasiu proporcijos (%):\n")
+print(klasiu_procentai_tsne)
+
+# 26.7. Issaugome klasterizavimo rezultatus
+dir.create("rezultatai", showWarnings = FALSE)
+
+write.csv(
+  klasterizuoti_tsne,
+  "rezultatai/kmeans_tsne_klasteriai.csv",
+  row.names = FALSE
+)
+
+
+# =====================================================
+# 27. K-MEANS KLASTERIZAVIMO KOKYBE t-SNE 2D AIBEJE
+# =====================================================
+
+# 27.1. Apskaiciuojame Calinski-Harabasz ir Davies-Bouldin
+# Naudojame t-SNE 2D koordinates, nes jose atliktas K-means
+
+kokybe_tsne <- clusterCrit::intCriteria(
+  traj = X_tsne,
+  part = as.integer(modelis_tsne$cluster),
+  crit = c("Calinski_Harabasz", "Davies_Bouldin")
+)
+
+# 27.2. Apskaiciuojame vidutini Silhouette
+silhouette_tsne <- mean(
+  cluster::silhouette(
+    modelis_tsne$cluster,
+    atstumai_tsne
+  )[, "sil_width"]
+)
+
+# 27.3. Sudarome rezultatu lentele
+kokybes_lentele_tsne <- data.frame(
+  aibe = "t-SNE 2D",
+  dimensija = ncol(X_tsne),
+  algoritmas = "K-means",
+  k = K_TSNE,
+  nstart = NSTART_TSNE,
+  seed = SEED_TSNE,
+  silhouette = silhouette_tsne,
+  calinski_harabasz = kokybe_tsne$calinski_harabasz,
+  davies_bouldin = kokybe_tsne$davies_bouldin
+)
+
+# 27.4. Parodome rezultatus
+cat("\nt-SNE 2D klasterizavimo kokybes rodikliai:\n")
+print(kokybes_lentele_tsne)
+
+# 27.5. Issaugome rezultatus
+write.csv(
+  kokybes_lentele_tsne,
+  "rezultatai/kmeans_kokybe_tsne.csv",
+  row.names = FALSE
+)
+
+# =====================================================
+# 28. K-MEANS KLASTERIU VIZUALIZACIJA t-SNE 2D AIBEJE
+# =====================================================
+
+# 28.1. Paruosiame duomenis grafikui
+# Naudojame t-SNE 2D koordinates ir toje pacioje
+# erdveje gautus K-means klasteriu numerius.
+
+grafiko_duomenys_tsne_kmeans <- data.frame(
+  TSNE1 = X_tsne[, 1],
+  TSNE2 = X_tsne[, 2],
+  klasteris = factor(modelis_tsne$cluster)
+)
+
+# 28.2. Nubraizome K-means klasterius t-SNE erdveje
+
+grafikas_klasteriai_tsne <- ggplot(
+  grafiko_duomenys_tsne_kmeans,
+  aes(x = TSNE1, y = TSNE2, color = klasteris)
+) +
+  geom_point(alpha = 0.5, size = 1) +
+  labs(
+    title = "K-means klasteriai t-SNE 2D aibeje",
+    subtitle = "Klasterizavimas ir vizualizacija t-SNE 2D",
+    x = "t-SNE 1",
+    y = "t-SNE 2",
+    color = "Klasteris"
+  ) +
+  theme_minimal()
+
+print(grafikas_klasteriai_tsne)
+
+# 28.3. Issaugome grafika
+dir.create("grafikai", showWarnings = FALSE)
+
+ggsave(
+  "grafikai/kmeans_klasteriai_tsne.png",
+  plot = grafikas_klasteriai_tsne,
+  width = 8,
+  height = 5,
+  dpi = 300
+)
+
+# =====================================================
+# 29. t-SNE 2D K-MEANS KLASTERIU VIZUALIZACIJA PCA 2D
+# =====================================================
+
+# 29.1. Apskaiciuojame PCA 2D koordinates
+# PCA taikome originaliai normuotai C aibei (19D).
+# Klasterizavimo nekartojame - naudojame t-SNE 2D
+# erdveje gautus K-means klasteriu priskyrimus.
+
+pca_viz_tsne <- prcomp(
+  X,
+  center = TRUE,
+  scale. = FALSE
+)
+
+# 29.2. Suderiname objektus pagal ID
+# X eiluciu tvarka atitinka duomenys$id.
+
+indeksai_pca_tsne <- match(
+  duomenys$id,
+  klasterizuoti_tsne$id
+)
+
+stopifnot(!anyNA(indeksai_pca_tsne))
+
+# 29.3. Paruosiame grafiko duomenis
+grafiko_duomenys_tsne_pca <- data.frame(
+  PC1 = pca_viz_tsne$x[, 1],
+  PC2 = pca_viz_tsne$x[, 2],
+  klasteris = factor(
+    klasterizuoti_tsne$klasteris[indeksai_pca_tsne]
+  )
+)
+
+# 29.4. Nubraizome grafika
+grafikas_tsne_pca <- ggplot(
+  grafiko_duomenys_tsne_pca,
+  aes(x = PC1, y = PC2, color = klasteris)
+) +
+  geom_point(alpha = 0.5, size = 1) +
+  labs(
+    title = "K-means klasteriai t-SNE 2D aibeje",
+    subtitle = "Klasterizavimas t-SNE 2D, vizualizacija PCA 2D",
+    x = "PC1",
+    y = "PC2",
+    color = "Klasteris"
+  ) +
+  theme_minimal()
+
+print(grafikas_tsne_pca)
+
+# 29.5. Issaugome grafika
+dir.create("grafikai", showWarnings = FALSE)
+
+ggsave(
+  "grafikai/kmeans_klasteriai_tsne_pca.png",
+  plot = grafikas_tsne_pca,
+  width = 8,
+  height = 5,
+  dpi = 300
+)
+
+# =====================================================
+# 30. t-SNE 2D K-MEANS KLASTERIU POZYMIU IR KLASIU ANALIZE
+# =====================================================
+
+# 30.1. Nuskaitome originalius deimantu duomenis
+# Originalius pozymius naudojame klasteriu interpretacijai,
+# nes t-SNE koordinates neturi tiesiogines fizines reiksmes.
+
+originalus_tsne <- read.csv(
+  "aibes/C_originaliais_vienetais_interpretacijai.csv"
+)
+
+# Suderiname objektus pagal ID
+indeksai_originalus_tsne <- match(
+  originalus_tsne$id,
+  klasterizuoti_tsne$id
+)
+
+stopifnot(!anyNA(indeksai_originalus_tsne))
+
+# Priskiriame t-SNE 2D erdveje gautus K-means klasterius
+originalus_tsne$klasteris <- factor(
+  klasterizuoti_tsne$klasteris[indeksai_originalus_tsne]
+)
+
+
+# 30.2. Deimantu svorio (carat) boxplot
+
+grafikas_carat_tsne <- ggplot(
+  originalus_tsne,
+  aes(x = klasteris, y = carat, fill = klasteris)
+) +
+  geom_boxplot(
+    alpha = 0.7,
+    outlier.alpha = 0.3
+  ) +
+  labs(
+    title = "Deimantu svorio pasiskirstymas pagal klasterius",
+    subtitle = "K-means t-SNE 2D aibeje",
+    x = "Klasteris",
+    y = "Svoris (karatai)"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+print(grafikas_carat_tsne)
+
+
+# 30.3. Deimantu kainos (price) boxplot
+
+grafikas_price_tsne <- ggplot(
+  originalus_tsne,
+  aes(x = klasteris, y = price, fill = klasteris)
+) +
+  geom_boxplot(
+    alpha = 0.7,
+    outlier.alpha = 0.3
+  ) +
+  labs(
+    title = "Deimantu kainos pasiskirstymas pagal klasterius",
+    subtitle = "K-means t-SNE 2D aibeje",
+    x = "Klasteris",
+    y = "Kaina"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+print(grafikas_price_tsne)
+
+
+# 30.4. Ideal ir Premium klasiu proporcijos
+
+# Suskaiciuojame kiekvienos klases objektu skaiciu
+klasiu_duomenys_tsne <- as.data.frame(
+  table(
+    klasteris = originalus_tsne$klasteris,
+    klase = originalus_tsne$class
+  )
+)
+
+# Apskaiciuojame procentus kiekviename klasteryje
+klasiu_duomenys_tsne <- klasiu_duomenys_tsne |>
+  dplyr::group_by(klasteris) |>
+  dplyr::mutate(
+    procentai = Freq / sum(Freq) * 100
+  ) |>
+  dplyr::ungroup()
+
+
+# 30.5. Klasiu proporciju grafikas
+
+grafikas_klases_tsne <- ggplot(
+  klasiu_duomenys_tsne,
+  aes(
+    x = klasteris,
+    y = procentai,
+    fill = klase
+  )
+) +
+  geom_col(width = 0.6) +
+  geom_text(
+    aes(label = paste0(round(procentai, 1), "%")),
+    position = position_stack(vjust = 0.5),
+    size = 4
+  ) +
+  scale_y_continuous(
+    limits = c(0, 100),
+    expand = c(0, 0)
+  ) +
+  labs(
+    title = "Ideal ir Premium klasiu proporcijos",
+    subtitle = "K-means t-SNE 2D aibeje",
+    x = "Klasteris",
+    y = "Procentai (%)",
+    fill = "Klase"
+  ) +
+  theme_minimal()
+
+print(grafikas_klases_tsne)
+
+
+# 30.6. Apskaiciuojame klasteriu pozymiu medianas
+
+medianu_lentele_tsne <- aggregate(
+  originalus_tsne[, c(
+    "carat",
+    "price",
+    "volume_xyz",
+    "price_per_carat"
+  )],
+  by = list(klasteris = originalus_tsne$klasteris),
+  FUN = median
+)
+
+cat("\nt-SNE 2D klasteriu pozymiu medianos:\n")
+print(medianu_lentele_tsne)
+
+
+# 30.7. Issaugome grafikus ir medianu lentele
+
+dir.create("grafikai", showWarnings = FALSE)
+dir.create("rezultatai", showWarnings = FALSE)
+
+ggsave(
+  "grafikai/kmeans_boxplot_carat_tsne.png",
+  plot = grafikas_carat_tsne,
+  width = 7,
+  height = 5,
+  dpi = 300
+)
+
+ggsave(
+  "grafikai/kmeans_boxplot_price_tsne.png",
+  plot = grafikas_price_tsne,
+  width = 7,
+  height = 5,
+  dpi = 300
+)
+
+ggsave(
+  "grafikai/kmeans_klasiu_proporcijos_tsne.png",
+  plot = grafikas_klases_tsne,
+  width = 7,
+  height = 5,
+  dpi = 300
+)
+
+write.csv(
+  medianu_lentele_tsne,
+  "rezultatai/kmeans_tsne_klasteriu_medianos.csv",
+  row.names = FALSE
+)
+
+cat("\n30 skyrius baigtas: sukurti 3 grafikai ir medianu lentele.\n")
 

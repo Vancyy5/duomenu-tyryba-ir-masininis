@@ -279,3 +279,109 @@ Pirmajame klasteryje `Ideal` sudaro 58,39 %, o antrajame `Premium` – 63,28 %. 
 Eksperimentų rezultatai išsaugoti `rezultatai/kmeans_eksperimentai_pca.csv`, kokybės rodikliai – `rezultatai/kmeans_kokybe_pca.csv`, o klasterių požymių medianos – `rezultatai/kmeans_pca_klasteriu_medianos.csv`.
 
 Visi grafikai išsaugoti `grafikai/` aplanke.
+
+### 7. K-means klasterizavimas t-SNE 2D aibėje
+
+#### Parametrų parinkimas
+
+Pritaikėme K-means algoritmą t-SNE metodu sumažintai aibei (3928 objektai, 2 dimensijos). Klasterių skaičių iš naujo vertinome Elbow ir vidutinio silueto metodais, tikrindami `k = 2–10`.
+
+**Elbow metodas**
+
+WSS mažėjo didėjant klasterių skaičiui. Ryškiausias mažėjimas pastebėtas esant mažesnėms `k` reikšmėms, o maždaug nuo `k = 5–6` kreivė pradėjo lėtėti.
+
+![K-means Elbow metodas t-SNE 2D](grafikai/kmeans_elbow_tsne.png)
+
+**Silhouette metodas**
+
+Didžiausias vidutinis silueto koeficientas gautas, kai `k = 2` (0,4415). Esant didesniam klasterių skaičiui rodiklis svyravo, tačiau šios reikšmės neviršijo `k = 2` rezultato.
+
+![K-means Silhouette metodas t-SNE 2D](grafikai/kmeans_silhouette_tsne.png)
+
+#### Parametrų eksperimentai
+
+Atlikome 6 bandymus, keisdami `k`, `nstart` ir `seed`.
+
+| k | nstart | seed | WSS | Silhouette |
+|---|---:|---:|---:|---:|
+| 2 | 25 | 42 | 1606573,4 | 0,4415 |
+| 3 | 25 | 42 | 1130509,9 | 0,3969 |
+| 4 | 25 | 42 | 840259,4 | 0,3921 |
+| 5 | 25 | 42 | 620763,8 | 0,3990 |
+| 2 | 10 | 42 | 1606573,4 | 0,4415 |
+| 2 | 25 | 123 | 1606573,4 | 0,4415 |
+
+Keičiant `nstart` ir `seed`, kai `k = 2`, WSS, Silhouette ir klasterių dydžiai nepasikeitė.
+
+**Pasirinkome `k = 2`, `nstart = 25`, `seed = 42`**, nes gautas didžiausias vidutinis silueto koeficientas.
+
+#### Klasterizavimo rezultatai
+
+t-SNE 2D aibėje išskirti du klasteriai:
+
+| Rodiklis | 1 klasteris | 2 klasteris |
+|---|---:|---:|
+| Objektų skaičius | 1856 | 2072 |
+| Ideal (%) | 60,45 | 40,59 |
+| Premium (%) | 39,55 | 59,41 |
+
+Pirmajame klasteryje daugiau `Ideal`, o antrajame – `Premium` klasės deimantų. Tačiau abi klasės pasitaiko abiejuose klasteriuose.
+
+#### Klasterizavimo kokybė
+
+Apskaičiavome tris vidinius kokybės rodiklius ir palyginome juos su originalios C bei PCA 5D aibių rezultatais.
+
+| Rodiklis | Originali C (19D) | PCA 5D | t-SNE 2D |
+|---|---:|---:|---:|
+| Silhouette ↑ | 0,3732 | 0,3852 | **0,4415** |
+| Calinski–Harabasz ↑ | 2725,921 | 2877,729 | **4426,787** |
+| Davies–Bouldin ↓ | 1,1218 | 1,0877 | **0,8825** |
+
+Pagal visus tris rodiklius t-SNE 2D erdvėje gauti palankiausi rezultatai. Tačiau t-SNE pakeičia atstumus tarp objektų, todėl šie rodikliai neįrodo, kad originali duomenų struktūra išsaugota geriau.
+
+#### Klasterių vizualizacija
+
+t-SNE 2D aibėje gautus klasterius pavaizdavome tiek t-SNE 2D, tiek PCA 2D projekcijose. Abiem atvejais naudoti tie patys t-SNE erdvėje gauti K-means klasteriai, keičiamos tik jų atvaizdavimo koordinatės.
+
+**t-SNE 2D vizualizacija**
+
+![K-means klasteriai t-SNE 2D erdvėje](grafikai/kmeans_klasteriai_tsne.png)
+
+**PCA 2D vizualizacija**
+
+![t-SNE klasteriai PCA 2D projekcijoje](grafikai/kmeans_klasteriai_tsne_pca.png)
+
+t-SNE projekcijoje klasteriai gana aiškiai atsiskiria, tačiau PCA projekcijoje jų riba labiau persidengia. Palyginti su originalios 19D ir PCA 5D aibių rezultatais, t-SNE erdvėje dalis objektų buvo priskirta kitaip.
+
+#### Klasterių požymių palyginimas
+
+Klasterius interpretavome pagal originalius deimantų požymius.
+
+| Požymis (mediana) | 1 klasteris | 2 klasteris |
+|---|---:|---:|
+| Karatai | 0,37 | 1,06 |
+| Kaina | 940 | 5410,5 |
+| Tūrio rodiklis | 60,61 | 174,43 |
+| Kaina už karatą | 2586,58 | 4871,71 |
+
+**Deimantų svorio pasiskirstymas**
+
+![Karatų pasiskirstymas t-SNE 2D klasteriuose](grafikai/kmeans_boxplot_carat_tsne.png)
+
+**Deimantų kainos pasiskirstymas**
+
+![Kainų pasiskirstymas t-SNE 2D klasteriuose](grafikai/kmeans_boxplot_price_tsne.png)
+
+Pirmąjį klasterį daugiausia sudaro mažesni ir pigesni deimantai, o antrąjį – didesni ir brangesni. Antrajame klasteryje matoma didesnė svorio ir kainos sklaida.
+
+#### Klasterių sudėtis pagal klases
+
+![Ideal ir Premium klasių proporcijos t-SNE 2D klasteriuose](grafikai/kmeans_klasiu_proporcijos_tsne.png)
+
+Pirmajame klasteryje `Ideal` sudaro 60,45 %, o antrajame `Premium` – 59,41 %. Taigi klasteriai nėra tapatūs pradinėms klasėms ir labiau atspindi deimantų dydžio bei kainos skirtumus.
+
+#### Rezultatų išsaugojimas
+
+Eksperimentų rezultatai išsaugoti `rezultatai/kmeans_eksperimentai_tsne.csv`, kokybės rodikliai – `rezultatai/kmeans_kokybe_tsne.csv`, o klasterių požymių medianos – `rezultatai/kmeans_tsne_klasteriu_medianos.csv`.
+
+Visi grafikai išsaugoti `grafikai/` aplanke.
