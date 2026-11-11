@@ -35,12 +35,40 @@ Duomenų būklė po pirmojo darbo:
 
 ---
 
-## Penkios duomenų aibės
+## 3 darbas. Dimensijos mažinimas klasterizavime
 
-1. aibe_orig  - originali, be dimensijos mažinimo
-2. aibe_pca5  - PCA, 5 komponentės          
-3. aibe_pca2  - PCA, 2 komponentės          
-4. aibe_tsne5 - t-SNE, 5 dimensijos         
-5. aibe_tsne2 - t-SNE, 2 dimensijos         
+### 1. Duomenų paruošimas
 
-aibe_orig atitinka aibe C antrame darbe, t. y. be iššimčių ir turi likusius 3928 objektus.
+Naudojome antrojo darbo **C duomenų aibę**, sudarytą iš `A02.csv`. Duomenų paruošimas išlaikytas toks pat kaip antrajame darbe, kad rezultatai būtų palyginami.
+
+- Sutvarkytos neteisingos ir trūkstamos reikšmės.
+- Apskaičiuoti išvestiniai požymiai.
+- Pašalintos ekstremalios išskirtys pagal **3 × IQR** taisyklę.
+- Atliktas **robust scaling** normavimas, kad skirtingų mastelių požymiai būtų palyginami.
+
+**Gauta C aibė: 3928 objektai ir 19 požymių.**
+
+### 2. Dimensijos mažinimas
+
+Iš originalios C aibės sudarėme dar dvi aibes, kad galėtume palyginti klasterizavimo rezultatus skirtingų dimensijų erdvėse.
+
+**PCA (5D)** – globalus dimensijos mažinimo metodas. Komponenčių skaičių parinkome pagal **95 % paaiškintos dispersijos kriterijų**. Pakako 5 komponenčių, todėl sumažinome dimensiją nuo 19D iki 5D, išsaugodami didžiąją dalį duomenų dispersijos.
+
+**t-SNE (2D)** – lokalus dimensijos mažinimo metodas, pasirinktas remiantis antrojo darbo rezultatais. Duomenis sumažinome iki 2D, siekdami išsaugoti artimų objektų kaimynystes.
+
+Naudoti t-SNE parametrai:
+- `perplexity = 30`
+- `max_iter = 1000`
+- `seed = 42`
+
+### 3. Gautos duomenų aibės
+
+| Aibė | Objektų skaičius | Dimensija |
+|---|---:|---:|
+| Originali C | 3928 | 19D |
+| PCA | 3928 | 5D |
+| t-SNE | 3928 | 2D |
+
+Visose trijose aibėse išsaugoti tie patys objektai, jų `id` ir `class`, kad būtų galima tiesiogiai palyginti klasterizavimo rezultatus. `class` nebuvo naudojamas dimensijos mažinimui.
+
+Duomenų aibės išsaugotos `aibes/` aplanke, o jų paruošimo kodas pateiktas `vykdymas.R` faile.
