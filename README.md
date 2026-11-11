@@ -385,3 +385,151 @@ Pirmajame klasteryje `Ideal` sudaro 60,45 %, o antrajame `Premium` – 59,41 %. 
 Eksperimentų rezultatai išsaugoti `rezultatai/kmeans_eksperimentai_tsne.csv`, kokybės rodikliai – `rezultatai/kmeans_kokybe_tsne.csv`, o klasterių požymių medianos – `rezultatai/kmeans_tsne_klasteriu_medianos.csv`.
 
 Visi grafikai išsaugoti `grafikai/` aplanke.
+
+### 8. K-means klasterizavimo rezultatų palyginimas naudojant išorinius rodiklius
+
+#### 8.1. Vertinimo tikslas
+
+Siekiant įvertinti, kaip dimensijos mažinimas paveikė K-means klasterizavimo rezultatus, palyginome objektų priskyrimus klasteriams trijose duomenų erdvėse:
+
+- **Originalioje C aibėje (19D)** – atskaitos rezultatas.
+- **PCA sumažintoje aibėje (5D)** – globalus dimensijos mažinimo metodas.
+- **t-SNE sumažintoje aibėje (2D)** – lokalus dimensijos mažinimo metodas.
+
+Visose aibėse buvo tie patys 3928 objektai, o K-means algoritmui parinkti vienodi pagrindiniai parametrai: `k = 2`, `nstart = 25` ir `seed = 42`.
+
+Objektai prieš palyginimą suderinti pagal jų identifikatorius (`id`), kad būtų lyginami tų pačių deimantų priskyrimai klasteriams.
+
+#### 8.2. Naudoti išoriniai vertinimo rodikliai
+
+Klasterizavimo rezultatų panašumui įvertinti apskaičiavome tris išorinius rodiklius.
+
+**Adjusted Rand Index (ARI)** – vertina dviejų suskirstymų panašumą pagal objektų porų priskyrimus, atsižvelgdamas į galimą atsitiktinį sutapimą. Reikšmė `1` reiškia visišką suskirstymų sutapimą, o reikšmė apie `0` – panašumą, artimą atsitiktiniam.
+
+**Normalized Mutual Information (NMI)** – vertina, kiek bendros informacijos turi du klasterizavimo rezultatai. Reikšmės kinta nuo `0` iki `1`, kur `1` reiškia visišką informacinį suskirstymų atitikimą. Naudojome normalizavimą pagal aritmetinį abiejų suskirstymų entropijų vidurkį.
+
+**Jaccard indeksas** – vertina objektų porų, priskirtų tam pačiam klasteriui abiejuose suskirstymuose, sutapimą. Reikšmė `1` reiškia visišką porų sutapimą.
+
+Šie rodikliai nepriklauso nuo klasterių numerių, todėl leidžia korektiškai palyginti suskirstymus net tada, kai klasterių numeracija skiriasi.
+
+#### 8.3. Išorinių rodiklių rezultatai
+
+| Palyginimas | ARI ↑ | NMI ↑ | Jaccard ↑ |
+|---|---:|---:|---:|
+| **Originali 19D ir PCA 5D** | **0,9959** | **0,9891** | **0,9961** |
+| Originali 19D ir t-SNE 2D | 0,5218 | 0,5332 | 0,6220 |
+| PCA 5D ir t-SNE 2D | 0,5204 | 0,5347 | 0,6212 |
+
+Gauti rezultatai rodo, kad PCA 5D klasterizavimo rezultatai beveik visiškai sutampa su originalios 19D aibės rezultatais. Tuo tarpu t-SNE 2D erdvėje gautas suskirstymas pastebimai labiau skiriasi.
+
+#### 8.4. Originalios 19D ir PCA 5D aibių palyginimas
+
+Palyginus originalios ir PCA sumažintos aibės objektų priskyrimus, gauta tokia sutapimo lentelė:
+
+| Originalios 19D aibės klasteris | PCA 5D: 1 klasteris | PCA 5D: 2 klasteris |
+|---|---:|---:|
+| 1 klasteris | 2399 | 0 |
+| 2 klasteris | 4 | 1525 |
+
+Iš 3928 objektų **3924 išliko tuose pačiuose klasteriuose**, o tik 4 objektai pakeitė klasterį.
+
+Tai sudaro:
+
+- **99,90 %** sutampančių objektų priskyrimų.
+- **0,10 %** pasikeitusių priskyrimų.
+
+Šį rezultatą patvirtina ir išoriniai rodikliai:
+
+- ARI = 0,9959
+- NMI = 0,9891
+- Jaccard = 0,9961
+
+Visos trys reikšmės labai artimos `1`, todėl galima teigti, kad **PCA sumažinimas nuo 19 iki 5 dimensijų beveik visiškai išsaugojo originalų K-means objektų suskirstymą**.
+
+Tai ypač svarbu, nes PCA 5D aibė buvo sudaryta siekiant sumažinti požymių skaičių ir kartu išsaugoti ne mažiau kaip 95 % pradinės dispersijos.
+
+#### 8.5. Originalios 19D ir t-SNE 2D aibių palyginimas
+
+Palyginus originalios aibės ir t-SNE 2D klasterizavimo rezultatus, gauta tokia sutapimo lentelė:
+
+| Originalios 19D aibės klasteris | t-SNE 2D: 1 klasteris | t-SNE 2D: 2 klasteris |
+|---|---:|---:|
+| 1 klasteris | 1855 | 544 |
+| 2 klasteris | 1 | 1528 |
+
+Matome, kad:
+
+- 1855 pirmojo klasterio objektai išliko pirmajame klasteryje.
+- 544 pirmojo klasterio objektai t-SNE erdvėje pateko į antrąjį klasterį.
+- 1528 antrojo klasterio objektai išliko antrajame.
+- 1 antrojo klasterio objektas pateko į pirmąjį.
+
+Iš viso **545 objektai iš 3928 pakeitė klasterį**, o 3383 objektų priskyrimai sutapo.
+
+Tai sudaro:
+
+- **86,13 %** sutampančių objektų priskyrimų.
+- **13,87 %** pasikeitusių priskyrimų.
+
+Išoriniai rodikliai:
+
+- ARI = 0,5218
+- NMI = 0,5332
+- Jaccard = 0,6220
+
+Šios reikšmės gerokai mažesnės nei PCA atveju, todėl galima teigti, kad **t-SNE 2D dimensijos mažinimas pastebimai pakeitė pradinį K-means suskirstymą**.
+
+Tai galima paaiškinti tuo, kad t-SNE pirmiausia siekia išsaugoti lokalias objektų kaimynystes, o ne visus globalius atstumus tarp objektų. Todėl dvimatėje erdvėje objektų tarpusavio išsidėstymas gali pasikeisti ir turėti įtakos K-means rezultatams.
+
+#### 8.6. PCA 5D ir t-SNE 2D palyginimas
+
+Palyginus abu dimensijos mažinimo metodus, gauti rodikliai:
+
+| Rodiklis | Reikšmė |
+|---|---:|
+| ARI | 0,5204 |
+| NMI | 0,5347 |
+| Jaccard | 0,6212 |
+
+Rezultatai labai panašūs į originalios 19D ir t-SNE 2D aibių palyginimą.
+
+Tai rodo, kad PCA 5D suskirstymas išlieka artimas originaliam, o t-SNE 2D suformuoja labiau besiskiriantį objektų grupavimą.
+
+#### 8.7. Vidinių ir išorinių rodiklių palyginimas
+
+Norėdami įvertinti ne tik klasterių sutapimą, bet ir jų kokybę skirtingose erdvėse, palyginome anksčiau apskaičiuotus vidinius rodiklius.
+
+| Rodiklis | Originali C (19D) | PCA 5D | t-SNE 2D |
+|---|---:|---:|---:|
+| Silhouette ↑ | 0,3732 | 0,3852 | **0,4415** |
+| Calinski–Harabasz ↑ | 2725,921 | 2877,729 | **4426,787** |
+| Davies–Bouldin ↓ | 1,1218 | 1,0877 | **0,8825** |
+| ARI su originalia 19D ↑ | 1,0000 | **0,9959** | 0,5218 |
+| NMI su originalia 19D ↑ | 1,0000 | **0,9891** | 0,5332 |
+| Jaccard su originalia 19D ↑ | 1,0000 | **0,9961** | 0,6220 |
+
+Pagal vidinius kokybės rodiklius geriausios reikšmės gautos t-SNE 2D erdvėje. Šioje erdvėje klasteriai atrodo geriau atskirti ir kompaktiškesni pagal joje apskaičiuotus atstumus.
+
+Tačiau išoriniai rodikliai parodo kitokią situaciją: **PCA 5D beveik visiškai išsaugo originalius klasterius, o t-SNE 2D juos pakeičia labiau**.
+
+Svarbu atsižvelgti į tai, kad vidiniai rodikliai buvo apskaičiuoti skirtingų dimensijų erdvėse. Ypač t-SNE atveju atstumų struktūra yra pakeista, todėl didesnės Silhouette ar Calinski–Harabasz reikšmės savaime neįrodo, kad geriau išsaugota originalių duomenų struktūra.
+
+#### 8.8. Išvados
+
+1. **PCA 5D beveik visiškai išsaugojo originalų K-means suskirstymą.** Tik 4 iš 3928 objektų pakeitė klasterį, o ARI siekė 0,9959.
+
+2. **t-SNE 2D klasterizavimo rezultatai skyrėsi labiau.** Palyginti su originalia 19D aibe, pasikeitė 545 objektų priskyrimai, o ARI sumažėjo iki 0,5218.
+
+3. **t-SNE 2D pasižymėjo palankiausiais vidiniais kokybės rodikliais**, tačiau tai nereiškia, kad originalus suskirstymas buvo išsaugotas geriausiai.
+
+4. **PCA 5D šiuo atveju yra tinkamesnis metodas, jei siekiama sumažinti dimensiją ir išlaikyti originalią klasterių struktūrą.** Jis sumažino požymių skaičių nuo 19 iki 5 ir beveik nepakeitė objektų priskyrimų klasteriams.
+
+5. **Vidiniai ir išoriniai rodikliai vertina skirtingus klasterizavimo aspektus.** Todėl norint įvertinti dimensijos mažinimo poveikį svarbu nagrinėti tiek klasterių kokybę sumažintoje erdvėje, tiek jų sutapimą su originalios aibės rezultatais.
+
+#### 8.9. Rezultatų failai
+
+Išorinių rodiklių rezultatai išsaugoti faile:
+
+`rezultatai/kmeans_isoriniai_rodikliai.csv`
+
+Skaičiavimai atlikti `kmeans.R` failo 31 skyriuje.

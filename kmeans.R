@@ -1776,3 +1776,198 @@ write.csv(
 
 cat("\n30 skyrius baigtas: sukurti 3 grafikai ir medianu lentele.\n")
 
+
+# =====================================================
+# 31. K-MEANS ISORINIAI RODIKLIAI: ARI, NMI IR JACCARD
+# =====================================================
+
+# 31.1. Suderiname visu triju aibiu objektus pagal ID
+# Taip uztikriname, kad lyginami tie patys deimantai.
+
+id_bendri <- duomenys$id
+
+indeksai_orig <- match(
+  id_bendri,
+  klasterizuoti_duomenys$id
+)
+
+indeksai_pca <- match(
+  id_bendri,
+  klasterizuoti_pca$id
+)
+
+indeksai_tsne <- match(
+  id_bendri,
+  klasterizuoti_tsne$id
+)
+
+# Patikriname, ar visi ID rasti
+stopifnot(
+  !anyNA(indeksai_orig),
+  !anyNA(indeksai_pca),
+  !anyNA(indeksai_tsne),
+  !anyDuplicated(id_bendri)
+)
+
+# 31.2. Paimame kiekvienos aibes klasteriu numerius
+# Visu vektoriu objektu tvarka dabar vienoda.
+
+kl_orig <- klasterizuoti_duomenys$klasteris[indeksai_orig]
+kl_pca <- klasterizuoti_pca$klasteris[indeksai_pca]
+kl_tsne <- klasterizuoti_tsne$klasteris[indeksai_tsne]
+
+
+# 31.3. Funkcija ARI, NMI ir Jaccard rodikliams
+# Rodikliai skaiciuojami pagal dvieju suskirstymu
+# kontingencijos lentele.
+# Klasteriu numeriu sutapimas nera butinas.
+
+skaiciuoti_isorinius <- function(grupe1, grupe2) {
+  
+  # Sukuriame dvieju suskirstymu kontingencijos lentele
+  T <- table(grupe1, grupe2)
+  
+  n <- sum(T)
+  
+  # Pagalbine funkcija objektu poru skaiciui
+  poros <- function(x) {
+    x * (x - 1) / 2
+  }
+  
+  # Bendros poros, priklausancios tam paciam
+  # klasteriui abiejuose suskirstymuose
+  TP <- sum(poros(T))
+  
+  # Poros tame paciame pirmojo suskirstymo klasteryje
+  A <- sum(poros(rowSums(T)))
+  
+  # Poros tame paciame antrojo suskirstymo klasteryje
+  B <- sum(poros(colSums(T)))
+  
+  # Skirtingi priskyrimai
+  FP <- A - TP
+  FN <- B - TP
+  
+  # 31.3.1. Jaccard indeksas (objektu poroms)
+  jaccard <- if ((TP + FP + FN) == 0) {
+    1
+  } else {
+    TP / (TP + FP + FN)
+  }
+  
+  # 31.3.2. Adjusted Rand Index (ARI)
+  visos_poros <- poros(n)
+  tiketinas <- A * B / visos_poros
+  maksimumas <- (A + B) / 2
+  
+  ari <- if (abs(maksimumas - tiketinas) < 1e-12) {
+    if (A == B && TP == A) 1 else 0
+  } else {
+    (TP - tiketinas) / (maksimumas - tiketinas)
+  }
+  
+  # 31.3.3. Normalized Mutual Information (NMI)
+  # Naudojame aritmetini entropiju vidurki.
+  
+  P <- T / n
+  p1 <- rowSums(P)
+  p2 <- colSums(P)
+  
+  entropija <- function(p) {
+    p <- p[p > 0]
+    -sum(p * log(p))
+  }
+  
+  H1 <- entropija(p1)
+  H2 <- entropija(p2)
+  
+  # Bendros informacijos (MI) skaiciavimas
+  MI <- 0
+  
+  for (i in seq_len(nrow(P))) {
+    for (j in seq_len(ncol(P))) {
+      if (P[i, j] > 0) {
+        MI <- MI + P[i, j] *
+          log(P[i, j] / (p1[i] * p2[j]))
+      }
+    }
+  }
+  
+  nmi <- if ((H1 + H2) == 0) {
+    1
+  } else {
+    2 * MI / (H1 + H2)
+  }
+  
+  # Graziname visu triju rodikliu reiksmes
+  data.frame(
+    ARI = ari,
+    NMI = nmi,
+    Jaccard = jaccard
+  )
+}
+
+
+# 31.4. Atliekame tris palyginimus
+
+palyginimas_orig_pca <- skaiciuoti_isorinius(
+  kl_orig, kl_pca
+)
+
+palyginimas_orig_tsne <- skaiciuoti_isorinius(
+  kl_orig, kl_tsne
+)
+
+palyginimas_pca_tsne <- skaiciuoti_isorinius(
+  kl_pca, kl_tsne
+)
+
+
+# 31.5. Sudarome bendra rezultatu lentele
+
+isoriniu_lentele <- rbind(
+  data.frame(
+    palyginimas = "Originali 19D vs PCA 5D",
+    palyginimas_orig_pca
+  ),
+  data.frame(
+    palyginimas = "Originali 19D vs t-SNE 2D",
+    palyginimas_orig_tsne
+  ),
+  data.frame(
+    palyginimas = "PCA 5D vs t-SNE 2D",
+    palyginimas_pca_tsne
+  )
+)
+
+cat("\nK-means isoriniu rodikliu palyginimas:\n")
+
+print(
+  isoriniu_lentele,
+  row.names = FALSE
+)
+
+
+# 31.6. Papildomai parodome klasteriu sutapimo lenteles
+# Eilutes - pirmos aibes klasteriai
+# Stulpeliai - antros aibes klasteriai
+
+cat("\nOriginali 19D vs PCA 5D:\n")
+print(table(kl_orig, kl_pca))
+
+cat("\nOriginali 19D vs t-SNE 2D:\n")
+print(table(kl_orig, kl_tsne))
+
+
+# 31.7. Issaugome rezultatus
+
+dir.create("rezultatai", showWarnings = FALSE)
+
+write.csv(
+  isoriniu_lentele,
+  "rezultatai/kmeans_isoriniai_rodikliai.csv",
+  row.names = FALSE
+)
+
+cat("\n31 skyrius baigtas. Isoriniai rodikliai issaugoti.\n")
+
