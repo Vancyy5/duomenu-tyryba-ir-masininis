@@ -635,3 +635,382 @@ ggsave(
 )
 
 cat("\n16 skyrius baigtas: issaugoti 3 grafikai.\n")
+
+# =====================================================
+# 17. K-MEANS PARAMETRU PARINKIMAS PCA 5D AIBEJE
+# =====================================================
+
+# 17.1. Nuskaitome PCA aibe
+pca_duomenys <- read.csv("aibes/aibe_PCA.csv")
+
+# Patikriname, ar objektu ID sutampa
+indeksai_pca <- match(duomenys$id, pca_duomenys$id)
+stopifnot(!anyNA(indeksai_pca))
+
+# Pasirenkame tik PCA komponentes
+X_pca <- as.matrix(
+  pca_duomenys[
+    indeksai_pca,
+    !names(pca_duomenys) %in% c("id", "class")
+  ]
+)
+
+cat("PCA aibes matmenys:", dim(X_pca), "\n")
+
+# 17.2. Apskaiciuojame Elbow rodikli
+k_reiksmes_pca <- 2:10
+
+set.seed(42)
+
+wss_pca <- sapply(k_reiksmes_pca, function(k) {
+  modelis <- kmeans(X_pca, centers = k, nstart = 25)
+  modelis$tot.withinss
+})
+
+# 17.3. Apskaiciuojame vidutini Silhouette
+atstumai_pca <- dist(X_pca)
+
+set.seed(42)
+
+sil_pca <- sapply(k_reiksmes_pca, function(k) {
+  modelis <- kmeans(X_pca, centers = k, nstart = 25)
+  sil <- cluster::silhouette(modelis$cluster, atstumai_pca)
+  mean(sil[, "sil_width"])
+})
+
+# 17.4. Sukuriame rezultatu lentele
+rezultatai_pca <- data.frame(
+  k = k_reiksmes_pca,
+  WSS = wss_pca,
+  silhouette = sil_pca
+)
+
+print(rezultatai_pca)
+
+cat(
+  "Didziausias PCA Silhouette, kai k =",
+  rezultatai_pca$k[which.max(rezultatai_pca$silhouette)],
+  "\n"
+)
+
+# 17.5. Elbow grafikas
+grafikas_elbow_pca <- ggplot(
+  rezultatai_pca,
+  aes(x = k, y = WSS)
+) +
+  geom_line() +
+  geom_point(size = 2) +
+  scale_x_continuous(breaks = k_reiksmes_pca) +
+  labs(
+    title = "K-means: Elbow metodas",
+    subtitle = "PCA 5D aibe",
+    x = "Klasteriu skaicius (k)",
+    y = "WSS"
+  ) +
+  theme_minimal()
+
+print(grafikas_elbow_pca)
+
+# 17.6. Silhouette grafikas
+grafikas_sil_pca <- ggplot(
+  rezultatai_pca,
+  aes(x = k, y = silhouette)
+) +
+  geom_line() +
+  geom_point(size = 2) +
+  scale_x_continuous(breaks = k_reiksmes_pca) +
+  labs(
+    title = "K-means: Silhouette metodas",
+    subtitle = "PCA 5D aibe",
+    x = "Klasteriu skaicius (k)",
+    y = "Vidutinis silueto koeficientas"
+  ) +
+  theme_minimal()
+
+print(grafikas_sil_pca)
+
+# 17.7. Issaugome rezultatus
+ggsave(
+  "grafikai/kmeans_elbow_pca.png",
+  grafikas_elbow_pca,
+  width = 8,
+  height = 5,
+  dpi = 300
+)
+
+ggsave(
+  "grafikai/kmeans_silhouette_pca.png",
+  grafikas_sil_pca,
+  width = 8,
+  height = 5,
+  dpi = 300
+)
+
+write.csv(
+  rezultatai_pca,
+  "rezultatai/kmeans_parametrai_pca.csv",
+  row.names = FALSE
+)
+
+# =====================================================
+# 18. K-MEANS EKSPERIMENTAI PCA 5D AIBEJE
+# =====================================================
+
+# 18.1. Parenkame parametrų derinius
+eksperimentai_pca <- data.frame(
+  k = c(2, 3, 4, 5, 2, 2),
+  nstart = c(25, 25, 25, 25, 10, 25),
+  seed = c(42, 42, 42, 42, 42, 123)
+)
+
+# 18.2. Funkcija vienam PCA eksperimentui
+vykdyti_pca_eksperimenta <- function(k, nstart, seed) {
+  
+  # Užfiksuojame atsitiktinę sėklą
+  set.seed(seed)
+  
+  # K-means taikome PCA 5D aibei
+  modelis <- kmeans(
+    X_pca,
+    centers = k,
+    nstart = nstart
+  )
+  
+  # Apskaičiuojame vidutinį Silhouette
+  sil <- cluster::silhouette(
+    modelis$cluster,
+    atstumai_pca
+  )
+  
+  # Grąžiname eksperimento rezultatus
+  data.frame(
+    aibe = "PCA 5D",
+    dimensija = ncol(X_pca),
+    k = k,
+    nstart = nstart,
+    seed = seed,
+    WSS = modelis$tot.withinss,
+    silhouette = mean(sil[, "sil_width"]),
+    klasteriu_dydziai = paste(modelis$size, collapse = ";")
+  )
+}
+
+# 18.3. Vykdome visus bandymus
+rez_eksperimentai_pca <- do.call(
+  rbind,
+  lapply(seq_len(nrow(eksperimentai_pca)), function(i) {
+    vykdyti_pca_eksperimenta(
+      eksperimentai_pca$k[i],
+      eksperimentai_pca$nstart[i],
+      eksperimentai_pca$seed[i]
+    )
+  })
+)
+
+# 18.4. Parodome rezultatus
+print(rez_eksperimentai_pca)
+
+# 18.5. Išsaugome eksperimentų lentelę
+dir.create("rezultatai", showWarnings = FALSE)
+
+write.csv(
+  rez_eksperimentai_pca,
+  "rezultatai/kmeans_eksperimentai_pca.csv",
+  row.names = FALSE
+)
+
+# =====================================================
+# 19. K-MEANS KLASTERIZAVIMAS PCA 5D AIBEJE
+# =====================================================
+
+# 19.1. Pasirenkame parametrus
+K_PCA <- 2
+NSTART_PCA <- 25
+SEED_PCA <- 42
+
+# 19.2. Atliekame K-means PCA 5D erdveje
+set.seed(SEED_PCA)
+
+modelis_pca <- kmeans(
+  X_pca,
+  centers = K_PCA,
+  nstart = NSTART_PCA
+)
+
+# 19.3. Priskiriame kiekvienam objektui klasteri
+# X_pca eilutes jau suderintos su originalios C aibes ID
+klasterizuoti_pca <- pca_duomenys[indeksai_pca, ]
+
+klasterizuoti_pca$klasteris <- modelis_pca$cluster
+
+# 19.4. Patikriname klasteriu dydzius
+cat("\nPCA 5D klasteriu dydziai:\n")
+print(table(klasterizuoti_pca$klasteris))
+
+# 19.5. Klasteriu sudetis pagal Ideal ir Premium
+klasiu_lentele_pca <- table(
+  Klasteris = klasterizuoti_pca$klasteris,
+  Klase = klasterizuoti_pca$class
+)
+
+cat("\nPCA 5D klasteriu sudetis pagal klases:\n")
+print(klasiu_lentele_pca)
+
+# 19.6. Apskaiciuojame klasiu proporcijas
+klasiu_procentai_pca <- round(
+  prop.table(klasiu_lentele_pca, margin = 1) * 100,
+  2
+)
+
+cat("\nPCA 5D klasiu proporcijos (%):\n")
+print(klasiu_procentai_pca)
+
+# 19.7. Issaugome klasterizavimo rezultatus
+dir.create("rezultatai", showWarnings = FALSE)
+
+write.csv(
+  klasterizuoti_pca,
+  "rezultatai/kmeans_pca_klasteriai.csv",
+  row.names = FALSE
+)
+
+# =====================================================
+# 20. K-MEANS KLASTERIZAVIMO KOKYBE PCA 5D AIBEJE
+# =====================================================
+
+# 20.1. Apskaiciuojame tris vidinius kokybes rodiklius
+# Naudojame PCA 5D koordinates, nes sioje erdveje
+# buvo atliktas klasterizavimas.
+
+kokybe_pca <- clusterCrit::intCriteria(
+  traj = X_pca,
+  part = as.integer(modelis_pca$cluster),
+  crit = c("Calinski_Harabasz", "Davies_Bouldin")
+)
+
+# 20.2. Apskaiciuojame vidutini silueto koeficienta
+silhouette_pca <- mean(
+  cluster::silhouette(
+    modelis_pca$cluster,
+    atstumai_pca
+  )[, "sil_width"]
+)
+
+# 20.3. Sudarome rezultatu lentele
+kokybes_lentele_pca <- data.frame(
+  aibe = "PCA 5D",
+  dimensija = ncol(X_pca),
+  algoritmas = "K-means",
+  k = K_PCA,
+  nstart = NSTART_PCA,
+  seed = SEED_PCA,
+  silhouette = silhouette_pca,
+  calinski_harabasz = kokybe_pca$calinski_harabasz,
+  davies_bouldin = kokybe_pca$davies_bouldin
+)
+
+# 20.4. Parodome rezultatus
+cat("\nPCA 5D klasterizavimo kokybes rodikliai:\n")
+print(kokybes_lentele_pca)
+
+# 20.5. Issaugome rezultatus
+write.csv(
+  kokybes_lentele_pca,
+  "rezultatai/kmeans_kokybe_pca.csv",
+  row.names = FALSE
+)
+
+# =====================================================
+# 21. K-MEANS KLASTERIU VIZUALIZACIJA PCA 5D AIBEJE
+# =====================================================
+
+# 21.1. Paruosiame duomenis grafikui
+# Klasteriai gauti PCA 5D erdveje, o vaizduojami PC1 ir PC2.
+
+grafiko_duomenys_pca <- data.frame(
+  PC1 = X_pca[, 1],
+  PC2 = X_pca[, 2],
+  klasteris = factor(modelis_pca$cluster)
+)
+
+# 21.2. Nubraizome grafika
+grafikas_klasteriai_pca <- ggplot(
+  grafiko_duomenys_pca,
+  aes(x = PC1, y = PC2, color = klasteris)
+) +
+  geom_point(alpha = 0.5, size = 1) +
+  labs(
+    title = "K-means klasteriai PCA 5D aibeje",
+    subtitle = "Klasterizavimas PCA 5D, vizualizacija PCA 2D",
+    x = "PC1",
+    y = "PC2",
+    color = "Klasteris"
+  ) +
+  theme_minimal()
+
+print(grafikas_klasteriai_pca)
+
+# 21.3. Issaugome grafika
+dir.create("grafikai", showWarnings = FALSE)
+
+ggsave(
+  "grafikai/kmeans_klasteriai_pca.png",
+  plot = grafikas_klasteriai_pca,
+  width = 8,
+  height = 5,
+  dpi = 300
+)
+
+# =====================================================
+# 22. PCA 5D K-MEANS KLASTERIU VIZUALIZAVIMAS t-SNE 2D
+# =====================================================
+
+# 22.1. Nuskaitome t-SNE 2D koordinates
+tsne_duomenys <- read.csv("aibes/aibe_tSNE_2D.csv")
+
+# 22.2. Suderiname objektus pagal ID
+indeksai_tsne_pca <- match(
+  klasterizuoti_pca$id,
+  tsne_duomenys$id
+)
+
+stopifnot(!anyNA(indeksai_tsne_pca))
+
+# 22.3. Paruosiame duomenis grafikui
+# Klasteriu numeriai gauti PCA 5D erdveje,
+# t-SNE naudojame tik vaizdavimui.
+
+grafiko_duomenys_pca_tsne <- data.frame(
+  TSNE1 = tsne_duomenys$TSNE1[indeksai_tsne_pca],
+  TSNE2 = tsne_duomenys$TSNE2[indeksai_tsne_pca],
+  klasteris = factor(klasterizuoti_pca$klasteris)
+)
+
+# 22.4. Braizome grafika
+grafikas_pca_tsne <- ggplot(
+  grafiko_duomenys_pca_tsne,
+  aes(x = TSNE1, y = TSNE2, color = klasteris)
+) +
+  geom_point(alpha = 0.5, size = 1) +
+  labs(
+    title = "K-means klasteriai PCA 5D aibeje",
+    subtitle = "Klasterizavimas PCA 5D, vizualizacija t-SNE 2D",
+    x = "t-SNE 1",
+    y = "t-SNE 2",
+    color = "Klasteris"
+  ) +
+  theme_minimal()
+
+print(grafikas_pca_tsne)
+
+# 22.5. Issaugome grafika
+ggsave(
+  "grafikai/kmeans_klasteriai_pca_tsne.png",
+  plot = grafikas_pca_tsne,
+  width = 8,
+  height = 5,
+  dpi = 300
+)
+
+
+

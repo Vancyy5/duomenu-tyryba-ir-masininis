@@ -176,3 +176,80 @@ Palyginome klasterius su pradinėmis `Ideal` ir `Premium` klasėmis, kurios nebu
 ![Ideal ir Premium klasių proporcijos](grafikai/kmeans_klasiu_proporcijos.png)
 
 Pirmajame klasteryje daugiau `Ideal`, o antrajame – `Premium` klasės deimantų. Tačiau abi klasės pasitaiko abiejuose klasteriuose, todėl gautas suskirstymas labiau susijęs su deimantų dydžiu ir kaina nei su jų pradine klase.
+
+
+### 6. K-means klasterizavimas PCA 5D aibėje
+
+#### Parametrų parinkimas
+
+Pritaikėme K-means algoritmą PCA metodu sumažintai aibei (3928 objektai, 5 komponentės). Klasterių skaičių iš naujo vertinome Elbow ir vidutinio silueto metodais, tikrindami `k = 2–10`.
+
+**Elbow metodas**
+
+WSS mažėjo didėjant klasterių skaičiui, tačiau maždaug nuo `k = 5` mažėjimas sulėtėjo.
+
+![K-means Elbow metodas PCA 5D](grafikai/kmeans_elbow_pca.png)
+
+**Silhouette metodas**
+
+Didžiausias vidutinis silueto koeficientas gautas, kai `k = 2` (0,3852). Didėjant klasterių skaičiui silueto koeficientas mažėjo.
+
+![K-means Silhouette metodas PCA 5D](grafikai/kmeans_silhouette_pca.png)
+
+#### Parametrų eksperimentai
+
+Atlikome 6 bandymus, keisdami `k`, `nstart` ir `seed`.
+
+| k | nstart | seed | WSS | Silhouette |
+|---|---:|---:|---:|---:|
+| 2 | 25 | 42 | 20996,16 | 0,3852 |
+| 3 | 25 | 42 | 17038,72 | 0,3305 |
+| 4 | 25 | 42 | 14010,12 | 0,3048 |
+| 5 | 25 | 42 | 12264,17 | 0,2741 |
+| 2 | 10 | 42 | 20996,16 | 0,3852 |
+| 2 | 25 | 123 | 20996,16 | 0,3852 |
+
+Keičiant `nstart` ir `seed`, kai `k = 2`, WSS, Silhouette ir klasterių dydžiai nepasikeitė.
+
+**Pasirinkome `k = 2`, `nstart = 25`, `seed = 42`**, nes gautas didžiausias vidutinis silueto koeficientas.
+
+#### Klasterizavimo rezultatai
+
+PCA 5D aibėje išskirti du klasteriai:
+
+| Rodiklis | 1 klasteris | 2 klasteris |
+|---|---:|---:|
+| Objektų skaičius | 2403 | 1525 |
+| Ideal (%) | 58,39 | 36,72 |
+| Premium (%) | 41,61 | 63,28 |
+
+Klasterių dydžiai ir klasių proporcijos labai panašūs į originalios 19D aibės rezultatus.
+
+#### Klasterizavimo kokybė
+
+Apskaičiavome tris vidinius klasterizavimo kokybės rodiklius ir palyginome juos su originalios C aibės rezultatais.
+
+| Rodiklis | Originali C (19D) | PCA 5D |
+|---|---:|---:|
+| Silhouette ↑ | 0,3732 | **0,3852** |
+| Calinski–Harabasz ↑ | 2725,921 | **2877,729** |
+| Davies–Bouldin ↓ | 1,1218 | **1,0877** |
+
+Sumažinus dimensiją nuo 19D iki 5D, visi trys kokybės rodikliai šiek tiek pagerėjo. Tačiau jie apskaičiuoti skirtingose erdvėse, todėl vien iš jų negalima spręsti, ar išliko tas pats objektų suskirstymas.
+
+#### Klasterių vizualizacija
+
+PCA 5D aibėje gautus K-means klasterius pavaizdavome dvimatėse PCA ir t-SNE projekcijose. Abiem atvejais klasterizavimas atliktas PCA 5D erdvėje, o 2D projekcijos naudotos tik rezultatams vizualizuoti.
+
+**PCA 2D vizualizacija**
+
+![K-means PCA 5D klasteriai PCA 2D projekcijoje](grafikai/kmeans_klasteriai_pca.png)
+
+**t-SNE 2D vizualizacija**
+
+![K-means PCA 5D klasteriai t-SNE 2D projekcijoje](grafikai/kmeans_klasteriai_pca_tsne.png)
+
+Abiejose projekcijose klasteriai gana aiškiai atsiskiria, nors jų sandūroje matomas nedidelis persidengimas. Vizualiai PCA 5D klasterizavimo rezultatai beveik nesiskiria nuo originalios C aibės rezultatų.
+
+Eksperimentų rezultatai išsaugoti `rezultatai/kmeans_eksperimentai_pca.csv`, o kokybės rodikliai – `rezultatai/kmeans_kokybe_pca.csv`.
+

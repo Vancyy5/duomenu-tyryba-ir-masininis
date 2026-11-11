@@ -1,0 +1,2 @@
+"aibe","dimensija","algoritmas","k","nstart","seed","silhouette","calinski_harabasz","davies_bouldin"
+"PCA 5D",5,"K-means",2,25,42,0.385195498392364,2877.72891199586,1.08771332645844
