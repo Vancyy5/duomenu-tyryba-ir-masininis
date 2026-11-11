@@ -3,4 +3,7 @@
 .RData
 .Ruserdata
 aibe_*.csv
-.RDataTmp*
+.RDataTmp*.DS_Store
+
+.DS_Store
+.RDataTmp
