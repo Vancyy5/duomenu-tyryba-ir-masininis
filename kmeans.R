@@ -2369,3 +2369,436 @@ ggsave(
   dpi = 300
 )
 
+# ============================================================
+# 33. PCA 5D IR t-SNE 2D K-MEANS STABILUMO TYRIMAS
+# ============================================================
+
+# 33.1. Nustatome parametrus
+# Naudojame tas pacias imtis kaip 32 skyriuje.
+
+N_PCA_STAB <- 20
+N_TSNE_STAB <- 10
+
+K_STAB_DIM <- 2
+NSTART_STAB_DIM <- 25
+PCA_KOMPONENTES <- 5
+
+# t-SNE parametrai turi sutapti su pradiniu tyrimu
+TSNE_PERPLEXITY <- 30
+TSNE_ITER <- 1000
+
+stopifnot(
+  length(bandymai_stab) >= N_PCA_STAB,
+  exists("normuoti_imti_stab"),
+  exists("skaiciuoti_isorinius")
+)
+
+
+# 33.2. Funkcija vienai PCA arba t-SNE imciai
+# Pirmiausia paimame originalius objektus pagal ID.
+# Tik tada normuojame ir maziname dimensija.
+
+viena_dim_imtis <- function(i, metodas) {
+  
+  # Paimame tuos pacius ID kaip 32 skyriuje
+  id_imties <- bandymai_stab[[i]]$priskyrimai$id
+  
+  indeksai <- match(id_imties, C_raw$id)
+  stopifnot(!anyNA(indeksai))
+  
+  imtis <- C_raw[indeksai, , drop = FALSE]
+  
+  # Is naujo normuojame tik sia imti
+  X_norm <- normuoti_imti_stab(imtis)
+  
+  if (metodas == "PCA 5D") {
+    
+    # PCA kiekvienoje imtyje apskaiciuojame is naujo
+    pca_modelis <- prcomp(
+      X_norm,
+      center = TRUE,
+      scale. = FALSE
+    )
+    
+    # Naudojame 5 pirmas pagrindines komponentes
+    X_dim <- pca_modelis$x[
+      , 1:PCA_KOMPONENTES, drop = FALSE
+    ]
+    
+  } else if (metodas == "t-SNE 2D") {
+    
+    # t-SNE kiekvienoje imtyje apskaiciuojame is naujo
+    set.seed(1000 + i)
+    
+    tsne_modelis <- Rtsne::Rtsne(
+      X_norm,
+      dims = 2,
+      perplexity = TSNE_PERPLEXITY,
+      max_iter = TSNE_ITER,
+      theta = 0.5,
+      pca = FALSE,
+      normalize = FALSE,
+      check_duplicates = FALSE,
+      verbose = FALSE
+    )
+    
+    X_dim <- tsne_modelis$Y
+    
+  } else {
+    stop("Nezinomas dimensijos mazinimo metodas")
+  }
+  
+  # K-means atliekame sumazintoje erdveje
+  set.seed(42)
+  
+  modelis <- kmeans(
+    X_dim,
+    centers = K_STAB_DIM,
+    nstart = NSTART_STAB_DIM
+  )
+  
+  # Vidutinis Silhouette
+  atstumai <- dist(X_dim)
+  
+  sil <- mean(
+    cluster::silhouette(
+      modelis$cluster,
+      atstumai
+    )[, "sil_width"]
+  )
+  
+  # Calinski-Harabasz ir Davies-Bouldin
+  kokybe <- clusterCrit::intCriteria(
+    traj = X_dim,
+    part = as.integer(modelis$cluster),
+    crit = c(
+      "Calinski_Harabasz",
+      "Davies_Bouldin"
+    )
+  )
+  
+  list(
+    priskyrimai = data.frame(
+      id = id_imties,
+      klasteris = modelis$cluster
+    ),
+    
+    vidiniai = data.frame(
+      metodas = metodas,
+      imtis = i,
+      atrankos_seed = SEEDS_STAB[i],
+      kmeans_seed = 42,
+      objektu = nrow(X_dim),
+      dimensija = ncol(X_dim),
+      silhouette = sil,
+      calinski_harabasz =
+        kokybe$calinski_harabasz,
+      davies_bouldin =
+        kokybe$davies_bouldin
+    )
+  )
+}
+
+
+# 33.3. Atliekame 20 PCA eksperimentu
+
+bandymai_pca_stab <- lapply(
+  seq_len(N_PCA_STAB),
+  function(i) {
+    
+    cat("PCA eksperimentas:", i, "/", N_PCA_STAB, "\n")
+    
+    viena_dim_imtis(i, "PCA 5D")
+  }
+)
+
+
+# 33.4. Atliekame 10 t-SNE eksperimentu
+
+bandymai_tsne_stab <- lapply(
+  seq_len(N_TSNE_STAB),
+  function(i) {
+    
+    cat("t-SNE eksperimentas:", i, "/", N_TSNE_STAB, "\n")
+    
+    viena_dim_imtis(i, "t-SNE 2D")
+  }
+)
+
+
+# 33.5. Funkcija visu imciu poru palyginimui
+# Lyginame tik objektus, esancius abiejose imtyse.
+
+palyginti_imtis_dim <- function(bandymai, metodas) {
+  
+  poros <- combn(seq_along(bandymai), 2)
+  
+  rezultatai <- lapply(
+    seq_len(ncol(poros)),
+    function(j) {
+      
+      i1 <- poros[1, j]
+      i2 <- poros[2, j]
+      
+      A <- bandymai[[i1]]$priskyrimai
+      B <- bandymai[[i2]]$priskyrimai
+      
+      # Bendri objektu ID
+      bendri_id <- intersect(A$id, B$id)
+      
+      # Suderiname pagal tuos pacius ID
+      ind_A <- match(bendri_id, A$id)
+      ind_B <- match(bendri_id, B$id)
+      
+      # Apskaiciuojame ARI, NMI ir Jaccard
+      rodikliai <- skaiciuoti_isorinius(
+        A$klasteris[ind_A],
+        B$klasteris[ind_B]
+      )
+      
+      data.frame(
+        metodas = metodas,
+        imtis_1 = i1,
+        imtis_2 = i2,
+        bendru_objektu = length(bendri_id),
+        rodikliai
+      )
+    }
+  )
+  
+  do.call(rbind, rezultatai)
+}
+
+
+# 33.6. Apskaiciuojame visas PCA ir t-SNE poras
+
+poros_pca_stab <- palyginti_imtis_dim(
+  bandymai_pca_stab,
+  "PCA 5D"
+)
+
+poros_tsne_stab <- palyginti_imtis_dim(
+  bandymai_tsne_stab,
+  "t-SNE 2D"
+)
+
+
+# 33.7. Sujungiame su originalios 19D erdves rezultatais
+
+poros_orig_stab <- poru_lentele_stab
+poros_orig_stab$metodas <- "Originali 19D"
+
+visos_poros_stab <- rbind(
+  poros_orig_stab,
+  poros_pca_stab,
+  poros_tsne_stab
+)
+
+
+# 33.8. Stabilumas didinant imciu skaiciu
+# Originali ir PCA: N = 5, 10, 15, 20.
+# t-SNE: N = 10.
+
+skaiciuoti_stabiluma_N <- function(df, metodas, N_reiksmes) {
+  
+  do.call(
+    rbind,
+    lapply(N_reiksmes, function(n) {
+      
+      D <- df[
+        df$imtis_1 <= n & df$imtis_2 <= n,
+      ]
+      
+      data.frame(
+        metodas = metodas,
+        N = n,
+        poru_skaicius = nrow(D),
+        ARI_vid = mean(D$ARI),
+        ARI_sd = sd(D$ARI),
+        NMI_vid = mean(D$NMI),
+        NMI_sd = sd(D$NMI),
+        Jaccard_vid = mean(D$Jaccard),
+        Jaccard_sd = sd(D$Jaccard)
+      )
+    })
+  )
+}
+
+stabilumas_visos_erdves <- rbind(
+  skaiciuoti_stabiluma_N(
+    poros_orig_stab, "Originali 19D", c(5, 10, 15, 20)
+  ),
+  skaiciuoti_stabiluma_N(
+    poros_pca_stab, "PCA 5D", c(5, 10, 15, 20)
+  ),
+  skaiciuoti_stabiluma_N(
+    poros_tsne_stab, "t-SNE 2D", c(10)
+  )
+)
+
+cat("\nSTABILUMAS PAGAL ERDVE IR N:\n")
+print(stabilumas_visos_erdves)
+
+
+# 33.9. Surenkame vidinius rodiklius
+
+vidiniai_pca_stab <- do.call(
+  rbind,
+  lapply(bandymai_pca_stab, function(x) x$vidiniai)
+)
+
+vidiniai_tsne_stab <- do.call(
+  rbind,
+  lapply(bandymai_tsne_stab, function(x) x$vidiniai)
+)
+
+vidiniai_orig_stab <- data.frame(
+  metodas = "Originali 19D",
+  vidiniai_stab
+)
+
+vidiniai_visos_erdves <- rbind(
+  vidiniai_orig_stab[, c(
+    "metodas", "silhouette",
+    "calinski_harabasz", "davies_bouldin"
+  )],
+  vidiniai_pca_stab[, c(
+    "metodas", "silhouette",
+    "calinski_harabasz", "davies_bouldin"
+  )],
+  vidiniai_tsne_stab[, c(
+    "metodas", "silhouette",
+    "calinski_harabasz", "davies_bouldin"
+  )]
+)
+
+
+# 33.10. Vidiniu rodikliu suvestine
+# Originali ir PCA: pirmos 10 imciu.
+# t-SNE: visos 10 imciu.
+# Taip visas erdves lyginame vienodu N.
+
+vidiniu_suvestine_dim <- do.call(
+  rbind,
+  lapply(
+    split(vidiniai_visos_erdves, vidiniai_visos_erdves$metodas),
+    function(D) {
+      
+      D <- head(D, 10)
+      
+      data.frame(
+        metodas = D$metodas[1],
+        N = nrow(D),
+        silhouette_vid = mean(D$silhouette),
+        silhouette_sd = sd(D$silhouette),
+        CH_vid = mean(D$calinski_harabasz),
+        CH_sd = sd(D$calinski_harabasz),
+        DB_vid = mean(D$davies_bouldin),
+        DB_sd = sd(D$davies_bouldin)
+      )
+    }
+  )
+)
+
+cat("\nVIDINIU RODIKLIU SUVESTINE, N = 10:\n")
+print(vidiniu_suvestine_dim)
+
+
+# 33.11. ARI sklaidos boxplot visoms trims erdvems
+# Naudojame pirmas 10 imciu kiekvienai erdvei.
+
+poros_10 <- subset(
+  visos_poros_stab,
+  imtis_1 <= 10 & imtis_2 <= 10
+)
+
+grafikas_ari_erdves <- ggplot(
+  poros_10,
+  aes(x = metodas, y = ARI, fill = metodas)
+) +
+  geom_boxplot(
+    alpha = 0.7,
+    outlier.alpha = 0.5
+  ) +
+  labs(
+    title = "K-means stabilumas skirtingose erdvese",
+    subtitle = "10 imciu, 80 % objektu, 45 poros kiekvienai erdvei",
+    x = "Duomenu erdve",
+    y = "ARI"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+print(grafikas_ari_erdves)
+
+
+# 33.12. ARI vidurkis didinant N
+# t-SNE turi tik viena N = 10 reiksme.
+
+grafikas_ari_N_erdves <- ggplot(
+  stabilumas_visos_erdves,
+  aes(x = N, y = ARI_vid, color = metodas, group = metodas)
+) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 3) +
+  scale_x_continuous(breaks = c(5, 10, 15, 20)) +
+  labs(
+    title = "K-means stabilumas didinant imciu skaiciu",
+    subtitle = "80 % imtys, dimensijos mazinimas kartojamas",
+    x = "Imciu skaicius (N)",
+    y = "Vidutinis ARI",
+    color = "Erdve"
+  ) +
+  theme_minimal()
+
+print(grafikas_ari_N_erdves)
+
+
+# 33.13. Issaugome rezultatus ir grafikus
+
+dir.create("rezultatai", showWarnings = FALSE)
+dir.create("grafikai", showWarnings = FALSE)
+
+write.csv(
+  stabilumas_visos_erdves,
+  "rezultatai/kmeans_stabilumas_visos_erdves.csv",
+  row.names = FALSE
+)
+
+write.csv(
+  visos_poros_stab,
+  "rezultatai/kmeans_stabilumo_poros_visos_erdves.csv",
+  row.names = FALSE
+)
+
+write.csv(
+  vidiniu_suvestine_dim,
+  "rezultatai/kmeans_stabilumo_vidiniai_visos_erdves.csv",
+  row.names = FALSE
+)
+
+write.csv(
+  rbind(vidiniai_pca_stab, vidiniai_tsne_stab),
+  "rezultatai/kmeans_stabilumo_dim_eksperimentai.csv",
+  row.names = FALSE
+)
+
+ggsave(
+  "grafikai/kmeans_stabilumo_ari_visos_erdves.png",
+  plot = grafikas_ari_erdves,
+  width = 8,
+  height = 5,
+  dpi = 300
+)
+
+ggsave(
+  "grafikai/kmeans_stabilumas_N_visos_erdves.png",
+  plot = grafikas_ari_N_erdves,
+  width = 8,
+  height = 5,
+  dpi = 300
+)
+
+cat("\n33 skyrius baigtas!\n")
+
+

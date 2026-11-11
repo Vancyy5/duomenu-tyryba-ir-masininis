@@ -710,3 +710,251 @@ Grafikai išsaugoti `grafikai/` aplanke:
 - `kmeans_stabilumo_ari_boxplot.png` – ARI reikšmių sklaida skirtingiems N.
 
 Visi skaičiavimai atlikti `kmeans.R` failo 32 skyriuje.
+
+
+### 9. K-means klasterizavimo stabilumo tyrimas
+
+#### 9.1. Tyrimo tikslas
+
+Stabilumo tyrimo tikslas – įvertinti, ar K-means klasterizavimo rezultatai išlieka panašūs keičiant duomenų imties sudėtį, ir nustatyti, kaip dimensijos mažinimas veikia klasterių stabilumą.
+
+Stabilumą tyrėme trijose duomenų erdvėse:
+
+- **Originali C aibė (19D)** – klasterizavimas be dimensijos mažinimo.
+- **PCA 5D** – klasterizavimas sumažinus dimensiją pagrindinių komponenčių metodu.
+- **t-SNE 2D** – klasterizavimas sumažinus dimensiją netiesiniu t-SNE metodu.
+
+Visais atvejais naudojome anksčiau parinktus K-means parametrus: `k = 2` ir `nstart = 25`.
+
+Stabilumui vertinti naudojome pakartotinę atsitiktinę objektų atranką (*subsampling*), o klasterizavimo rezultatus lyginome pagal ARI, NMI ir Jaccard indeksus.
+
+#### 9.2. Stabilumo eksperimento metodika
+
+Pradinę C aibę sudarė **3928 objektai ir 19 požymių**.
+
+Kiekvieną stabilumo eksperimentą atlikome tokia tvarka:
+
+1. Iš pradinės, dar nenormuotos C aibės atsitiktinai atrinkome 80 % objektų (3142 objektus).
+2. Kiekvienai atrinktai imčiai atskirai atlikome robustų normavimą, naudojant tos imties medianas ir tarpkvartilinius pločius (IQR).
+3. Priklausomai nuo tiriamos erdvės:
+   - Originalioje 19D erdvėje dimensijos mažinimo neatlikome.
+   - PCA 5D atveju iš naujo apskaičiavome PCA projekciją ir pasirinkome pirmąsias 5 pagrindines komponentes.
+   - t-SNE 2D atveju iš naujo apskaičiavome dvimatę t-SNE projekciją.
+4. Kiekvienoje erdvėje atlikome K-means klasterizavimą su `k = 2` ir `nstart = 25`.
+5. Apskaičiavome vidinius kokybės rodiklius: Silhouette, Calinski–Harabasz ir Davies–Bouldin.
+6. Išsaugojome objektų identifikatorius (`id`) ir jų priskyrimus klasteriams.
+7. Visas imtis palyginome poromis, naudodami tik abiem imtims bendrus objektus.
+8. Kiekvienai imčių porai apskaičiavome ARI, NMI ir Jaccard indeksus.
+
+**Svarbu:** kiekvienoje imtyje normavimą ir dimensijos mažinimą atlikome iš naujo. Imčių atranka vyko prieš normavimą, todėl normavimo parametrai buvo apskaičiuoti tik iš atrinktų objektų.
+
+Taip išvengėme duomenų nutekėjimo, kuris atsirastų naudojant visos aibės normavimo parametrus arba iš anksto apskaičiuotą PCA ar t-SNE projekciją.
+
+Eksperimentų atkuriamumui užtikrinti naudojome skirtingas, bet fiksuotas atsitiktines sėklas. Imčių atrankai naudotos sėklos nuo `0` iki `19`, K-means inicializacijai – `42`, o t-SNE projekcijoms – atskiros fiksuotos sėklos.
+
+#### 9.3. Imčių skaičius ir palyginimo principas
+
+Pagal stabilumo vertinimo metodiką siekėme nustatyti pakankamą atsitiktinių imčių skaičių.
+
+Originaliai 19D ir PCA 5D erdvėms atlikome po **20 eksperimentų**, stabilumo rodiklius vertindami didinant imčių skaičių:
+
+| Imčių skaičius (N) | Palyginamų porų skaičius |
+|---:|---:|
+| 5 | 10 |
+| 10 | 45 |
+| 15 | 105 |
+| 20 | 190 |
+
+t-SNE 2D atveju atlikome **10 eksperimentų**, kurie sudarė 45 imčių poras.
+
+Kiekvienai imčių porai pirmiausia nustatėme bendrus objektų identifikatorius (`id`). ARI, NMI ir Jaccard skaičiavome tik tiems objektams, kurie priklausė abiem lyginamoms imtims.
+
+Taip užtikrinome, kad būtų lyginami tų pačių objektų klasterių priskyrimai, nepriklausomai nuo objektų eiliškumo skirtingose imtyse.
+
+#### 9.4. Originalios 19D aibės stabilumo rezultatai
+
+| N | ARI vidurkis ± SD | NMI vidurkis ± SD | Jaccard vidurkis ± SD |
+|---:|---:|---:|---:|
+| 5 | 0,994760 ± 0,005882 | 0,987701 ± 0,013133 | 0,995051 ± 0,005546 |
+| 10 | 0,993916 ± 0,005200 | 0,985419 ± 0,011434 | 0,994240 ± 0,004911 |
+| 15 | 0,994114 ± 0,005537 | 0,985899 ± 0,011881 | 0,994433 ± 0,005216 |
+| 20 | 0,994844 ± 0,004932 | 0,987323 ± 0,010678 | 0,995120 ± 0,004650 |
+
+Originalioje 19D erdvėje K-means klasterizavimas pasižymėjo labai dideliu stabilumu.
+
+Visais atvejais ARI vidurkis viršijo 0,9939, o standartinis nuokrypis neviršijo 0,0059.
+
+Tai rodo, kad atsitiktinai keičiant 80 % objektų imties sudėtį gaunami beveik vienodi klasterių suskirstymai.
+
+#### 9.5. PCA 5D aibės stabilumo rezultatai
+
+| N | ARI vidurkis ± SD | NMI vidurkis ± SD | Jaccard vidurkis ± SD |
+|---:|---:|---:|---:|
+| 5 | 0,994745 ± 0,006597 | 0,988028 ± 0,014723 | 0,995042 ± 0,006219 |
+| 10 | 0,994056 ± 0,005846 | 0,985854 ± 0,012570 | 0,994379 ± 0,005511 |
+| 15 | 0,994539 ± 0,005727 | 0,986797 ± 0,012075 | 0,994837 ± 0,005391 |
+| 20 | 0,995254 ± 0,005144 | 0,988253 ± 0,010936 | 0,995511 ± 0,004846 |
+
+PCA 5D stabilumo rezultatai beveik nesiskyrė nuo originalios 19D erdvės rezultatų.
+
+Kai N = 10, ARI vidurkis siekė 0,9941, o standartinis nuokrypis – 0,0058.
+
+Didinant imčių skaičių iki 20, ARI vidurkis padidėjo iki 0,9953, tačiau pokytis buvo labai nedidelis.
+
+Tai rodo, kad **PCA sumažinimas iki 5 dimensijų nesumažino K-means klasterizavimo stabilumo**.
+
+#### 9.6. t-SNE 2D aibės stabilumo rezultatai
+
+t-SNE 2D stabilumą vertinome naudodami 10 atsitiktinių 80 % imčių.
+
+| Rodiklis | Vidurkis | Standartinis nuokrypis |
+|---|---:|---:|
+| ARI | 0,817217 | 0,072071 |
+| NMI | 0,751278 | 0,069320 |
+| Jaccard | 0,834979 | 0,060050 |
+
+Gauti rezultatai rodo, kad t-SNE 2D klasterizavimo stabilumas yra mažesnis nei originalioje 19D ar PCA 5D erdvėse.
+
+ARI vidurkis siekė 0,8172, o jo standartinis nuokrypis – 0,0721.
+
+Tai reiškia, kad skirtingose imtyse gauti klasteriai išlieka gana panašūs, tačiau jų priskyrimai kinta labiau nei kitose dviejose erdvėse.
+
+Didesnis standartinis nuokrypis taip pat rodo, kad t-SNE rezultatai jautresni imties sudėčiai ir galimiems projekcijos pokyčiams.
+
+#### 9.7. Stabilumo palyginimas tarp trijų erdvių
+
+Norėdami objektyviai palyginti visų trijų erdvių stabilumą, naudojome vienodą imčių skaičių – **N = 10**.
+
+| Rodiklis | Originali 19D | PCA 5D | t-SNE 2D |
+|---|---:|---:|---:|
+| ARI vidurkis | 0,9939 | **0,9941** | 0,8172 |
+| ARI SD | 0,0052 | 0,0058 | 0,0721 |
+| NMI vidurkis | 0,9854 | **0,9859** | 0,7513 |
+| NMI SD | 0,0114 | 0,0126 | 0,0693 |
+| Jaccard vidurkis | 0,9942 | **0,9944** | 0,8350 |
+| Jaccard SD | 0,0049 | 0,0055 | 0,0601 |
+
+PCA 5D ir originalios 19D aibių stabilumo rodikliai beveik sutampa.
+
+Tuo tarpu t-SNE 2D ARI vidurkis mažesnis maždaug 0,177, o standartinis nuokrypis yra daugiau nei 12 kartų didesnis nei PCA 5D atveju.
+
+Tai rodo, kad **PCA 5D išsaugojo originalios aibės klasterizavimo stabilumą, o t-SNE 2D rezultatai yra mažiau pastovūs**.
+
+#### 9.8. ARI reikšmių sklaidos palyginimas
+
+ARI reikšmių pasiskirstymui palyginti sudarėme boxplot grafiką visoms trims erdvėms, naudojant po 10 imčių ir 45 tarpusavio palyginimus.
+
+![K-means stabilumo ARI palyginimas tarp erdvių](grafikai/kmeans_stabilumo_ari_visos_erdves.png)
+
+Grafike matome, kad:
+
+- Originalios 19D ir PCA 5D erdvių ARI pasiskirstymai beveik sutampa.
+- Abiejų erdvių ARI reikšmės yra arti 1 ir pasižymi labai maža sklaida.
+- t-SNE 2D erdvės ARI reikšmės yra mažesnės ir labiau išsisklaidžiusios.
+- t-SNE 2D ARI reikšmių diapazonas gerokai platesnis, todėl klasterių priskyrimai jautresni imties pokyčiams.
+
+Grafikas patvirtina išorinių stabilumo rodiklių lentelėje nustatytas tendencijas.
+
+#### 9.9. Pakankamo imčių skaičiaus nustatymas
+
+Siekiant nustatyti, kiek imčių pakanka stabilumui įvertinti, analizavome ARI vidurkio kitimą didinant N nuo 5 iki 20.
+
+![K-means stabilumas didinant imčių skaičių](grafikai/kmeans_stabilumas_N_visos_erdves.png)
+
+| N | Originali 19D ARI | PCA 5D ARI |
+|---:|---:|---:|
+| 5 | 0,994760 | 0,994745 |
+| 10 | 0,993916 | 0,994056 |
+| 15 | 0,994114 | 0,994539 |
+| 20 | 0,994844 | 0,995254 |
+
+Originalioje 19D ir PCA 5D erdvėse ARI vidurkis visais atvejais išliko apie 0,994–0,995.
+
+Didinant imčių skaičių nuo 10 iki 20, ARI vidurkis originalioje erdvėje pasikeitė tik apie 0,00093, o PCA 5D erdvėje – apie 0,00120.
+
+Tai rodo, kad stabilumo įverčiai praktiškai nusistovi jau naudojant 10 imčių.
+
+**Todėl nustatėme, kad originaliai 19D ir PCA 5D erdvėms stabilumo įvertinimui pakanka N = 10 imčių.**
+
+t-SNE 2D atveju pagal dėstytojos rekomendaciją atlikome 10 eksperimentų. Grafike t-SNE pavaizduotas tik ties N = 10, todėl jo ARI vidurkio kitimo didinant imčių skaičių nevertinome.
+
+#### 9.10. Vidinių klasterizavimo kokybės rodiklių stabilumas
+
+Kiekvienoje imtyje papildomai apskaičiavome tris vidinius kokybės rodiklius: Silhouette, Calinski–Harabasz ir Davies–Bouldin.
+
+Visų trijų erdvių rezultatus palyginome naudodami pirmąsias 10 imčių.
+
+| Rodiklis (vidurkis ± SD) | Originali 19D | PCA 5D | t-SNE 2D |
+|---|---:|---:|---:|
+| Silhouette ↑ | 0,3735 ± 0,0020 | 0,3854 ± 0,0021 | **0,4383 ± 0,0091** |
+| Calinski–Harabasz ↑ | 2194,71 ± 21,82 | 2317,82 ± 23,46 | **3405,87 ± 210,78** |
+| Davies–Bouldin ↓ | 1,1185 ± 0,0044 | 1,0844 ± 0,0044 | **0,8911 ± 0,0252** |
+
+**Originali 19D.** Vidiniai rodikliai beveik nesikeitė tarp skirtingų imčių. Silhouette vidurkis siekė apie 0,374, o Davies–Bouldin – apie 1,118.
+
+**PCA 5D.** Vidiniai rodikliai buvo šiek tiek palankesni nei originalioje aibėje, o jų standartiniai nuokrypiai išliko labai maži. Tai rodo, kad PCA sumažintoje erdvėje klasterizavimo kokybė yra pastovi.
+
+**t-SNE 2D.** Vidiniai kokybės rodikliai buvo palankiausi, tačiau jų standartiniai nuokrypiai gerokai didesni. Pavyzdžiui, Calinski–Harabasz standartinis nuokrypis siekė 210,78, palyginti su 23,46 PCA 5D erdvėje.
+
+Taigi t-SNE projekcijoje klasteriai atrodo geriau atskirti, tačiau jų kokybės rodikliai tarp skirtingų imčių svyruoja labiau.
+
+Svarbu pabrėžti, kad t-SNE keičia objektų tarpusavio atstumus. Todėl palankesni vidiniai rodikliai t-SNE erdvėje savaime nereiškia, kad geriau išsaugoma originalių duomenų struktūra.
+
+#### 9.11. Bendras klasterizavimo kokybės ir stabilumo įvertinimas
+
+Sujungėme ankstesnio dimensijos mažinimo tyrimo rezultatus su stabilumo eksperimentais.
+
+| Rodiklis | Originali 19D | PCA 5D | t-SNE 2D |
+|---|---:|---:|---:|
+| Silhouette (pilna aibė) | 0,3732 | 0,3852 | **0,4415** |
+| ARI su originalia 19D | 1,0000 | **0,9959** | 0,5218 |
+| Stabilumo ARI (N = 10) | 0,9939 | **0,9941** | 0,8172 |
+
+Vertinant rezultatus svarbu atskirti du aspektus:
+
+- **ARI su originalia aibe** parodo, kiek sumažintos dimensijos klasterizavimo rezultatai sutampa su originalios 19D aibės suskirstymu.
+- **Stabilumo ARI** parodo, kiek panašūs klasterių priskyrimai gaunami kartojant visą duomenų apdorojimo ir klasterizavimo procesą su skirtingomis 80 % imtimis.
+
+PCA 5D abiem aspektais pasižymėjo labai gerais rezultatais: beveik visiškai išsaugojo originalius klasterius ir išliko labai stabilus.
+
+t-SNE 2D pasižymėjo palankesniais vidiniais kokybės rodikliais savo projekcijoje, tačiau jo klasterių priskyrimai labiau skyrėsi nuo originalių ir buvo mažiau stabilūs.
+
+#### 9.12. Stabilumo tyrimo išvados
+
+1. **Originalios 19D aibės K-means klasterizavimas yra labai stabilus.** Kai N = 10, ARI vidurkis siekė 0,9939, o standartinis nuokrypis – 0,0052.
+
+2. **PCA 5D beveik visiškai išsaugojo originalios aibės stabilumą.** ARI vidurkis siekė 0,9941, o rezultatai beveik nesiskyrė nuo originalios 19D erdvės.
+
+3. **t-SNE 2D klasterizavimo stabilumas buvo mažesnis.** ARI vidurkis siekė 0,8172, o standartinis nuokrypis – 0,0721, todėl klasterių priskyrimai labiau priklausė nuo imties sudėties ir projekcijos pokyčių.
+
+4. **Originaliai 19D ir PCA 5D erdvėms pakanka 10 imčių**, nes didinant jų skaičių iki 15 ir 20 ARI vidurkiai pasikeitė labai nedaug.
+
+5. **Vidiniai kokybės rodikliai originalioje ir PCA erdvėse išliko stabilūs.** t-SNE 2D rodikliai buvo palankesni savo projekcijoje, tačiau jų sklaida didesnė.
+
+6. **PCA 5D yra tinkamiausias iš tirtų dimensijos mažinimo metodų K-means klasterizavimui**, jeigu tikslas – sumažinti požymių skaičių, išsaugoti originalią klasterių struktūrą ir gauti stabilius rezultatus.
+
+Apibendrinant, stabilumo tyrimas parodė, kad **dimensijos mažinimas PCA metodu beveik nepakeitė K-means rezultatų pastovumo, o t-SNE metodu gauti suskirstymai buvo jautresni duomenų imties pokyčiams**.
+
+#### 9.13. Rezultatų failai
+
+Stabilumo tyrimo rezultatai išsaugoti `rezultatai/` aplanke:
+
+| Failas | Turinys |
+|---|---|
+| `kmeans_stabilumas_pagal_N.csv` | Originalios 19D aibės stabilumas didinant imčių skaičių |
+| `kmeans_stabilumo_poros.csv` | Originalios 19D aibės imčių porų palyginimai |
+| `kmeans_stabilumo_vidiniai.csv` | Originalios 19D aibės vidiniai kokybės rodikliai |
+| `kmeans_stabilumo_vidiniai_pagal_N.csv` | Originalios 19D aibės vidinių rodiklių suvestinė |
+| `kmeans_stabilumas_visos_erdves.csv` | Visų trijų erdvių stabilumo palyginimas |
+| `kmeans_stabilumo_poros_visos_erdves.csv` | Visų trijų erdvių imčių porų ARI, NMI ir Jaccard |
+| `kmeans_stabilumo_vidiniai_visos_erdves.csv` | Visų trijų erdvių vidinių rodiklių suvestinė |
+| `kmeans_stabilumo_dim_eksperimentai.csv` | PCA ir t-SNE stabilumo eksperimentų rezultatai |
+
+Grafikai išsaugoti `grafikai/` aplanke:
+
+- `kmeans_stabilumas_pagal_N.png` – originalios 19D aibės ARI vidurkio kitimas.
+- `kmeans_stabilumo_ari_boxplot.png` – originalios 19D aibės ARI reikšmių sklaida.
+- `kmeans_stabilumo_ari_visos_erdves.png` – visų trijų erdvių ARI sklaidos palyginimas.
+- `kmeans_stabilumas_N_visos_erdves.png` – ARI vidurkio kitimas didinant N skirtingose erdvėse.
+
+Skaičiavimai atlikti `kmeans.R` failo 32 ir 33 skyriuose.
