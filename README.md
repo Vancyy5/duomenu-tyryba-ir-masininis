@@ -533,3 +533,180 @@ Išorinių rodiklių rezultatai išsaugoti faile:
 `rezultatai/kmeans_isoriniai_rodikliai.csv`
 
 Skaičiavimai atlikti `kmeans.R` failo 31 skyriuje.
+
+
+### 9. K-means klasterizavimo stabilumo tyrimas
+
+#### 9.1. Tyrimo tikslas
+
+Stabilumo tyrimo tikslas – nustatyti, ar K-means klasterizavimo rezultatai išlieka panašūs keičiant duomenų imties sudėtį.
+
+Tyrimą atlikome **originalioje C aibėje (19D)**, naudodami anksčiau parinktą K-means modelį su parametrais `k = 2` ir `nstart = 25`.
+
+Stabilumui vertinti naudojome pakartotinę atsitiktinę objektų atranką (*subsampling*). Kiekvieną kartą atrinkome 80 % pradinių objektų, iš naujo normavome duomenis ir atlikome klasterizavimą.
+
+Stabilumą vertinome pagal ARI, NMI ir Jaccard indeksus, lygindami skirtingose imtyse gautus klasterių suskirstymus.
+
+#### 9.2. Eksperimento metodika
+
+Pradinę C aibę sudarė **3928 objektai ir 19 požymių**.
+
+Kiekvienas stabilumo eksperimentas buvo vykdomas tokia seka:
+
+1. Iš pradinės, dar nenormuotos C aibės atsitiktinai atrenkama 80 % objektų (3142 objektai).
+2. Atrinktai imčiai atskirai atliekamas robustus normavimas, naudojant tos imties medianas ir tarpkvartilinius pločius (IQR).
+3. Normuotai imčiai pritaikomas K-means algoritmas su `k = 2` ir `nstart = 25`.
+4. Apskaičiuojami vidiniai kokybės rodikliai: Silhouette, Calinski–Harabasz ir Davies–Bouldin.
+5. Išsaugomi objektų identifikatoriai (`id`) ir jų priskyrimai klasteriams.
+6. Visos imtys palyginamos poromis, naudojant tik abiem imtims bendrus objektus.
+7. Kiekvienai imčių porai apskaičiuojami ARI, NMI ir Jaccard indeksai.
+
+**Svarbu:** duomenų normavimas atliktas tik po atsitiktinės imties atrankos. Taip užtikrinome, kad normavimo parametrai nebūtų apskaičiuoti naudojant į imtį nepatekusius objektus, ir išvengėme duomenų nutekėjimo.
+
+Visuose eksperimentuose K-means inicializacijai naudota atsitiktinė sėkla `42`, o imčių atrankai – skirtingos sėklos nuo `0` iki `19`.
+
+#### 9.3. Stabilumo vertinimas lyginant imčių poras
+
+Skirtingos atsitiktinės imtys nebūtinai turi tuos pačius objektus, todėl jų klasterių priskyrimų negalima lyginti tiesiogiai pagal eilučių numerius.
+
+Kiekvienai imčių porai pirmiausia nustatėme bendrus objektų identifikatorius (`id`). Tuomet ARI, NMI ir Jaccard skaičiavome tik tiems objektams, kurie pateko į abi lyginamas imtis.
+
+Tokiu būdu užtikrinome, kad abu klasterių priskyrimų vektoriai apibūdintų tuos pačius objektus vienoda tvarka.
+
+Atlikome **20 atsitiktinių imčių eksperimentų**, o jų stabilumą vertinome didindami nagrinėjamų imčių skaičių:
+
+| Imčių skaičius (N) | Imčių porų skaičius |
+|---:|---:|
+| 5 | 10 |
+| 10 | 45 |
+| 15 | 105 |
+| 20 | 190 |
+
+Kiekvienam N apskaičiavome visų pirmųjų N imčių porų ARI, NMI ir Jaccard vidurkius bei standartinius nuokrypius.
+
+#### 9.4. Išorinių stabilumo rodiklių rezultatai
+
+| N | ARI vidurkis ± SD | NMI vidurkis ± SD | Jaccard vidurkis ± SD |
+|---:|---:|---:|---:|
+| 5 | 0,994760 ± 0,005882 | 0,987701 ± 0,013133 | 0,995051 ± 0,005546 |
+| 10 | 0,993916 ± 0,005200 | 0,985419 ± 0,011434 | 0,994240 ± 0,004911 |
+| 15 | 0,994114 ± 0,005537 | 0,985899 ± 0,011881 | 0,994433 ± 0,005216 |
+| 20 | 0,994844 ± 0,004932 | 0,987323 ± 0,010678 | 0,995120 ± 0,004650 |
+
+Gauti rezultatai rodo labai didelį K-means klasterizavimo stabilumą.
+
+Visais nagrinėtais atvejais ARI vidurkis viršijo **0,9939**, o Jaccard vidurkis viršijo **0,9942**. Tai reiškia, kad skirtingose atsitiktinėse 80 % imtyse gauti klasterių priskyrimai beveik visiškai sutampa.
+
+NMI reikšmės taip pat išliko labai aukštos – nuo 0,9854 iki 0,9877, todėl skirtingi klasterizavimo rezultatai pasižymi labai dideliu informaciniu panašumu.
+
+Maži standartiniai nuokrypiai rodo, kad rezultatai tarp skirtingų imčių porų svyravo nedaug.
+
+#### 9.5. Pakankamo imčių skaičiaus nustatymas
+
+Siekiant nustatyti, kiek atsitiktinių imčių pakanka patikimam stabilumo įvertinimui, analizavome ARI vidurkio kitimą didinant imčių skaičių nuo 5 iki 20.
+
+![K-means stabilumas didinant imčių skaičių](grafikai/kmeans_stabilumas_pagal_N.png)
+
+Grafike matome, kad:
+
+- Kai `N = 5`, ARI vidurkis buvo 0,994760.
+- Padidinus iki `N = 10`, ARI vidurkis sumažėjo iki 0,993916.
+- Kai `N = 15`, jis siekė 0,994114.
+- Kai `N = 20`, ARI vidurkis padidėjo iki 0,994844.
+
+Nors grafike matomi nedideli svyravimai, jų absoliutus dydis yra labai mažas. Didžiausio ir mažiausio ARI vidurkių skirtumas siekia tik apie **0,00093**.
+
+Lyginant `N = 10` ir `N = 20`, ARI vidurkis pasikeitė tik 0,00093.
+
+Tai rodo, kad stabilumo įvertis praktiškai nusistovi jau naudojant 10 imčių, o papildomų imčių įtraukimas esminės įtakos rezultatui neturi.
+
+**Todėl nustatėme, kad K-means stabilumui įvertinti pakanka N = 10 imčių**, kurios sudaro 45 tarpusavio palyginimus.
+
+#### 9.6. ARI reikšmių sklaidos analizė
+
+Norėdami išsamiau įvertinti rezultatų pastovumą, sudarėme ARI reikšmių boxplot grafiką, kai `N = 5, 10, 15 ir 20`.
+
+![K-means stabilumo ARI sklaida](grafikai/kmeans_stabilumo_ari_boxplot.png)
+
+Grafikas rodo, kad:
+
+- Visais atvejais ARI reikšmės yra labai aukštos, dauguma jų artimos 1.
+- Esant `N = 5`, reikšmių sklaida didesnė dėl mažesnio palyginamų porų skaičiaus.
+- Didinant imčių skaičių iki 10, 15 ir 20, ARI reikšmių pasiskirstymas išlieka panašus.
+- Dalis imčių porų pasiekia ARI = 1, o tai reiškia visiškai sutampančius bendrų objektų suskirstymus.
+- Net ir mažesnės ARI reikšmės išlieka aukštos, todėl klasterizavimas pasižymi dideliu pastovumu.
+
+Didinant N, naudojamos ir ankstesniuose etapuose palygintos imčių poros, todėl boxplot grupės nėra nepriklausomos.
+
+Bendrai ARI sklaidos analizė patvirtina, kad **atsitiktiniai objektų atrankos pokyčiai daro labai nedidelę įtaką K-means klasterizavimo rezultatams**.
+
+#### 9.7. Vidinių klasterizavimo kokybės rodiklių stabilumas
+
+Kiekvienoje atrinktoje 80 % imtyje papildomai apskaičiavome tris vidinius kokybės rodiklius:
+
+- Silhouette – klasterių kompaktiškumui ir atskyrimui vertinti.
+- Calinski–Harabasz – tarpklasterinės ir vidinės sklaidos santykiui vertinti.
+- Davies–Bouldin – klasterių panašumui ir atskyrimui vertinti.
+
+Gauti rezultatai:
+
+| N | Silhouette vidurkis ± SD | Calinski–Harabasz vidurkis ± SD | Davies–Bouldin vidurkis ± SD |
+|---:|---:|---:|---:|
+| 5 | 0,373896 ± 0,002171 | 2198,988 ± 24,669 | 1,117819 ± 0,005136 |
+| 10 | 0,373541 ± 0,001976 | 2194,711 ± 21,823 | 1,118495 ± 0,004395 |
+| 15 | 0,373861 ± 0,001926 | 2196,170 ± 21,231 | 1,118285 ± 0,004339 |
+| 20 | 0,373913 ± 0,001823 | 2195,189 ± 20,143 | 1,118518 ± 0,004184 |
+
+**Silhouette.** Vidurkis visais atvejais išliko apie 0,374, o standartinis nuokrypis neviršijo 0,0022. Tai rodo, kad klasterių kompaktiškumas ir atskyrimas mažai priklauso nuo atrinktų objektų.
+
+**Calinski–Harabasz.** Vidurkis svyravo apie 2195–2199. Didinant imčių skaičių, rodiklio vidurkis išliko panašus, o standartinis nuokrypis sumažėjo nuo 24,67 iki 20,14.
+
+**Davies–Bouldin.** Vidurkis visais atvejais siekė apie 1,118, o standartinis nuokrypis buvo mažesnis nei 0,0052. Tai rodo mažus klasterių kompaktiškumo ir tarpusavio atskyrimo pokyčius.
+
+Visų trijų vidinių rodiklių rezultatai patvirtina, kad keičiant imties sudėtį K-means klasterizavimo kokybė išlieka labai panaši.
+
+#### 9.8. Palyginimas su pilnos aibės rezultatais
+
+Anksčiau originalioje C aibėje, naudojant visus 3928 objektus, gavome:
+
+| Rodiklis | Pilna C aibė (3928 objektai) | 80 % imtys (N = 10, vidurkis) |
+|---|---:|---:|
+| Silhouette | 0,373230 | 0,373541 |
+| Calinski–Harabasz | 2725,921 | 2194,711 |
+| Davies–Bouldin | 1,121817 | 1,118495 |
+
+Silhouette ir Davies–Bouldin reikšmės beveik nepasikeitė, todėl galima teigti, kad klasterių vidinė kokybė išliko panaši.
+
+Calinski–Harabasz rodiklio reikšmė 80 % imtyse buvo mažesnė, tačiau tai susiję ir su mažesniu objektų skaičiumi, nes šis rodiklis priklauso nuo imties dydžio. Todėl vien pagal tiesioginį šių reikšmių palyginimą negalima teigti, kad klasterizavimo kokybė suprastėjo.
+
+#### 9.9. Stabilumo tyrimo išvados
+
+1. **K-means klasterizavimas originalioje C aibėje yra labai stabilus.** Keičiant atsitiktinai atrinktų 80 % objektų imties sudėtį, klasterių priskyrimai beveik nesikeičia. Tai patvirtina ARI vidurkis, siekiantis apie 0,994.
+
+2. **Stabilumo tyrimui pakanka 10 imčių.** Didinant imčių skaičių iki 15 ir 20, ARI vidurkis pasikeitė mažiau nei 0,001, todėl papildomi eksperimentai esminės įtakos stabilumo įvertinimui neturėjo.
+
+3. **Išoriniai stabilumo rodikliai yra labai aukšti.** Kai N = 10, ARI siekė 0,9939, NMI – 0,9854, o Jaccard – 0,9942.
+
+4. **Vidiniai kokybės rodikliai taip pat išliko stabilūs.** Silhouette vidurkis buvo apie 0,374, Calinski–Harabasz – apie 2195, o Davies–Bouldin – apie 1,118.
+
+5. **Atskirai normuojant kiekvieną imtį išvengta duomenų nutekėjimo.** Kiekviename eksperimente normavimo parametrai apskaičiuoti tik iš atrinktų objektų.
+
+Apibendrinant galima teigti, kad **pasirinktas K-means modelis (`k = 2`, `nstart = 25`) pasižymi labai dideliu stabilumu originalioje 19D erdvėje**. Gauti rezultatai yra patikimi imties sudėties pokyčių atžvilgiu, o klasterių struktūra išlieka beveik nepakitusi.
+
+#### 9.10. Rezultatų failai
+
+Visi stabilumo tyrimo rezultatai išsaugoti `rezultatai/` aplanke:
+
+| Failas | Turinys |
+|---|---|
+| `kmeans_stabilumas_pagal_N.csv` | ARI, NMI ir Jaccard vidurkiai bei standartiniai nuokrypiai, kai N = 5, 10, 15 ir 20 |
+| `kmeans_stabilumo_poros.csv` | Visų 190 imčių porų palyginimų rezultatai |
+| `kmeans_stabilumo_vidiniai.csv` | Kiekvienos iš 20 imčių vidiniai kokybės rodikliai |
+| `kmeans_stabilumo_vidiniai_pagal_N.csv` | Vidinių rodiklių suvestinė didinant imčių skaičių |
+
+Grafikai išsaugoti `grafikai/` aplanke:
+
+- `kmeans_stabilumas_pagal_N.png` – ARI vidurkio kitimas didinant imčių skaičių.
+- `kmeans_stabilumo_ari_boxplot.png` – ARI reikšmių sklaida skirtingiems N.
+
+Visi skaičiavimai atlikti `kmeans.R` failo 32 skyriuje.

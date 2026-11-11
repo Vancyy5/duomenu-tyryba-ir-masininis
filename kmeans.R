@@ -1971,3 +1971,401 @@ write.csv(
 
 cat("\n31 skyrius baigtas. Isoriniai rodikliai issaugoti.\n")
 
+# ============================================================
+# 32. K-MEANS KLASTERIU STABILUMO TYRIMAS
+# Originali C aibe (19D)
+# Imciu dydis: 80 %
+# Tikrinamas imciu skaicius: N = 5, 10, 15, 20
+# ============================================================
+
+# 32.1. Nustatome eksperimento parametrus
+
+N_MAX <- 20
+N_VARIANTAI <- c(5, 10, 15, 20)
+IMTIES_DALIS <- 0.80
+
+K_STAB <- 2
+NSTART_STAB <- 25
+
+# Skirtingos atsitiktines sekos imciu atrankai
+SEEDS_STAB <- 0:(N_MAX - 1)
+
+
+# 32.2. Nuskaitome pradine C aibe originaliais vienetais
+# Svarbu: nenaudojame jau normuotos aibes!
+# Pirmiausia atrinksime 80 %, tada normuosime.
+
+C_raw <- read.csv(
+  "aibes/C_originaliais_vienetais_interpretacijai.csv"
+)
+
+# Naudojame tuos pacius 19 pozymiu, kaip ir
+# pradiniame K-means tyrime.
+pozymiai_stab <- colnames(X)
+
+stopifnot(
+  all(pozymiai_stab %in% names(C_raw)),
+  length(pozymiai_stab) == 19,
+  !anyDuplicated(C_raw$id)
+)
+
+
+# 32.3. Funkcija kiekvienos imties normavimui
+# Mediana ir IQR apskaiciuojami tik atrinktoje imtyje.
+
+normuoti_imti_stab <- function(imtis) {
+  
+  M <- as.matrix(
+    imtis[, pozymiai_stab, drop = FALSE]
+  )
+  
+  medianos <- apply(M, 2, median)
+  iqr <- apply(M, 2, IQR)
+  
+  if (any(iqr == 0)) {
+    stop("Bent vieno pozymio IQR lygus nuliui")
+  }
+  
+  M <- sweep(M, 2, medianos, "-")
+  M <- sweep(M, 2, iqr, "/")
+  
+  return(M)
+}
+
+
+# 32.4. Funkcija vienam stabilumo eksperimentui
+
+vienas_bandymas_stab <- function(seed) {
+  
+  # 1. Atsitiktinai atrenkame 80 % objektu
+  set.seed(seed)
+  
+  indeksai <- sort(sample(
+    seq_len(nrow(C_raw)),
+    size = floor(nrow(C_raw) * IMTIES_DALIS),
+    replace = FALSE
+  ))
+  
+  imtis <- C_raw[indeksai, , drop = FALSE]
+  
+  # 2. Normuojame TIK atrinkta imti
+  X_imtis <- normuoti_imti_stab(imtis)
+  
+  # 3. Atliekame K-means originalioje 19D erdveje
+  # Inicializacijos seed laikome pastovu,
+  # kad tirtume imties sudeties poveiki.
+  set.seed(42)
+  
+  modelis <- kmeans(
+    X_imtis,
+    centers = K_STAB,
+    nstart = NSTART_STAB
+  )
+  
+  # 4. Apskaiciuojame Silhouette
+  atstumai <- dist(X_imtis)
+  
+  sil <- mean(
+    cluster::silhouette(
+      modelis$cluster,
+      atstumai
+    )[, "sil_width"]
+  )
+  
+  # 5. Apskaiciuojame CH ir DB rodiklius
+  kokybe <- clusterCrit::intCriteria(
+    traj = X_imtis,
+    part = as.integer(modelis$cluster),
+    crit = c(
+      "Calinski_Harabasz",
+      "Davies_Bouldin"
+    )
+  )
+  
+  # 6. Issaugome klasteriu priskyrimus pagal ID
+  priskyrimai <- data.frame(
+    id = imtis$id,
+    klasteris = modelis$cluster
+  )
+  
+  # 7. Issaugome vidinius kokybes rodiklius
+  vidiniai <- data.frame(
+    seed = seed,
+    objektu = nrow(imtis),
+    k = K_STAB,
+    nstart = NSTART_STAB,
+    silhouette = sil,
+    calinski_harabasz =
+      kokybe$calinski_harabasz,
+    davies_bouldin =
+      kokybe$davies_bouldin
+  )
+  
+  return(list(
+    priskyrimai = priskyrimai,
+    vidiniai = vidiniai
+  ))
+}
+
+
+# 32.5. Atliekame 20 eksperimentu
+# Veliau tirsime, ar pakanka pirmu 5, 10 arba 15.
+
+bandymai_stab <- lapply(
+  SEEDS_STAB,
+  function(seed) {
+    
+    cat(
+      "Vykdomas eksperimentas:",
+      seed + 1, "/", N_MAX, "\n"
+    )
+    
+    vienas_bandymas_stab(seed)
+  }
+)
+
+
+# 32.6. Sudarome visas 20 imciu poras
+# Is viso gausime 190 poru.
+
+poros <- combn(
+  seq_len(N_MAX),
+  2
+)
+
+
+# 32.7. Skaiciuojame ARI, NMI ir Jaccard
+# Tik objektams, esantiems abiejose imtyse.
+
+poru_rezultatai_stab <- lapply(
+  seq_len(ncol(poros)),
+  function(j) {
+    
+    i <- poros[1, j]
+    k <- poros[2, j]
+    
+    A <- bandymai_stab[[i]]$priskyrimai
+    B <- bandymai_stab[[k]]$priskyrimai
+    
+    # Randame bendrus objektus
+    bendri_id <- intersect(A$id, B$id)
+    
+    # Suderiname objektus pagal ID
+    ind_A <- match(bendri_id, A$id)
+    ind_B <- match(bendri_id, B$id)
+    
+    kl_A <- A$klasteris[ind_A]
+    kl_B <- B$klasteris[ind_B]
+    
+    # Naudojame 31 skyriuje sukurta funkcija
+    rodikliai <- skaiciuoti_isorinius(
+      kl_A,
+      kl_B
+    )
+    
+    data.frame(
+      imtis_1 = i,
+      imtis_2 = k,
+      bendru_objektu = length(bendri_id),
+      rodikliai
+    )
+  }
+)
+
+poru_lentele_stab <- do.call(
+  rbind,
+  poru_rezultatai_stab
+)
+
+
+# 32.8. Skaiciuojame ARI vidurki, didindami N
+# N = 5, 10, 15, 20.
+# Kiekvienam N naudojame visas pirmu N imciu poras.
+
+stabilumo_N <- do.call(
+  rbind,
+  lapply(N_VARIANTAI, function(n) {
+    
+    poros_n <- subset(
+      poru_lentele_stab,
+      imtis_1 <= n & imtis_2 <= n
+    )
+    
+    data.frame(
+      N = n,
+      poru_skaicius = nrow(poros_n),
+      ARI_vid = mean(poros_n$ARI),
+      ARI_sd = sd(poros_n$ARI),
+      NMI_vid = mean(poros_n$NMI),
+      NMI_sd = sd(poros_n$NMI),
+      Jaccard_vid = mean(poros_n$Jaccard),
+      Jaccard_sd = sd(poros_n$Jaccard)
+    )
+  })
+)
+
+cat("\nSTABILUMAS DIDINANT IMCIU SKAICIU:\n")
+print(stabilumo_N)
+
+
+# 32.9. Braizome ARI vidurkio kitimo grafika
+
+grafikas_stabilumo_N <- ggplot(
+  stabilumo_N,
+  aes(x = N, y = ARI_vid)
+) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 3) +
+  scale_x_continuous(
+    breaks = N_VARIANTAI
+  ) +
+  labs(
+    title = "K-means stabilumas didinant imciu skaiciu",
+    subtitle = "Originali C aibe (19D), 80 % imtys",
+    x = "Imciu skaicius (N)",
+    y = "Vidutinis ARI"
+  ) +
+  theme_minimal()
+
+print(grafikas_stabilumo_N)
+
+
+# 32.10. Surenkame 20 eksperimentu vidinius rodiklius
+
+vidiniai_stab <- do.call(
+  rbind,
+  lapply(bandymai_stab, function(x) {
+    x$vidiniai
+  })
+)
+
+
+# 32.11. Vidiniai rodikliai didinant N
+
+vidiniai_N <- do.call(
+  rbind,
+  lapply(N_VARIANTAI, function(n) {
+    
+    D <- vidiniai_stab[seq_len(n), ]
+    
+    data.frame(
+      N = n,
+      silhouette_vid = mean(D$silhouette),
+      silhouette_sd = sd(D$silhouette),
+      CH_vid = mean(D$calinski_harabasz),
+      CH_sd = sd(D$calinski_harabasz),
+      DB_vid = mean(D$davies_bouldin),
+      DB_sd = sd(D$davies_bouldin)
+    )
+  })
+)
+
+cat("\nVIDINIAI RODIKLIAI DIDINANT N:\n")
+print(vidiniai_N)
+
+
+# 32.12. Issaugome rezultatus
+
+dir.create("rezultatai", showWarnings = FALSE)
+dir.create("grafikai", showWarnings = FALSE)
+
+write.csv(
+  stabilumo_N,
+  "rezultatai/kmeans_stabilumas_pagal_N.csv",
+  row.names = FALSE
+)
+
+write.csv(
+  poru_lentele_stab,
+  "rezultatai/kmeans_stabilumo_poros.csv",
+  row.names = FALSE
+)
+
+write.csv(
+  vidiniai_stab,
+  "rezultatai/kmeans_stabilumo_vidiniai.csv",
+  row.names = FALSE
+)
+
+write.csv(
+  vidiniai_N,
+  "rezultatai/kmeans_stabilumo_vidiniai_pagal_N.csv",
+  row.names = FALSE
+)
+
+ggsave(
+  "grafikai/kmeans_stabilumas_pagal_N.png",
+  plot = grafikas_stabilumo_N,
+  width = 8,
+  height = 5,
+  dpi = 300
+)
+
+cat("\n32 skyrius baigtas.\n")
+
+# =====================================================
+# 32.13. ARI REIKSMIU SKLAIDOS PALYGINIMAS (BOXPLOT)
+# =====================================================
+
+# 32.13.1. Paruosiame ARI reiksmes kiekvienam N
+# N = 5, 10, 15 ir 20.
+# Kiekvienu atveju naudojame visas pirmu N imciu poras.
+
+ari_boxplot_duomenys <- do.call(
+  rbind,
+  lapply(N_VARIANTAI, function(n) {
+    
+    # Atrenkame tik pirmu N imciu palyginimus
+    duomenys_n <- subset(
+      poru_lentele_stab,
+      imtis_1 <= n & imtis_2 <= n
+    )
+    
+    data.frame(
+      N = factor(
+        n,
+        levels = N_VARIANTAI
+      ),
+      ARI = duomenys_n$ARI
+    )
+  })
+)
+
+
+# 32.13.2. Nubraizome ARI boxplot
+
+grafikas_ari_boxplot <- ggplot(
+  ari_boxplot_duomenys,
+  aes(x = N, y = ARI, fill = N)
+) +
+  geom_boxplot(
+    alpha = 0.7,
+    outlier.alpha = 0.6
+  ) +
+  geom_jitter(
+    width = 0.12,
+    alpha = 0.25,
+    size = 0.8
+  ) +
+  labs(
+    title = "K-means stabilumo ARI sklaida",
+    subtitle = "Originali C aibe (19D), 80 % imtys",
+    x = "Imciu skaicius (N)",
+    y = "ARI"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+print(grafikas_ari_boxplot)
+
+
+# 32.13.3. Issaugome grafika
+
+ggsave(
+  "grafikai/kmeans_stabilumo_ari_boxplot.png",
+  plot = grafikas_ari_boxplot,
+  width = 8,
+  height = 5,
+  dpi = 300
+)
+
