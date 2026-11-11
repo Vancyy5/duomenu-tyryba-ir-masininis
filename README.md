@@ -72,3 +72,107 @@ Naudoti t-SNE parametrai:
 Visose trijose aibėse išsaugoti tie patys objektai, jų `id` ir `class`, kad būtų galima tiesiogiai palyginti klasterizavimo rezultatus. `class` nebuvo naudojamas dimensijos mažinimui.
 
 Duomenų aibės išsaugotos `aibes/` aplanke, o jų paruošimo kodas pateiktas `vykdymas.R` faile.
+ 
+
+### 4. K-means parametrų parinkimas originalioje C aibėje (19D)
+
+Optimalų klasterių skaičių vertinome naudodami **Elbow** ir **vidutinio silueto** metodus. Tikrinome klasterių skaičių nuo `k = 2` iki `k = 10`.
+
+#### Elbow metodas
+
+WSS mažėjo didėjant klasterių skaičiui, tačiau maždaug nuo `k = 5` mažėjimas sulėtėjo. Tai rodo, kad toliau didinant klasterių skaičių papildoma nauda tampa mažesnė.
+
+![K-means Elbow metodas – originali C aibė](grafikai/kmeans_elbow_originali.png)
+
+#### Silhouette metodas
+
+Didžiausias vidutinis silueto koeficientas gautas, kai `k = 2` (0,3732). Didėjant `k`, silueto reikšmės nuosekliai mažėjo, todėl pagal šį metodą tinkamiausias klasterių skaičius yra 2.
+
+![K-means Silhouette metodas – originali C aibė](grafikai/kmeans_silhouette_originali.png)
+
+#### Parametrų eksperimentai
+
+Papildomai atlikome 6 bandymus, keisdami klasterių skaičių `k`, pradinių centrų parinkimų skaičių `nstart` ir atsitiktinę sėklą (`seed`).
+
+| k | nstart | seed | WSS | Silhouette |
+|---|---:|---:|---:|---:|
+| 2 | 25 | 42 | 22174,12 | 0,3732 |
+| 3 | 25 | 42 | 18210,08 | 0,3174 |
+| 4 | 25 | 42 | 15077,90 | 0,2921 |
+| 5 | 25 | 42 | 13346,07 | 0,2603 |
+| 2 | 10 | 42 | 22174,12 | 0,3732 |
+| 2 | 25 | 123 | 22174,12 | 0,3732 |
+
+Keičiant `nstart` ir `seed`, kai `k = 2`, WSS, Silhouette ir klasterių dydžiai nepasikeitė. Tai rodo, kad šių bandymų metu rezultatai pagal vertintus rodiklius buvo stabilūs.
+
+**Pagrindiniam K-means klasterizavimui pasirinkome `k = 2`, `nstart = 25`, `seed = 42`**, nes šis derinys davė didžiausią Silhouette reikšmę iš patikrintų klasterių skaičių.
+
+Eksperimentų rezultatai išsaugoti `rezultatai/kmeans_eksperimentai_originali.csv`, o Elbow ir Silhouette grafikai – `grafikai/` aplanke.
+
+
+### 5. K-means klasterizavimas originalioje C aibėje (19D)
+
+Pritaikėme K-means algoritmą su pasirinktais parametrais `k = 2`, `nstart = 25` ir `seed = 42`. Gauti du klasteriai:
+
+| Rodiklis | 1 klasteris | 2 klasteris |
+|---|---:|---:|
+| Objektų skaičius | 2399 | 1529 |
+| Karatų mediana | 0,41 | 1,20 |
+| Kainos mediana | 1080 | 6720 |
+| Tūrio mediana | 67,77 | 193,23 |
+| Kainos už karatą mediana | 2805,36 | 5743,52 |
+
+**1 klasteris** apima mažesnius ir pigesnius deimantus, o **2 klasteris** – didesnius ir brangesnius. Taigi K-means daugiausia atskyrė objektus pagal jų dydį ir kainą.
+
+#### Klasterizavimo kokybė
+
+Apskaičiavome tris vidinius klasterizavimo kokybės rodiklius:
+
+| Rodiklis | Reikšmė |
+|---|---:|
+| Silhouette | 0,3732 |
+| Calinski–Harabasz | 2725,921 |
+| Davies–Bouldin | 1,1218 |
+
+Silhouette reikšmė rodo, kad klasteriai atskirti vidutiniškai. Kitus rodiklius naudosime rezultatams skirtingose dimensijų erdvėse palyginti.
+
+#### Klasterių vizualizacija
+
+Kadangi originali C aibė turi 19 požymių, klasterizavimo rezultatus pavaizdavome dvimatėse PCA ir t-SNE projekcijose. Abiem atvejais klasteriai nustatyti originalioje 19D erdvėje, o dimensijos mažinimas naudotas tik vizualizavimui.
+
+**PCA 2D vizualizacija**
+
+![K-means klasteriai PCA 2D projekcijoje](grafikai/kmeans_klasteriai_originali.png)
+
+**t-SNE 2D vizualizacija**
+
+![K-means klasteriai t-SNE 2D projekcijoje](grafikai/kmeans_klasteriai_originali_tsne.png)
+
+Abiejose projekcijose matomos dvi gana aiškios grupės, tačiau jų sandūroje yra persidengiančių objektų. t-SNE projekcijoje taip pat išryškėja mažesnės lokalios objektų grupės.
+
+#### Klasterių požymių palyginimas
+
+Deimantų svorio ir kainos pasiskirstymus palyginome naudodami dėžučių diagramas (boxplot).
+
+**Deimantų svoris (carat)**
+
+![Karatų pasiskirstymas pagal klasterius](grafikai/kmeans_boxplot_carat.png)
+
+**Deimantų kaina (price)**
+
+![Kainų pasiskirstymas pagal klasterius](grafikai/kmeans_boxplot_price.png)
+
+Grafikai parodo, kad antrajame klasteryje deimantai paprastai yra didesni ir brangesni, taip pat matoma didesnė jų kainų sklaida.
+
+#### Klasterių sudėtis pagal klases
+
+Palyginome klasterius su pradinėmis `Ideal` ir `Premium` klasėmis, kurios nebuvo naudojamos klasterizavimui.
+
+| Klasė | 1 klasteris | 2 klasteris |
+|---|---:|---:|
+| Ideal | 58,36 % | 36,82 % |
+| Premium | 41,64 % | 63,18 % |
+
+![Ideal ir Premium klasių proporcijos](grafikai/kmeans_klasiu_proporcijos.png)
+
+Pirmajame klasteryje daugiau `Ideal`, o antrajame – `Premium` klasės deimantų. Tačiau abi klasės pasitaiko abiejuose klasteriuose, todėl gautas suskirstymas labiau susijęs su deimantų dydžiu ir kaina nei su jų pradine klase.
