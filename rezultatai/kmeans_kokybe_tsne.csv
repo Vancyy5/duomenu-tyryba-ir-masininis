@@ -1,0 +1,2 @@
+"aibe","dimensija","algoritmas","k","nstart","seed","silhouette","calinski_harabasz","davies_bouldin"
+"t-SNE 2D",2,"K-means",2,25,42,0.44145394081921,4426.78728206754,0.882475129196739
