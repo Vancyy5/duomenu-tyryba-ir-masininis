@@ -178,6 +178,7 @@ Palyginome klasterius su pradinėmis `Ideal` ir `Premium` klasėmis, kurios nebu
 Pirmajame klasteryje daugiau `Ideal`, o antrajame – `Premium` klasės deimantų. Tačiau abi klasės pasitaiko abiejuose klasteriuose, todėl gautas suskirstymas labiau susijęs su deimantų dydžiu ir kaina nei su jų pradine klase.
 
 
+
 ### 6. K-means klasterizavimas PCA 5D aibėje
 
 #### Parametrų parinkimas
@@ -192,7 +193,7 @@ WSS mažėjo didėjant klasterių skaičiui, tačiau maždaug nuo `k = 5` mažė
 
 **Silhouette metodas**
 
-Didžiausias vidutinis silueto koeficientas gautas, kai `k = 2` (0,3852). Didėjant klasterių skaičiui silueto koeficientas mažėjo.
+Didžiausias vidutinis silueto koeficientas gautas, kai `k = 2` (0,3852). Didėjant klasterių skaičiui, silueto koeficientas mažėjo.
 
 ![K-means Silhouette metodas PCA 5D](grafikai/kmeans_silhouette_pca.png)
 
@@ -251,5 +252,30 @@ PCA 5D aibėje gautus K-means klasterius pavaizdavome dvimatėse PCA ir t-SNE pr
 
 Abiejose projekcijose klasteriai gana aiškiai atsiskiria, nors jų sandūroje matomas nedidelis persidengimas. Vizualiai PCA 5D klasterizavimo rezultatai beveik nesiskiria nuo originalios C aibės rezultatų.
 
-Eksperimentų rezultatai išsaugoti `rezultatai/kmeans_eksperimentai_pca.csv`, o kokybės rodikliai – `rezultatai/kmeans_kokybe_pca.csv`.
+#### Klasterių požymių palyginimas
 
+Klasterių charakteristikas įvertinome pagal originalius deimantų požymius, nes PCA komponentės tiesiogiai neatitinka pradinių matavimo vienetų.
+
+**Deimantų svorio pasiskirstymas**
+
+![Karatų pasiskirstymas PCA 5D klasteriuose](grafikai/kmeans_boxplot_carat_pca.png)
+
+**Deimantų kainos pasiskirstymas**
+
+![Kainų pasiskirstymas PCA 5D klasteriuose](grafikai/kmeans_boxplot_price_pca.png)
+
+Abiejuose grafikuose matyti, kad pirmąjį klasterį daugiausia sudaro mažesni ir pigesni deimantai, o antrąjį – didesni ir brangesni. Antrajame klasteryje taip pat pastebima didesnė svorio ir kainos sklaida.
+
+#### Klasterių sudėtis pagal klases
+
+Klasterių pasiskirstymą papildomai įvertinome pagal pradines `Ideal` ir `Premium` klases.
+
+![Ideal ir Premium klasių proporcijos PCA 5D klasteriuose](grafikai/kmeans_klasiu_proporcijos_pca.png)
+
+Pirmajame klasteryje `Ideal` sudaro 58,39 %, o antrajame `Premium` – 63,28 %. Abi klasės pasitaiko abiejuose klasteriuose, todėl suskirstymas labiau atspindi deimantų dydžio ir kainos skirtumus nei pradinę klasę.
+
+#### Rezultatų išsaugojimas
+
+Eksperimentų rezultatai išsaugoti `rezultatai/kmeans_eksperimentai_pca.csv`, kokybės rodikliai – `rezultatai/kmeans_kokybe_pca.csv`, o klasterių požymių medianos – `rezultatai/kmeans_pca_klasteriu_medianos.csv`.
+
+Visi grafikai išsaugoti `grafikai/` aplanke.

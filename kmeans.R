@@ -1013,4 +1013,188 @@ ggsave(
 )
 
 
+# =====================================================
+# 23. PCA 5D K-MEANS KLASTERIU POZYMIU IR KLASIU VIZUALIZAVIMAS
+# =====================================================
+
+# 23.1. Paruosiame originalius duomenis
+# Naudojame originalius deimantu pozymius, o klasteriu
+# numerius paimame is PCA 5D K-means rezultatu.
+
+originalus_pca <- read.csv(
+  "aibes/C_originaliais_vienetais_interpretacijai.csv"
+)
+
+# Suderiname objektus pagal ID, kad nesusimaisytu eilutes
+indeksai_originalus_pca <- match(
+  originalus_pca$id,
+  klasterizuoti_pca$id
+)
+
+# Patikriname, ar visi objektai rasti
+stopifnot(!anyNA(indeksai_originalus_pca))
+
+# Priskiriame PCA 5D klasteriu numerius
+originalus_pca$klasteris <- factor(
+  klasterizuoti_pca$klasteris[indeksai_originalus_pca],
+  levels = c(1, 2)
+)
+
+
+# 23.2. Deimantu svorio (carat) boxplot
+
+grafikas_carat_pca <- ggplot(
+  originalus_pca,
+  aes(x = klasteris, y = carat, fill = klasteris)
+) +
+  geom_boxplot(
+    alpha = 0.7,
+    outlier.alpha = 0.3
+  ) +
+  labs(
+    title = "Deimantu svorio pasiskirstymas pagal klasterius",
+    subtitle = "K-means PCA 5D aibeje",
+    x = "Klasteris",
+    y = "Svoris (karatai)"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+print(grafikas_carat_pca)
+
+
+# 23.3. Deimantu kainos (price) boxplot
+
+grafikas_price_pca <- ggplot(
+  originalus_pca,
+  aes(x = klasteris, y = price, fill = klasteris)
+) +
+  geom_boxplot(
+    alpha = 0.7,
+    outlier.alpha = 0.3
+  ) +
+  labs(
+    title = "Deimantu kainos pasiskirstymas pagal klasterius",
+    subtitle = "K-means PCA 5D aibeje",
+    x = "Klasteris",
+    y = "Kaina"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+print(grafikas_price_pca)
+
+
+# 23.4. Ideal ir Premium klasiu proporciju skaiciavimas
+
+# Suskaiciuojame klasiu objektus kiekviename klasteryje
+klasiu_duomenys_pca <- as.data.frame(
+  table(
+    klasteris = originalus_pca$klasteris,
+    klase = originalus_pca$class
+  )
+)
+
+# Apskaiciuojame procentines klasiu dalis klasteriuose
+klasiu_duomenys_pca <- klasiu_duomenys_pca |>
+  dplyr::group_by(klasteris) |>
+  dplyr::mutate(
+    procentai = Freq / sum(Freq) * 100
+  ) |>
+  dplyr::ungroup()
+
+cat("\nPCA 5D klasiu proporcijos:\n")
+print(klasiu_duomenys_pca)
+
+
+# 23.5. Klasiu proporciju grafikas
+
+grafikas_klases_pca <- ggplot(
+  klasiu_duomenys_pca,
+  aes(
+    x = klasteris,
+    y = procentai,
+    fill = klase
+  )
+) +
+  geom_col(width = 0.6) +
+  geom_text(
+    aes(label = paste0(round(procentai, 1), "%")),
+    position = position_stack(vjust = 0.5),
+    size = 4
+  ) +
+  scale_y_continuous(
+    limits = c(0, 100),
+    expand = c(0, 0)
+  ) +
+  labs(
+    title = "Ideal ir Premium klasiu proporcijos",
+    subtitle = "K-means PCA 5D aibeje",
+    x = "Klasteris",
+    y = "Procentai (%)",
+    fill = "Klase"
+  ) +
+  theme_minimal()
+
+print(grafikas_klases_pca)
+
+
+# 23.6. Issaugome visus tris grafikus
+
+dir.create("grafikai", showWarnings = FALSE)
+
+ggsave(
+  "grafikai/kmeans_boxplot_carat_pca.png",
+  plot = grafikas_carat_pca,
+  width = 7,
+  height = 5,
+  dpi = 300
+)
+
+ggsave(
+  "grafikai/kmeans_boxplot_price_pca.png",
+  plot = grafikas_price_pca,
+  width = 7,
+  height = 5,
+  dpi = 300
+)
+
+ggsave(
+  "grafikai/kmeans_klasiu_proporcijos_pca.png",
+  plot = grafikas_klases_pca,
+  width = 7,
+  height = 5,
+  dpi = 300
+)
+
+
+# 23.7. Apskaiciuojame klasteriu pozymiu medianas
+
+# Palyginame tipinius deimantu svorius ir kainas
+medianu_lentele_pca <- aggregate(
+  originalus_pca[, c(
+    "carat",
+    "price",
+    "volume_xyz",
+    "price_per_carat"
+  )],
+  by = list(klasteris = originalus_pca$klasteris),
+  FUN = median
+)
+
+cat("\nPCA 5D klasteriu pozymiu medianos:\n")
+print(medianu_lentele_pca)
+
+# Issaugome medianu lentele
+dir.create("rezultatai", showWarnings = FALSE)
+
+write.csv(
+  medianu_lentele_pca,
+  "rezultatai/kmeans_pca_klasteriu_medianos.csv",
+  row.names = FALSE
+)
+
+cat("\n23 skyrius baigtas: sukurti 3 grafikai ir medianu lentele.\n")
+
+
 
