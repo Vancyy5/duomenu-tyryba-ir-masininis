@@ -1,0 +1,4 @@
+"erdve","atstumas","jungimas","k","silhouette","calinski_harabasz","davies_bouldin"
+"Originali C (19D)","manhattan","complete",2,0.420909361022701,1831.37668440202,1.01771931313082
+"PCA 5D","euclidean","ward.D2",2,0.381570831877727,2828.6366339733,1.09459984325128
+"t-SNE 2D","euclidean","complete",2,0.408436463132772,3756.39302340832,0.933975547645658
