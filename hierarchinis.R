@@ -388,6 +388,7 @@ braizyti_klasterius <- function(koord, klasteriai, failas, pavadinimas, xlab, yl
 
 pca_viz <- prcomp(X, center = TRUE, scale. = FALSE)
 
+
 # Originalios erdvės klasteriai PCA 2D projekcijoje
 braizyti_klasterius(
   pca_viz$x, modelis_originali$klasteriai,
@@ -415,6 +416,12 @@ braizyti_klasterius(
   "grafikai/hierarchinis_klasteriai_originali_tsne_projekcija.png",
   "Hierarchiniai klasteriai: originali C (19D), t-SNE 2D projekcija",
   colnames(tsne_aibe$X)[1], colnames(tsne_aibe$X)[2])
+
+# PCA 5D klasteriai t-SNE projekcijoje
+braizyti_klasterius(tsne_aibe$X, modelis_pca$klasteriai,
+   "grafikai/hierarchinis_klasteriai_pca_tsne_projekcija.png",
+    "Hierarchiniai klasteriai: PCA 5D, t-SNE 2D projekcija",
+   colnames(tsne_aibe$X)[1], colnames(tsne_aibe$X)[2])
 
 # Klasterių aprašymas sumažintose erdvėse (medianos originaliais vienetais)
 aprasyti_klasterius <- function(klasteriai, sufiksas) {
@@ -448,6 +455,9 @@ medianos_tsne <- aprasyti_klasterius(modelis_tsne$klasteriai, "tsne")
 
 # Palyginimas tarp erdvių: klasteriai sunumeruoti pagal karatų medianą
 # (1 = mažesni deimantai), nes klasterių numeriai skirtingose erdvėse savavališki
+profilio_duomenys <- as.data.frame(X_originalus)
+profilio_duomenys$klasteris <- factor(modelis_originali$klasteriai)
+klasteriu_medianos <- aggregate(. ~ klasteris, data = profilio_duomenys, FUN = median)
 pozymiai_palyginimui <- intersect(
   c("carat", "price", "volume_xyz", "price_per_carat"),
   colnames(X_originalus))
@@ -477,11 +487,8 @@ write.csv(galutiniai, "rezultatai/hierarchinis_klasteriai.csv", row.names = FALS
 
 klasteriu_dydziai <- as.data.frame(table(klasteris = modelis_originali$klasteriai))
 names(klasteriu_dydziai)[2] <- "objektu_skaicius"
-write.csv(klasteriu_dydziai, "rezultatai/hierarchinis_klasteriu_dydziai.csv", row.names = FALSE)
 
-profilio_duomenys <- as.data.frame(X_originalus)
-profilio_duomenys$klasteris <- factor(modelis_originali$klasteriai)
-klasteriu_medianos <- aggregate(. ~ klasteris, data = profilio_duomenys, FUN = median)
+write.csv(klasteriu_dydziai, "rezultatai/hierarchinis_klasteriu_dydziai.csv", row.names = FALSE)
 write.csv(klasteriu_medianos, "rezultatai/hierarchinis_klasteriu_medianos.csv", row.names = FALSE)
 
 if ("class" %in% names(duomenys)) {
