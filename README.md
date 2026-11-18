@@ -959,7 +959,195 @@ Grafikai išsaugoti `grafikai/` aplanke:
 
 Skaičiavimai atlikti `kmeans.R` failo 32 ir 33 skyriuose.
 
+## Hierarchinis klasterizavimas
 
+Hierarchinį klasterizavimą atlikome tose pačiose trijose erdvėse kaip ir K-means: originalioje C aibėje (19D), PCA 5D ir t-SNE 2D. Visose aibėse yra tie patys 3928 objektai, suderinti pagal `id`. `id` ir `class` klasterizavimui nenaudoti. Kodas yra `hierarchinis.R` faile.
+
+### 1. Parametrų parinkimas
+
+Kiekvienoje erdvėje klasterizavimą kartojome iš naujo, lygindami 7 atstumo ir jungimo metodo derinius:
+
+| Atstumas | Jungimo metodas |
+|---|---|
+| euclidean | single, complete, average, ward.D2 |
+| manhattan | single, complete, average |
+
+`ward.D2` taikytas tik su euklidiniu atstumu, nes Ward metodas apibrėžtas kvadratiniams euklidiniams atstumams.
+
+Klasterių skaičių tikrinome nuo `k = 2` iki `k = 10` ir parinkome **pagal dendrogramą**, t. y. pagal didžiausią aukščio šuolį prieš apjungimą:
+
+- Skirtingų konfigūracijų aukščiai turi skirtingas skales (manhattan aukščiai didesni nei euclidean, Ward didesni nei single), todėl šuolį **normalizavome** pagal didžiausią medžio aukštį (`santykinis_suolis`).
+- Atmetėme `k`, kurio bent vienas klasteris sudaro mažiau nei **1 %** objektų. Dėl šio reikalavimo atkrito single ir average konfigūracijos, kurios atskiria po 1–2 išskirtis.
+- Silhouette skaičiavome kiekvienos konfigūracijos geriausiam `k`.
+
+Stipriai koreliuoti požymiai (`|r| ≥ 0,90`) nebuvo šalinami, kad hierarchinis klasterizavimas būtų lyginamas su K-means toje pačioje aibėje. Jų sąrašas išsaugotas `rezultatai/hierarchinis_stipriai_koreliuoti_pozymiai.csv`.
+
+### 2. Klasterių skaičiaus parinkimas pagal dendrogramą
+
+Visose trijose erdvėse didžiausią santykinį šuolį ir tinkamą klasterių dydį turėjo `euclidean_ward.D2` su `k = 2`:
+
+| Erdvė | Konfigūracija | k | Santykinis šuolis | Mažiausias klasteris | Kitas didžiausias šuolis |
+|---|---|---:|---:|---:|---|
+| Originali C (19D) | euclidean_ward.D2 | 2 | 0,3505 | 29,56 % | k = 3: 0,2291 |
+| PCA 5D | euclidean_ward.D2 | 2 | 0,5651 | 38,34 % | k = 5: 0,1126 |
+| t-SNE 2D | euclidean_ward.D2 | 2 | 0,4045 | 30,83 % | k = 4: 0,2311 |
+
+PCA ir t-SNE erdvėse `k = 2` šuolis aiškiai didesnis už kitus. Originalioje erdvėje `k = 3` šuolis taip pat pastebimas, tačiau `k = 2` išlieka didžiausias.
+
+Kitos konfigūracijos originalioje erdvėje (geriausias leistinas k): `manhattan_complete` k = 2 (0,2878), `euclidean_complete` k = 3 (0,1824). Single ir average konfigūracijos neatitiko 1 % klasterio dydžio reikalavimo.
+
+**Originali C (19D)**
+
+![Pasirinkta dendrograma, originali C aibė](grafikai/hierarchinis_dendrograma_pasirinktas.png)
+
+**PCA 5D**
+
+![Pasirinkta dendrograma, PCA 5D](grafikai/hierarchinis_dendrograma_pasirinktas_pca.png)
+
+**t-SNE 2D**
+
+![Pasirinkta dendrograma, t-SNE 2D](grafikai/hierarchinis_dendrograma_pasirinktas_tsne.png)
+
+Raudona punktyrinė linija žymi pjovimo aukštį. Visų 7 konfigūracijų dendrogramos yra `grafikai/hierarchinis_dendrogramos.pdf` (PCA ir t-SNE – su priesagomis `_pca`, `_tsne`), o šuoliai – `rezultatai/hierarchinis_dendrogramos_suoliai.csv`.
+
+### 3. Hierarchinis klasterizavimas originalioje C aibėje (19D)
+
+Pasirinkta konfigūracija: `euclidean_ward.D2`, `k = 2`. Gauti du klasteriai:
+
+| Rodiklis | 1 klasteris | 2 klasteris |
+|---|---:|---:|
+| Objektų skaičius | 2767 (70,4 %) | 1161 (29,6 %) |
+| Karatų mediana | 0,50 | 1,23 |
+| Kainos mediana | 1295 | 7903 |
+| Tūrio (`volume_xyz`) mediana | 80,24 | 201,35 |
+| Kainos už karatą mediana | 2926,67 | 6104,98 |
+| Kainos už tūrį mediana | 17,84 | 37,64 |
+| `depth` / `table` mediana | 61,5 / 57 | 62 / 58 |
+| `length_width_ratio` mediana | 1,002 | 1,006 |
+
+**1 klasteris** apima mažesnius ir pigesnius deimantus (apie 0,5 karato), o **2 klasteris** – didesnius ir brangesnius (apie 1,2 karato), kurių kaina vienam karatui maždaug dvigubai didesnė. Proporcijų požymiai (`depth`, `table`, `length_width_ratio`, `depth_ratio`, `table_depth_ratio`, `dimension_cv`) tarp klasterių beveik nesiskiria, todėl klasteriai skiria **dydį ir kainą, o ne formą**. Tai atitinka K-means rezultatą, nors klasterių dydžiai skiriasi (K-means: 2399 ir 1529 objektai).
+
+Klasterių medianos originaliais vienetais išsaugotos `rezultatai/hierarchinis_klasteriu_medianos.csv`.
+
+#### Klasterių sudėtis pagal klases
+
+| Klasė | 1 klasteris | 2 klasteris |
+|---|---:|---:|
+| Ideal | 1474 (53,27 %) | 489 (42,12 %) |
+| Premium | 1293 (46,73 %) | 672 (57,88 %) |
+
+Abi klasės pasitaiko abiejuose klasteriuose, o bendras klasių santykis yra beveik 50 : 50. Todėl klasteriai nėra tapatūs `Ideal` ir `Premium`, o labiau atspindi dydžio ir kainos skirtumus.
+
+#### Klasterių vizualizacija
+
+![Hierarchiniai klasteriai PCA 2D projekcijoje](grafikai/hierarchinis_klasteriai_PCA.png)
+
+Originalioje 19D erdvėje gauti klasteriai pavaizduoti pirmųjų dviejų pagrindinių komponenčių projekcijoje. Projekcija naudota tik vizualizacijai.
+
+### 4. Hierarchinis klasterizavimas PCA 5D ir t-SNE 2D aibėse
+
+Abiejose sumažintose erdvėse parametrus parinkome iš naujo tuo pačiu principu (žr. 2 skyrių). Abiem atvejais gauta ta pati konfigūracija `euclidean_ward.D2` su `k = 2`, tačiau klasterių dydžiai skiriasi:
+
+| Erdvė | 1 klasteris | 2 klasteris |
+|---|---:|---:|
+| Originali C (19D) | 2767 (70,4 %) | 1161 (29,6 %) |
+| PCA 5D | 1506 (38,3 %) | 2422 (61,7 %) |
+| t-SNE 2D | 2717 (69,2 %) | 1211 (30,8 %) |
+
+Klasterių numeriai skirtingose erdvėse yra savavališki, todėl dydžius reikia lyginti kaip dvi grupes, o ne pagal numerį. t-SNE 2D dydžiai beveik sutampa su originaliais (70 % ir 30 %), o PCA 5D skirstymas kitoks (apie 38 % ir 62 %).
+
+### 5. Vidiniai kokybės rodikliai
+
+| Rodiklis | Originali C (19D) | PCA 5D | t-SNE 2D |
+|---|---:|---:|---:|
+| Silhouette ↑ | 0,3344 | **0,3816** | 0,3750 |
+| Calinski–Harabasz ↑ | 2037,73 | 2828,64 | **3017,31** |
+| Davies–Bouldin ↓ | 1,1945 | 1,0946 | **0,8997** |
+
+Originali C aibė pagal visus tris rodiklius turi silpniausias reikšmes. Silhouette didžiausias PCA 5D erdvėje, o Calinski–Harabasz ir Davies–Bouldin – t-SNE 2D erdvėje. Tačiau vidiniai rodikliai skaičiuoti skirtingose erdvėse, o t-SNE atveju atstumų struktūra pakeista, todėl vien jų negalima laikyti įrodymu, kad originali struktūra išsaugota geriau.
+
+### 6. Rezultatų palyginimas naudojant išorinius rodiklius
+
+Klasterių priskyrimus trijose erdvėse palyginome pagal ARI, NMI ir Jaccard indeksus.
+
+| Palyginimas | ARI ↑ | NMI ↑ | Jaccard ↑ |
+|---|---:|---:|---:|
+| Originali 19D ir PCA 5D | 0,5912 | 0,5059 | 0,6915 |
+| Originali 19D ir t-SNE 2D | **0,8340** | **0,7233** | **0,8692** |
+| PCA 5D ir t-SNE 2D | 0,6601 | 0,5759 | 0,7343 |
+
+Hierarchinio klasterizavimo atveju t-SNE 2D suskirstymas yra artimesnis originaliam nei PCA 5D (ARI 0,834 prieš 0,591). Tai priešinga K-means rezultatui, kur PCA beveik visiškai sutapo su originaliu (ARI 0,9959). Pagal ARI ir NMI išlieka tik vidutinis sutapimas tarp PCA ir originalaus suskirstymo, o pagal Jaccard – šiek tiek aukštesnis.
+
+Sutampančių objektų lentelės išsaugotos:
+
+- `rezultatai/hierarchinis_sutampantys_taskai_originali_pca.csv`
+- `rezultatai/hierarchinis_sutampantys_taskai_originali_tsne.csv`
+- `rezultatai/hierarchinis_sutampantys_taskai_pca_tsne.csv`
+
+Atsiskyrėlių (klasterių < 1 %) pasirinktuose `k` nėra, nes jie buvo atmesti pačiame `k` parinkimo etape, todėl `hierarchinis_mazu_klasteriu_id.csv` tuščias.
+
+### 7. Hierarchinio klasterizavimo stabilumo tyrimas
+
+Stabilumą vertinome pagal tą pačią metodiką kaip K-means: **N = 10** atsitiktinių 80 % imčių (imčių sėklos nuo `42` iki `51`). Kiekvienoje imtyje:
+
+1. Iš nenormuotos C aibės atrinkome 80 % objektų (3142).
+2. Normavome robust scaling (mediana ir IQR) tik tos imties duomenimis.
+3. PCA 5D atveju iš naujo skaičiavome PCA ir ėmėme pirmas 5 komponentes. t-SNE 2D atveju iš naujo skaičiavome t-SNE projekciją.
+4. Atlikome hierarchinį klasterizavimą su pasirinkta konfigūracija (`euclidean_ward.D2`, `k = 2`).
+5. Imtis palyginome poromis (45 poros) tik bendriems objektams, pagal ARI, NMI ir Jaccard.
+
+#### Išoriniai stabilumo rodikliai (vidurkis ± SD)
+
+| Rodiklis | Originali 19D | PCA 5D | t-SNE 2D |
+|---|---:|---:|---:|
+| ARI | 0,7132 ± 0,0982 | 0,6960 ± 0,1346 | 0,4260 ± 0,2336 |
+| NMI | 0,6190 ± 0,0967 | 0,6086 ± 0,1302 | 0,4470 ± 0,1524 |
+| Jaccard | 0,7617 ± 0,0726 | 0,7590 ± 0,0936 | 0,5931 ± 0,1304 |
+
+#### ARI sklaida
+
+**Originali 19D**
+
+![Hierarchinio klasterizavimo stabilumas, originali 19D](grafikai/hierarchinis_stabilumo_ARI.png)
+
+**PCA 5D**
+
+![Hierarchinio klasterizavimo stabilumas, PCA 5D](grafikai/hierarchinis_stabilumo_ARI_pca.png)
+
+**t-SNE 2D**
+
+![Hierarchinio klasterizavimo stabilumas, t-SNE 2D](grafikai/hierarchinis_stabilumo_ARI_tsne.png)
+
+#### Vidinių rodiklių stabilumas (vidurkis ± SD)
+
+| Rodiklis | Originali 19D | PCA 5D | t-SNE 2D |
+|---|---:|---:|---:|
+| Silhouette | 0,3478 ± 0,0089 | 0,3634 ± 0,0157 | 0,3895 ± 0,0266 |
+| Calinski–Harabasz | 1937,16 ± 83,77 | 2048,49 ± 219,59 | 2618,74 ± 385,77 |
+| Davies–Bouldin | 1,1773 ± 0,0201 | 1,1334 ± 0,0335 | 0,9362 ± 0,0553 |
+
+Silhouette, Calinski–Harabasz ir Davies–Bouldin 80 % imtyse šiek tiek skiriasi nuo pilnos aibės reikšmių (5 skyrius), nes imtys mažesnės, o Calinski–Harabasz taip pat priklauso nuo objektų skaičiaus. Tačiau abiejų rinkinių tendencija ta pati: originali erdvė silpniausia, t-SNE turi didžiausią sklaidą.
+
+### 7.1. Dimensijos mažinimo efektyvumo vertinimas
+
+Dimensijos mažinimas klasterizavime laikomas efektyviu, kai vidiniai matai pagerėja, o išoriniai rodikliai su originalia erdve išlieka aukšti (arčiau 1). Gautus rezultatus palyginome su šiuo kriterijumi:
+
+| Erdvė | Vidiniai matai (Silhouette ↑, CH ↑, DB ↓) | Išoriniai matai su originalia (ARI ↑) | Stabilumas (ARI ↑) | Vertinimas |
+|---|---|---:|---:|---|
+| PCA 5D | pagerėjo pagal visus tris (0,3344 → 0,3816; 2037,73 → 2828,64; 1,1945 → 1,0946) | 0,5912 | 0,6960 | vidiniai matai geresni, tačiau suskirstymas gerokai pasikeitė |
+| t-SNE 2D | pagerėjo pagal visus tris (→ 0,3750; 3017,31; 0,8997) | 0,8340 | 0,4260 | vidiniai matai ir sutapimas geri, tačiau stabilumas žemas |
+
+Nė viena sumažinta erdvė neatitinka kriterijaus visais aspektais. PCA 5D pagerino vidinius matus, bet pakeitė suskirstymą, o t-SNE 2D išlaikė suskirstymą artimiausią originaliam, bet buvo nestabilus. Be to, vidiniai matai skaičiuoti skirtingose erdvėse, todėl jų pagerėjimas pats savaime neįrodo geresnės klasterizacijos.
+
+### 8. Hierarchinio klasterizavimo išvados
+
+1. **Visose trijose erdvėse dendrograma rodo `k = 2`.** Šuolis ypač ryškus PCA 5D (0,565) ir t-SNE 2D (0,404) erdvėse. Originalioje erdvėje `k = 3` šuolis (0,229) yra antras.
+2. **Klasteriai atskiria deimanto dydį ir kainą.** Antrame klasteryje karatų mediana apie 2,5 karto, o kainos mediana apie 6 kartus didesnė, tuo tarpu proporcijų požymiai beveik nesiskiria. Klasės `Ideal` ir `Premium` pasiskirsčiusios abiejuose klasteriuose.
+3. **Dimensijos mažinimo poveikis.** Hierarchinio klasterizavimo rezultatai po dimensijos mažinimo pasikeitė labiau nei K-means. Originalus ir PCA 5D suskirstymai sutampa tik vidutiniškai (ARI 0,591), o su t-SNE 2D sutampa geriau (ARI 0,834). Vidiniai rodikliai sumažintose erdvėse palankesni, tačiau jie skaičiuoti skirtingose erdvėse, todėl vien jais negalima teigti, kad struktūra išsaugota geriau.
+4. **Stabilumas.** Hierarchinis klasterizavimas yra mažiau stabilus nei K-means. Originalioje 19D ir PCA 5D erdvėse ARI vidurkis siekia apie 0,70–0,71 (K-means ~0,99), o t-SNE 2D – tik 0,426 su dideliu nuokrypiu (± 0,234; K-means 0,817). Tai rodo, kad dviejų klasterių riba jautri imties sudėčiai, ypač t-SNE projekcijoje, kuri kiekvienoje imtyje perskaičiuojama iš naujo.
+5. **Palyginimas su K-means.** Abu metodai randa tą pačią dydžio ir kainos struktūrą, tačiau K-means yra stabilesnis ir mažiau jautrus dimensijos mažinimui. Hierarchinis Ward klasterizavimas suteikia aiškią dendrogramą ir daugiau objektų priskiria pirmam klasteriui (2767 prieš 2399).
+
+Visi skaičiavimai atlikti `hierarchinis.R` faile.
 
 
 ## DBSCAN klasterizavimas

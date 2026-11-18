@@ -370,20 +370,104 @@ modeliai <- list(
   pca = modelis_pca,
   tsne = modelis_tsne
 )
+table(modelis_pca$klasteriai)
+table(modelis_tsne$klasteriai)
 
-# Klasteriai PCA projekcijoje (originaliai erdvei)
+# Klasterių vizualizacija
+braizyti_klasterius <- function(koord, klasteriai, failas, pavadinimas, xlab, ylab) {
+  lygis <- factor(klasteriai)
+  spalvos <- grDevices::hcl.colors(nlevels(lygis), "Dark 3")
+  png(failas, width = 1400, height = 1000, res = 150)
+  plot(koord[, 1], koord[, 2],
+       col = spalvos[as.integer(lygis)], pch = 16, cex = 0.6,
+       xlab = xlab, ylab = ylab, main = pavadinimas)
+  legend("topright", legend = levels(lygis), col = spalvos,
+         pch = 16, title = "Klasteris")
+  dev.off()
+}
+
 pca_viz <- prcomp(X, center = TRUE, scale. = FALSE)
-kl_lygis <- factor(modelis_originali$klasteriai)
-spalvos <- grDevices::hcl.colors(nlevels(kl_lygis), "Dark 3")
-png("grafikai/hierarchinis_klasteriai_PCA.png",
-    width = 1400, height = 1000, res = 150)
-plot(pca_viz$x[, 1], pca_viz$x[, 2],
-     col = spalvos[as.integer(kl_lygis)], pch = 16, cex = 0.6,
-     xlab = "PC1", ylab = "PC2",
-     main = "Hierarchiniai klasteriai PCA projekcijoje")
-legend("topright", legend = levels(kl_lygis), col = spalvos,
-       pch = 16, title = "Klasteris")
-dev.off()
+
+# Originalios erdvės klasteriai PCA 2D projekcijoje
+braizyti_klasterius(
+  pca_viz$x, modelis_originali$klasteriai,
+  "grafikai/hierarchinis_klasteriai_PCA.png",
+  "Hierarchiniai klasteriai: originali C (19D), PCA 2D projekcija",
+  "PC1", "PC2")
+
+# PCA 5D klasteriai PCA koordinatėse
+braizyti_klasterius(
+  pca_aibe$X, modelis_pca$klasteriai,
+  "grafikai/hierarchinis_klasteriai_pca_erdve.png",
+  "Hierarchiniai klasteriai: PCA 5D (rodomos PC1 ir PC2)",
+  colnames(pca_aibe$X)[1], colnames(pca_aibe$X)[2])
+
+# t-SNE 2D klasteriai t-SNE koordinatėse
+braizyti_klasterius(
+  tsne_aibe$X, modelis_tsne$klasteriai,
+  "grafikai/hierarchinis_klasteriai_tsne_erdve.png",
+  "Hierarchiniai klasteriai: t-SNE 2D",
+  colnames(tsne_aibe$X)[1], colnames(tsne_aibe$X)[2])
+
+# Originalios erdvės klasteriai t-SNE projekcijoje (bendras žemėlapis palyginimui)
+braizyti_klasterius(
+  tsne_aibe$X, modelis_originali$klasteriai,
+  "grafikai/hierarchinis_klasteriai_originali_tsne_projekcija.png",
+  "Hierarchiniai klasteriai: originali C (19D), t-SNE 2D projekcija",
+  colnames(tsne_aibe$X)[1], colnames(tsne_aibe$X)[2])
+
+# Klasterių aprašymas sumažintose erdvėse (medianos originaliais vienetais)
+aprasyti_klasterius <- function(klasteriai, sufiksas) {
+  d <- as.data.frame(X_originalus)
+  d$klasteris <- factor(klasteriai)
+  medianos <- aggregate(. ~ klasteris, data = d, FUN = median)
+  write.csv(medianos,
+            paste0("rezultatai/hierarchinis_klasteriu_medianos_", sufiksas, ".csv"),
+            row.names = FALSE)
+  
+  dydziai <- as.data.frame(table(klasteris = klasteriai))
+  names(dydziai)[2] <- "objektu_skaicius"
+  write.csv(dydziai,
+            paste0("rezultatai/hierarchinis_klasteriu_dydziai_", sufiksas, ".csv"),
+            row.names = FALSE)
+  
+  if ("class" %in% names(duomenys)) {
+    sudetis <- as.data.frame(table(klasteris = klasteriai, klase = duomenys$class))
+    names(sudetis)[3] <- "objektu_skaicius"
+    sudetis$procentai <- ave(sudetis$objektu_skaicius, sudetis$klasteris,
+                             FUN = function(x) 100 * x / sum(x))
+    write.csv(sudetis,
+              paste0("rezultatai/hierarchinis_klasiu_sudetis_", sufiksas, ".csv"),
+              row.names = FALSE)
+  }
+  medianos
+}
+
+medianos_pca <- aprasyti_klasterius(modelis_pca$klasteriai, "pca")
+medianos_tsne <- aprasyti_klasterius(modelis_tsne$klasteriai, "tsne")
+
+# Palyginimas tarp erdvių: klasteriai sunumeruoti pagal karatų medianą
+# (1 = mažesni deimantai), nes klasterių numeriai skirtingose erdvėse savavališki
+pozymiai_palyginimui <- intersect(
+  c("carat", "price", "volume_xyz", "price_per_carat"),
+  colnames(X_originalus))
+medianu_sarasas <- list(
+  originali = klasteriu_medianos,
+  pca = medianos_pca,
+  tsne = medianos_tsne
+)
+medianu_palyginimas <- do.call(rbind, lapply(names(medianu_sarasas), function(v) {
+  m <- medianu_sarasas[[v]]
+  m <- m[order(m$carat), ]
+  data.frame(erdve = v,
+             klasteris_pagal_karata = seq_len(nrow(m)),
+             klasteris = m$klasteris,
+             m[, pozymiai_palyginimui, drop = FALSE])
+}))
+write.csv(medianu_palyginimas,
+          "rezultatai/hierarchinis_klasteriu_medianu_palyginimas_erdvese.csv",
+          row.names = FALSE)
+print(medianu_palyginimas)
 
 # Galutiniai klasterių failai ir profiliai (originali erdvė)
 
