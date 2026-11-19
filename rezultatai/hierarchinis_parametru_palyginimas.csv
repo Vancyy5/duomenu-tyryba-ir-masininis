@@ -1,0 +1,15 @@
+"erdve","konfiguracija","k","silhouette"
+"Originali_C_19D","euclidean_complete",3,0.335275954131337
+"Originali_C_19D","manhattan_complete",2,0.420909361022701
+"Originali_C_19D","euclidean_ward.D2",2,0.334381008261455
+"PCA_5D","euclidean_complete",2,0.212974013188481
+"PCA_5D","manhattan_complete",2,0.307023195373898
+"PCA_5D","manhattan_average",2,0.358398545506734
+"PCA_5D","euclidean_ward.D2",2,0.381570831877727
+"tSNE_2D","euclidean_single",2,0.35283412811396
+"tSNE_2D","manhattan_single",4,0.202172358779656
+"tSNE_2D","euclidean_complete",2,0.408436463132772
+"tSNE_2D","manhattan_complete",2,0.347753093933497
+"tSNE_2D","euclidean_average",2,0.403472077475226
+"tSNE_2D","manhattan_average",4,0.396160231727872
+"tSNE_2D","euclidean_ward.D2",2,0.374978297706953

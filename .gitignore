@@ -7,3 +7,7 @@ aibe_*.csv
 .DS_Store
 .RDataTmp
 Duomenų tyryba ir mašininis mokymasis2.pdf
+.RData
+.RDataTmp*
+.Rhistory
+.Rproj.user/
