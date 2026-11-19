@@ -4553,3 +4553,260 @@ ggsave(
 )
 
 print(grafikas_stabilumas_N_20)
+
+
+
+# 36. Panašios aprėpties kelių klasterių variantai
+
+variantai_apreptis <- data.frame(
+  erdve = c("Originali 19D", "PCA 5D", "t-SNE 2D"),
+  eps = c(1.15, 1.00, 2.30),
+  minPts = c(10L, 10L, 20L)
+)
+
+erdviu_matricos <- list(x, x_pca, x_tsne)
+
+# Patikriname, kad matricų eilutės atitinka tuos pačius ID.
+stopifnot(
+  identical(aibe$id, pca_aibe$id),
+  identical(aibe$id, tsne_pca_vaizdui$id)
+)
+
+aprepties_zymes <- lapply(
+  seq_len(nrow(variantai_apreptis)),
+  function(i) {
+    dbscan::dbscan(
+      erdviu_matricos[[i]],
+      eps = variantai_apreptis$eps[i],
+      minPts = variantai_apreptis$minPts[i],
+      borderPoints = TRUE
+    )$cluster
+  }
+)
+
+# Vidiniai rodikliai kiekvieno varianto savo erdvėje.
+aprepties_kokybe <- do.call(
+  rbind,
+  lapply(seq_len(nrow(variantai_apreptis)), function(i) {
+    
+    zymes <- aprepties_zymes[[i]]
+    
+    data.frame(
+      variantai_apreptis[i, ],
+      triuksmas_proc = 100 * mean(zymes == 0),
+      vidiniai_matai(erdviu_matricos[[i]], zymes)
+    )
+  })
+)
+
+# Tie patys objektai, priskirti klasteriams visuose variantuose.
+bendri_priskirti <- Reduce(
+  "&",
+  lapply(aprepties_zymes, function(z) z > 0)
+)
+
+# Visus suskirstymus vertiname pagal originalius 19D atstumus.
+bendra_19D_kokybe <- do.call(
+  rbind,
+  lapply(seq_len(nrow(variantai_apreptis)), function(i) {
+    
+    # Perkoduojame išlikusias klasterių žymes į 1,...,k.
+    zymes <- as.integer(factor(
+      aprepties_zymes[[i]][bendri_priskirti]
+    ))
+    
+    data.frame(
+      suskirstymo_erdve = variantai_apreptis$erdve[i],
+      vertinimo_erdve = "Originali 19D",
+      vidiniai_matai(
+        x[bendri_priskirti, , drop = FALSE],
+        zymes
+      )
+    )
+  })
+)
+
+write.csv(
+  aprepties_kokybe,
+  "rezultatai/dbscan_panasios_aprepties_kokybe.csv",
+  row.names = FALSE
+)
+
+write.csv(
+  bendra_19D_kokybe,
+  "rezultatai/dbscan_panasios_aprepties_kokybe_bendra_19D.csv",
+  row.names = FALSE
+)
+
+write.csv(
+  data.frame(
+    id = aibe$id,
+    originali = aprepties_zymes[[1]],
+    pca = aprepties_zymes[[2]],
+    tsne = aprepties_zymes[[3]],
+    bendras_vertinimo_poaibis = bendri_priskirti
+  ),
+  "rezultatai/dbscan_panasios_aprepties_priskyrimai.csv",
+  row.names = FALSE
+)
+
+print(aprepties_kokybe, row.names = FALSE, digits = 5)
+print(bendra_19D_kokybe, row.names = FALSE, digits = 5)
+
+
+
+# 37. Bendra DBSCAN eksperimentų suvestinė
+
+# Panašios aprėpties t-SNE kandidato stabilumas.
+stabilumas_tsne_apreptis <- lapply(
+  stabilumas_tsne,
+  function(imtis) {
+    
+    zymes <- dbscan::dbscan(
+      imtis$x,
+      eps = 2.30,
+      minPts = 20,
+      borderPoints = TRUE
+    )$cluster
+    
+    list(
+      sekla = imtis$sekla,
+      id = imtis$id,
+      klasteris = zymes
+    )
+  }
+)
+
+# Naudojame 34 bloke sukurtą porų palyginimo funkciją.
+tsne_aprepties_poros <- lyginti_imciu_poras(
+  stabilumas_tsne_apreptis
+)
+
+tsne_aprepties_bandymai <- do.call(
+  rbind,
+  lapply(stabilumas_tsne_apreptis, function(rez) {
+    
+    dydziai <- sort(
+      table(rez$klasteris[rez$klasteris > 0]),
+      decreasing = TRUE
+    )
+    
+    data.frame(
+      sekla = rez$sekla,
+      eps = 2.30,
+      minPts = 20,
+      klasteriu_sk = length(dydziai),
+      triuksmas_proc = 100 * mean(rez$klasteris == 0),
+      klasteriu_dydziai = paste(
+        as.integer(dydziai),
+        collapse = "; "
+      )
+    )
+  })
+)
+
+write.csv(
+  tsne_aprepties_poros,
+  "rezultatai/dbscan_aprepties_tsne_stabilumo_poros.csv",
+  row.names = FALSE
+)
+
+write.csv(
+  tsne_aprepties_bandymai,
+  "rezultatai/dbscan_aprepties_tsne_stabilumo_bandymai.csv",
+  row.names = FALSE
+)
+
+# Dvi atskiros palyginimo grupės.
+atskaitu_kokybe <- rbind(
+  originali_suvestine,
+  pca_suvestine,
+  tsne_suvestine
+)
+
+atskaitu_zymes <- lapply(
+  priskyrimai_erdvese,
+  function(d) d$klasteris
+)
+
+atskaitu_stabilumas <- list(
+  stabilumo_originali_poros,
+  stabilumo_pca_poros,
+  stabilumo_tsne_poros
+)
+
+aprepties_stabilumas <- list(
+  kandidato_originali_poros,
+  kandidato_pca_poros,
+  tsne_aprepties_poros
+)
+
+suvestines_dalys <- list()
+
+for (tipas in c("Kelio atskaita", "Panaši aprėptis")) {
+  
+  if (tipas == "Kelio atskaita") {
+    kokybe <- atskaitu_kokybe
+    zymes <- atskaitu_zymes
+    stabilumas <- atskaitu_stabilumas
+  } else {
+    kokybe <- aprepties_kokybe
+    zymes <- aprepties_zymes
+    stabilumas <- aprepties_stabilumas
+  }
+  
+  # Kiekvienos grupės referencija – jos originalios 19D
+  # erdvės suskirstymas.
+  referencija <- zymes[[1]]
+  
+  for (i in seq_len(nrow(kokybe))) {
+    
+    matai <- suskirstymu_matai(
+      referencija,
+      zymes[[i]]
+    )
+    
+    suvestines_dalys[[length(suvestines_dalys) + 1L]] <-
+      data.frame(
+        variantu_grupe = tipas,
+        erdve = kokybe$erdve[i],
+        algoritmas = "DBSCAN",
+        eps = kokybe$eps[i],
+        minPts = kokybe$minPts[i],
+        k = kokybe$klasteriu_sk[i],
+        triuksmas_proc = kokybe$triuksmas_proc[i],
+        Silhouette = kokybe$Silhouette[i],
+        CH = kokybe$CH[i],
+        DB = kokybe$DB[i],
+        ARI_originali = unname(matai["ARI"]),
+        NMI_originali = unname(matai["NMI"]),
+        Jaccard_originali = unname(matai["Jaccard"]),
+        stabilumo_N = 10L,
+        stabilumo_ARI_vidurkis = mean(stabilumas[[i]]$ARI),
+        stabilumo_ARI_SD = sd(stabilumas[[i]]$ARI)
+      )
+  }
+}
+
+eksperimentu_suvestine <- do.call(
+  rbind,
+  suvestines_dalys
+)
+
+write.csv(
+  eksperimentu_suvestine,
+  "rezultatai/dbscan_eksperimentu_suvestine.csv",
+  row.names = FALSE
+)
+
+print(
+  eksperimentu_suvestine,
+  row.names = FALSE,
+  digits = 5
+)
+
+print(
+  tsne_aprepties_bandymai,
+  row.names = FALSE,
+  digits = 5
+)

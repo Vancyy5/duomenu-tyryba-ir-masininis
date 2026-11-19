@@ -1752,7 +1752,9 @@ neatitikimą, bet savaime neįrodo, kuris rezultatas geresnis.
 
 #### Triukšmo objektų sutapimas
 
-Atskirai palyginti triukšmui priskirtų objektų rinkiniai.
+Atskirai palyginti geometrinio kelio atskaitose
+triukšmui priskirtų objektų rinkiniai. Lentelėje
+A ir B žymi pirmąją ir antrąją palyginimo erdves.
 
 | Palyginimas | Triukšmas A | Triukšmas B | Triukšmas abiejose | Triukšmo Jaccard |
 |---|---:|---:|---:|---:|
@@ -1760,23 +1762,36 @@ Atskirai palyginti triukšmui priskirtų objektų rinkiniai.
 | Originali 19D ir t-SNE 2D | 63 | 150 | 8 | 0,03902 |
 | PCA 5D ir t-SNE 2D | 93 | 150 | 13 | 0,05652 |
 
-Originalioje ir PCA erdvėse 3815 objektų abiem atvejais
-priskirti didžiajam klasteriui, o 43 – triukšmui.
-Dar 20 objektų buvo triukšmas tik originalioje erdvėje,
-50 – tik PCA erdvėje.
+Originalios ir PCA erdvių atskaitose gauta po vieną
+klasterį. Jų objektų priskyrimų sutapimas pateiktas
+lentelėje: eilutės žymi originalios 19D erdvės,
+o stulpeliai – PCA 5D erdvės priskyrimus.
+
+| Originali 19D / PCA 5D | Didysis klasteris | Triukšmas | Iš viso |
+|---|---:|---:|---:|
+| Didysis klasteris | 3815 | 50 | 3865 |
+| Triukšmas | 20 | 43 | 63 |
+| **Iš viso** | **3835** | **93** | **3928** |
+
+Abiejose erdvėse didžiajam klasteriui priskirta
+3815 tų pačių objektų, o triukšmui – 43.
+Dar 50 objektų priklausė didžiajam klasteriui
+originalioje erdvėje, bet buvo triukšmas PCA erdvėje.
+Kitų 20 objektų priskyrimas pasikeitė priešinga kryptimi.
 
 Su t-SNE erdve triukšmo objektų sutapimas mažesnis:
 su originalia erdve sutapo 8, su PCA – 13 objektų.
 Taigi pasikeitė ne tik klasterių skaičius,
 bet ir triukšmui priskiriamų objektų rinkinys.
+Triukšmo žymė savaime nereiškia duomenų klaidos.
 
 Rezultatai išsaugoti:
+
 - `rezultatai/dbscan_erdviu_palyginimas.csv`
 - `rezultatai/dbscan_triuksmo_palyginimas.csv`
 
 Pilnos klasterių perėjimų lentelės išsaugotos
 `rezultatai/dbscan_perejimai_*.csv` failuose.
-
 
 
 
@@ -2167,6 +2182,143 @@ Rezultatai išsaugoti:
 - `rezultatai/dbscan_kandidatu_stabilumo_poros_tsne.csv`
 
 
+### Panašios aprėpties kelių klasterių variantų palyginimas
+
+Papildomai palyginti trys jau išbandyti parametrų
+deriniai, kurių triukšmo dalis panaši – apie 8–9 %.
+Taip sumažintas objektų aprėpties skirtumas,
+tačiau panaši aprėptis savaime neužtikrina vienodų
+vertinimo sąlygų: skiriasi erdvės, priskirti objektai
+ir klasterių skaičius.
+
+#### Rodikliai klasterizavimo erdvėse
+
+Vidiniai rodikliai pirmiausia apskaičiuoti kiekvieno
+varianto klasterizavimo erdvėje, neįtraukiant triukšmo.
+
+| Erdvė | eps | minPts | Klasterių sk. | Vertinta objektų | Triukšmas (%) | Silhouette ↑ | CH ↑ | DB ↓ |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| Originali 19D | 1,15 | 10 | 2 | 3599 | 8,38 | 0,42694 | 78,601 | 0,56661 |
+| PCA 5D | 1,00 | 10 | 3 | 3604 | 8,25 | 0,39257 | 283,197 | 0,67267 |
+| t-SNE 2D | 2,30 | 20 | 40 | 3581 | 8,83 | 0,30007 | 3387,160 | 0,72575 |
+
+Visiems trims variantams rodikliai apibrėžti,
+tačiau jų tiesioginis palyginimas ribotas,
+nes skaičiavimai atlikti skirtingose erdvėse
+ir su skirtingais objektų poaibiais.
+
+#### Vertinimas bendroje originalioje 19D erdvėje
+
+Siekiant bendro vertinimo pagrindo, atrinkti
+3269 objektai, kurie visuose trijuose variantuose
+priskirti klasteriams. Visų trijų suskirstymų
+rodikliai perskaičiuoti pagal šių pačių objektų
+atstumus originalioje normuotoje 19D erdvėje.
+
+Klasterizavimas šiame žingsnyje nekartotas –
+vertinti anksčiau gauti objektų priskyrimai.
+
+| Suskirstymo erdvė | Bendrame poaibyje likusių klasterių sk. | Silhouette ↑ | CH ↑ | DB ↓ |
+|---|---:|---:|---:|---:|
+| Originali 19D | 2 | 0,42742 | 52,533 | 0,54237 |
+| PCA 5D | 3 | 0,39440 | 246,825 | 0,73693 |
+| t-SNE 2D | 39 | 0,05744 | 388,552 | 1,63026 |
+
+t-SNE variante iš 40 klasterių bendrame poaibyje
+liko 39: vieno klasterio objektai į bendrą
+vertinimo poaibį nepateko.
+
+Pagal Silhouette ir DB šiame bendrame poaibyje
+palankiausias buvo originalioje 19D erdvėje
+gautas suskirstymas. t-SNE suskirstymo siluetas
+sumažėjo nuo 0,30007 jo paties erdvėje iki 0,05744
+originalioje erdvėje, o DB padidėjo iki 1,63026.
+Tai rodo, kad šio varianto grupių atskyrimas
+t-SNE projekcijoje taip pat aiškiai nepasireiškia
+pagal pradinius 19D atstumus.
+
+CH didžiausias liko t-SNE suskirstymui, todėl
+rodikliai nepateikė vienodo variantų išrikiavimo.
+Jie vertinami kartu su skirtingu klasterių skaičiumi,
+grupių dydžiais, interpretacija ir stabilumu.
+
+Šis papildomas palyginimas nepakeičia geometrinio
+kelio atskaitų. Rezultatai apibūdina pasirinktus
+parametrų derinius ir bendrą objektų poaibį;
+jų negalima automatiškai apibendrinti visiems
+galimiems kiekvienos erdvės suskirstymams.
+
+Rezultatai išsaugoti:
+- `rezultatai/dbscan_panasios_aprepties_kokybe.csv`
+- `rezultatai/dbscan_panasios_aprepties_kokybe_bendra_19D.csv`
+- `rezultatai/dbscan_panasios_aprepties_priskyrimai.csv`
+
+
+### DBSCAN eksperimentų suvestinė
+
+Pagrindiniai rezultatai sujungti į vieną lentelę.
+A grupė žymi geometrinio kelio atskaitas,
+B grupė – papildomus panašios aprėpties variantus.
+Visose eilutėse naudotas DBSCAN algoritmas,
+Euklido atstumas ir `borderPoints = TRUE`.
+
+| Grupė | Erdvė | eps / minPts | k | Triukšmas (%) | Silhouette ↑ | CH ↑ | DB ↓ | ARI* ↑ | NMI* ↑ | Stabilumo ARI vidurkis ± SD |
+|---|---|---|---:|---:|---:|---:|---:|---:|---:|---|
+| A | Originali 19D | 1,785453 / 38 | 1 | 1,60 | NA | NA | NA | Atskaita | Atskaita | 0,81757 ± 0,05654 |
+| A | PCA 5D | 1,253755 / 10 | 1 | 2,37 | NA | NA | NA | 0,53247 | 0,35022 | 0,80758 ± 0,04740 |
+| A | t-SNE 2D | 1,189986 / 4 | 114 | 3,82 | 0,12681 | 2109,755 | 0,88403 | 0,00074 | 0,02060 | 0,49413 ± 0,05566 |
+| B | Originali 19D | 1,15 / 10 | 2 | 8,38 | 0,42694 | 78,601 | 0,56661 | Atskaita | Atskaita | 0,86922 ± 0,03006 |
+| B | PCA 5D | 1,00 / 10 | 3 | 8,25 | 0,39257 | 283,197 | 0,67267 | 0,69456 | 0,51822 | 0,87938 ± 0,02305 |
+| B | t-SNE 2D | 2,30 / 20 | 40 | 8,83 | 0,30007 | 3387,160 | 0,72575 | 0,00188 | 0,05555 | 0,39215 ± 0,04794 |
+
+k žymi klasterių skaičių, neįskaičiuojant triukšmo.
+Silhouette, CH ir DB apskaičiuoti kiekvieno varianto
+klasterizavimo erdvėje be triukšmo. NA reiškia,
+kad atmetus triukšmą liko vienas klasteris.
+
+ARI* ir NMI* lygina suskirstymą su tos pačios
+grupės originalios 19D erdvės rezultatu:
+A grupėje – geometrinio kelio atskaita,
+B grupėje – `eps = 1,15`, `minPts = 10` variantu.
+Todėl A ir B grupių išoriniai rodikliai turi
+skirtingas referencijas. Triukšmo žymė 0 šiuose
+palyginimuose laikyta viena bendra grupe.
+
+Stabilumo rezultatai pateikti naudojant tas pačias
+10 imčių ir 45 porinius palyginimus bendriems objektams.
+A grupėje eps kiekvienai imčiai perskaičiuotas
+geometriniu kelio metodu, o B grupėje parametrai
+fiksuoti. Šie du protokolai vertina skirtingas
+procedūras, todėl jų stabilumo skirtumai negali
+būti priskirti vien parametrų gerumui.
+
+#### Papildomo panašios aprėpties t-SNE varianto stabilumas
+
+Variantas `eps = 2,30`, `minPts = 20` pilnoje aibėje
+išskyrė 40 klasterių ir 8,83 % triukšmo.
+Pritaikius tuos pačius parametrus 10 iš naujo
+apskaičiuotų imčių projekcijų, gautas 31–47 klasterių
+skaičius ir 14,00–21,23 % triukšmo.
+
+Stabilumo ARI vidurkis siekė 0,39215,
+standartinis nuokrypis – 0,04794.
+Taigi panaši aprėptis pilnoje aibėje nevirto
+pastovia aprėptimi ir suskirstymu naujose imtyse.
+
+Suvestinės vidiniai rodikliai aprašo rezultatus
+skirtingose erdvėse. Jų palyginimas bendroje 19D
+erdvėje ir su tais pačiais 3269 objektais pateiktas
+panašios aprėpties variantų palyginimo skyriuje.
+
+Rezultatai išsaugoti:
+
+- `rezultatai/dbscan_eksperimentu_suvestine.csv`
+- `rezultatai/dbscan_aprepties_tsne_stabilumo_bandymai.csv`
+- `rezultatai/dbscan_aprepties_tsne_stabilumo_poros.csv`
+
+
+
+
 ### DBSCAN tyrimo išvados
 
 1. **Rezultatai priklausė nuo parametrų ir duomenų erdvės.**
@@ -2214,3 +2366,15 @@ Rezultatai išsaugoti:
    papildomų grupių savybes ir jautrumą. Galutinėje
    interpretacijoje kartu vertinti kokybės rodikliai,
    objektų aprėptis, stabilumas ir grupių charakteristikos.
+   
+   
+  8. **Panaši objektų aprėptis negarantuoja vienodos kokybės.**
+   Papildomi variantai pilnoje aibėje turėjo apie
+   8–9 % triukšmo. Įvertinus jų suskirstymus bendroje
+   originalioje 19D erdvėje pagal tuos pačius
+   3269 objektus, originalios erdvės variantas turėjo
+   didžiausią Silhouette ir mažiausią DB, o t-SNE –
+   didžiausią CH. Todėl vieno rodiklio nepakanka
+   variantui pasirinkti. Papildomo t-SNE varianto
+   stabilumo ARI buvo 0,39215, taigi ir šis pasirinkimas
+   neparodė pastovaus suskirstymo naujose projekcijose.
