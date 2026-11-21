@@ -1,0 +1,8 @@
+"konfiguracija","k","silhouette"
+"euclidean_single",2,0.35283412811396
+"manhattan_single",4,0.202172358779656
+"euclidean_complete",2,0.408436463132772
+"manhattan_complete",2,0.347753093933497
+"euclidean_average",2,0.403472077475226
+"manhattan_average",4,0.396160231727872
+"euclidean_ward.D2",2,0.374978297706953
