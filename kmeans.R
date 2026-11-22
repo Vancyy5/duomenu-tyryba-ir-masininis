@@ -2801,4 +2801,187 @@ ggsave(
 
 cat("\n33 skyrius baigtas!\n")
 
+# =====================================================
+# 34. EMPIRINIS K-MEANS KLASTERIU SKAICIAUS VERTINIMAS
+# =====================================================
+
+# 34.1. Pasirenkame eksperimentu parametrus
+# Lyginsime k = 2, 3, 4 ir 5.
+
+K_REIKSMES <- 2:5
+NSTART_EMP <- 25
+SEED_EMP <- 42
+
+# Originalus duomenis sujungiame pagal ID.
+# Jie reikalingi klasteriu interpretacijai.
+
+originalus_emp <- read.csv(
+  "aibes/C_originaliais_vienetais_interpretacijai.csv"
+)
+
+indeksai_emp <- match(
+  duomenys$id,
+  originalus_emp$id
+)
+
+stopifnot(!anyNA(indeksai_emp))
+
+originalus_emp <- originalus_emp[
+  indeksai_emp, , drop = FALSE
+]
+
+
+# 34.2. Atliekame K-means su skirtingais k
+
+empiriniai_modeliai <- lapply(
+  K_REIKSMES,
+  function(k) {
+    
+    set.seed(SEED_EMP)
+    
+    kmeans(
+      X,
+      centers = k,
+      nstart = NSTART_EMP
+    )
+  }
+)
+
+names(empiriniai_modeliai) <- paste0(
+  "k_", K_REIKSMES
+)
+
+
+# 34.3. Apskaiciuojame klasteriu dydzius
+# ir originaliu pozymiu medianas
+
+empirine_lentele <- do.call(
+  rbind,
+  lapply(seq_along(K_REIKSMES), function(i) {
+    
+    k <- K_REIKSMES[i]
+    modelis <- empiriniai_modeliai[[i]]
+    
+    # Klasteriu objektu skaicius
+    dydziai <- as.integer(
+      table(factor(modelis$cluster, levels = 1:k))
+    )
+    
+    # Pozymai originaliais vienetais
+    medianos <- aggregate(
+      originalus_emp[, c(
+        "carat",
+        "price",
+        "volume_xyz",
+        "price_per_carat"
+      )],
+      by = list(klasteris = modelis$cluster),
+      FUN = median
+    )
+    
+    medianos <- medianos[
+      match(1:k, medianos$klasteris),
+    ]
+    
+    data.frame(
+      k = k,
+      klasteris = 1:k,
+      objektu_skaicius = dydziai,
+      carat_mediana = medianos$carat,
+      price_mediana = medianos$price,
+      volume_mediana = medianos$volume_xyz,
+      kaina_uz_karata_mediana =
+        medianos$price_per_carat
+    )
+  })
+)
+
+cat("\nEMPIRINIS KLASTERIU PALYGINIMAS:\n")
+print(empirine_lentele, row.names = FALSE)
+
+
+# 34.4. Apskaiciuojame Silhouette kiekvienam k
+# Naudojame jau apskaiciuotus atstumus.
+
+empirine_kokybe <- do.call(
+  rbind,
+  lapply(seq_along(K_REIKSMES), function(i) {
+    
+    modelis <- empiriniai_modeliai[[i]]
+    
+    data.frame(
+      k = K_REIKSMES[i],
+      WSS = modelis$tot.withinss,
+      Silhouette = mean(
+        cluster::silhouette(
+          modelis$cluster,
+          atstumai
+        )[, "sil_width"]
+      )
+    )
+  })
+)
+
+cat("\nEMPIRINIU BANDYMU KOKYBE:\n")
+print(empirine_kokybe, row.names = FALSE)
+
+
+# 34.5. Klasiu Ideal ir Premium pasiskirstymas
+# Kiekvienam k ir kiekvienam klasteriui.
+
+empirines_klases <- do.call(
+  rbind,
+  lapply(seq_along(K_REIKSMES), function(i) {
+    
+    k <- K_REIKSMES[i]
+    modelis <- empiriniai_modeliai[[i]]
+    
+    lentele <- as.data.frame(
+      table(
+        klasteris = modelis$cluster,
+        klase = originalus_emp$class
+      )
+    )
+    
+    lentele$k <- k
+    
+    lentele <- dplyr::group_by(
+      lentele, k, klasteris
+    )
+    
+    lentele <- dplyr::mutate(
+      lentele,
+      procentai = 100 * Freq / sum(Freq)
+    )
+    
+    dplyr::ungroup(lentele)
+  })
+)
+
+cat("\nKLASIU PASISKIRSTYMAS:\n")
+print(empirines_klases)
+
+
+# 34.6. Issaugome eksperimento rezultatus
+
+dir.create("rezultatai", showWarnings = FALSE)
+
+write.csv(
+  empirine_lentele,
+  "rezultatai/kmeans_empirinis_klasteriu_palyginimas.csv",
+  row.names = FALSE
+)
+
+write.csv(
+  empirine_kokybe,
+  "rezultatai/kmeans_empirinis_kokybe.csv",
+  row.names = FALSE
+)
+
+write.csv(
+  empirines_klases,
+  "rezultatai/kmeans_empirinis_klasiu_proporcijos.csv",
+  row.names = FALSE
+)
+
 
