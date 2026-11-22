@@ -1,0 +1,5 @@
+Originali 19D (eps = 1.15, minPts = 10): klasterių 2, triukšmas 8.4 %; ARI = 0.007, NMI = 0.028. Didžiausiame klasteryje (n = 3584) Ideal sudaro 52.5 % (visoje aibėje 50.0 %). Triukšme (n = 329) Ideal sudaro 24.9 %.
+PCA 5D (eps = 1.00, minPts = 10): klasterių 3, triukšmas 8.2 %; ARI = 0.008, NMI = 0.026. Didžiausiame klasteryje (n = 3494) Ideal sudaro 52.7 % (visoje aibėje 50.0 %). Triukšme (n = 324) Ideal sudaro 27.5 %.
+t-SNE 2D (eps = 2.30, minPts = 20): klasterių 40, triukšmas 8.8 %; ARI = 0.029, NMI = 0.116. Didžiausiame klasteryje (n = 268) Ideal sudaro 88.4 % (visoje aibėje 50.0 %). Triukšme (n = 347) Ideal sudaro 33.7 %.
+
+Aukščiau pateikti ARI ir NMI apskaičiuoti triukšmą laikant viena papildoma grupe. Mažas ARI savaime neįrodo, kad Ideal ir Premium klasteriuose susimaišę: rodiklį gali mažinti ir dviejų pradinių klasių suskaidymas į daug mažesnių grupių. Klasterių sudėtį vertinkite pagal dbscan_klasiu_sudetis_pasirinkti_variantai.csv; palyginimas be triukšmo pateiktas dbscan_palyginimas_su_class.csv. Šie rezultatai nėra įrodymas, kad parametrai optimalūs.

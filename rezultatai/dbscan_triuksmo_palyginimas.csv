@@ -1,4 +1,4 @@
 "erdve_A","erdve_B","triuksmas_A","triuksmas_B","triuksmas_abiejose","tik_A_triuksmas","tik_B_triuksmas","klasteriuose_abiejose","triuksmo_Jaccard"
-"Originali_19D","PCA_5D",63,93,43,20,50,3815,0.380530973451327
-"Originali_19D","tSNE_2D",63,150,8,55,142,3723,0.0390243902439024
-"PCA_5D","tSNE_2D",93,150,13,80,137,3698,0.0565217391304348
+"Originali_19D","PCA_5D",329,324,265,64,59,3540,0.68298969072165
+"Originali_19D","tSNE_2D",329,347,74,255,273,3326,0.122923588039867
+"PCA_5D","tSNE_2D",324,347,67,257,280,3324,0.110927152317881

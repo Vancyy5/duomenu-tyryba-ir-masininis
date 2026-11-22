@@ -1,2 +1,2 @@
-"erdve","eps","minPts","atstumas","borderPoints","klasteriu_sk","triuksmo_sk","triuksmas_proc","Silhouette","CH","DB","data"
-"t-SNE 2D",1.18998620567953,4,"Euklidinis",TRUE,114,150,3.81873727087576,0.126812360449365,2109.7545298771,0.884033075528336,"2026-11-18"
+"erdve","eps","minPts","variantas","eps_kelio_informacijai","atstumas","borderPoints","klasteriu_sk","triuksmo_sk","triuksmas_proc","didziausio_klasterio_nuo_visu_proc","klasteriu_dydziai","Silhouette","CH","DB","data"
+"t-SNE 2D",2.3,20,"Pasirinktas (ne įrodytai optimalus)",2.93363118447651,"Euklidinis",TRUE,40,347,8.83401221995927,6.82281059063136,"268; 258; 255; 230; 196; 190; 180; 177; 146; 139; 117; 115; 109; 109; 89; 76; 67; 67; 61; 56; 56; 50; 48; 47; 45; 44; 41; 41; 37; 34; 34; 33; 30; 26; 25; 24; 17; 16; 16; 12",0.300068654797261,3387.16005185155,0.725749328368163,"2026-11-22"

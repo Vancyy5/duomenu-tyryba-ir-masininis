@@ -1,16 +1,3 @@
-  # ==============================================================================
-# DBSCAN klasterizavimas: originali C aibė (19D), PCA 5D ir t-SNE 2D
-# ------------------------------------------------------------------------------
-#  0. Paketai, duomenys, bendros funkcijos
-#  1. Kiekvienai erdvei (ciklas): eps kelio įvertis, jautrumas, kandidatai, atskaita
-#  2. Papildomi tyrimai: 19D mažųjų grupių jautrumas, t-SNE 2 ir 3 klasterių variantai
-#  3. Atskaitų palyginimas tarp erdvių
-#  4. Stabilumas (80 % imtys): atskaitos procedūra, N pakankamumas, vidiniai matai
-#  5. Fiksuotų parametrų kandidatų ir panašios aprėpties variantų stabilumas
-#  6. Bendra eksperimentų suvestinė
-# Darbo aplankas: tas, kuriame yra aibes/, grafikai/ ir rezultatai/.
-# ==============================================================================
-
 # ---- 0. Paketai, duomenys, funkcijos ----------------------------------------
 
 for (p in c("dbscan", "ggplot2", "cluster", "Rtsne")) {
@@ -20,6 +7,13 @@ library(ggplot2)
 
 dir.create("grafikai", showWarnings = FALSE)
 dir.create("rezultatai", showWarnings = FALSE)
+
+
+rasti_pasenusiu <- intersect(pasenusie_failai, list.files("rezultatai"))
+if (length(rasti_pasenusiu)) {
+  warning("Neatnaujinami failai: ",
+          paste(rasti_pasenusiu, collapse = ", "), call. = FALSE)
+}
 
 rasyti <- function(df, failas) {
   write.csv(df, file.path("rezultatai", failas), row.names = FALSE)
@@ -70,7 +64,8 @@ paleisti <- function(X, eps, minPts) {
   dbscan::dbscan(X, eps = eps, minPts = minPts, borderPoints = TRUE)$cluster
 }
 
-# Klasterių skaičius, triukšmas, dydžiai.
+# Klasterių skaičius, triukšmas, dydžiai. Be klasterių (visi objektai triukšmas)
+# klasteriu_sk = 0, o dydžių ir dalių laukai tušti arba NA.
 santrauka <- function(z, rusiuoti = FALSE) {
   dyd <- table(z[z > 0])
   if (rusiuoti) dyd <- sort(dyd, decreasing = TRUE)
@@ -79,6 +74,8 @@ santrauka <- function(z, rusiuoti = FALSE) {
     triuksmo_sk = sum(z == 0),
     triuksmas_proc = 100 * mean(z == 0),
     didziausio_klasterio_proc = if (length(dyd)) 100 * max(dyd) / sum(dyd) else NA_real_,
+    didziausio_klasterio_nuo_visu_proc =
+      if (length(dyd)) 100 * max(dyd) / length(z) else NA_real_,
     maziausias_klasteris = if (length(dyd)) as.integer(min(dyd)) else NA_integer_,
     klasteriu_dydziai = paste(as.integer(dyd), collapse = "; ")
   )
@@ -92,11 +89,6 @@ kelio_indeksas <- function(d) {
   h <- seq(0, 1, length.out = length(d))
   v <- (d - min(d)) / plotis
   which.max(h - v)
-}
-
-kelio_eps <- function(X, minPts) {
-  d <- sort(dbscan::kNNdist(X, k = minPts - 1L))
-  d[kelio_indeksas(d)]
 }
 
 kelio_lentele <- function(X, minPts, rusiuoti = FALSE) {
@@ -248,8 +240,14 @@ tema_dbscan <- function() {
 
 PAL_MINPTS <- c("4" = "#619CFF", "5" = "#C77CFF", "10" = "#F8766D",
                 "20" = "#00BFC4", "38" = "#7CAE00")
-PAL_GRUPES <- c("Triukšmas" = "#BDBDBD", K1 = "#F8766D", K2 = "#00BFC4",
-                K3 = "#7CAE00", K4 = "#C77CFF", K5 = "#619CFF", K6 = "#E6AB02")
+# Paletė iki 40 klasterių (K1–K40): pirmos šešios spalvos tos pačios kaip anksčiau,
+# kitos 34 sugeneruotos. Tiek spalvų visiškai atskirti neįmanoma, todėl kai klasterių
+# daug, grafikas tinka tik bendram vaizdui.
+MAKS_KLASTERIU_PALETEI <- 40L
+PAL_GRUPES <- c("Triukšmas" = "#BDBDBD",
+                setNames(c("#F8766D", "#00BFC4", "#7CAE00", "#C77CFF", "#619CFF", "#E6AB02",
+                           grDevices::hcl.colors(MAKS_KLASTERIU_PALETEI - 6L, "Dark 3")),
+                         paste0("K", seq_len(MAKS_KLASTERIU_PALETEI))))
 PAL_ERDVES <- c("Originali 19D" = "#F8766D", "PCA 5D" = "#00BFC4",
                 "t-SNE 2D" = "#C77CFF")
 
@@ -320,7 +318,10 @@ kandidatu_grafikas <- function(kz, kand, koord, antraste, poantraste, stulpeliai
   
   max_k <- max(unlist(lapply(kand$variantas, function(v) kz[[v]])))
   niv <- c("Triukšmas", paste0("K", seq_len(max_k)))
-  stopifnot(all(niv %in% names(PAL_GRUPES)))
+  if (max_k > MAKS_KLASTERIU_PALETEI) {
+    stop("Kandidatas turi ", max_k, " klasterių, o paletė skirta iki ",
+         MAKS_KLASTERIU_PALETEI, ". Tokio varianto nebraižykite.")
+  }
   d$grupe <- factor(d$grupe, levels = niv)
   
   ggplot(d, aes(x = TSNE1, y = TSNE2, colour = grupe)) +
@@ -331,17 +332,72 @@ kandidatu_grafikas <- function(kz, kand, koord, antraste, poantraste, stulpeliai
     labs(title = antraste, subtitle = poantraste, x = "t-SNE 1", y = "t-SNE 2",
          caption = "Klasterių numeriai galioja tik atskiram bandymui. Triukšmas nėra klasteris.") +
     tema_dbscan() +
-    guides(colour = guide_legend(override.aes = list(size = 3, alpha = 1)))
+    guides(colour = guide_legend(ncol = if (length(niv) > 12) 2 else 1,
+                                 override.aes = list(size = 3, alpha = 1)))
 }
 
-# ---- 1. Erdvių konfigūracija --------------------------------------------------
-# minPts: pagrindinė reikšmė = 2 × dimensija, kitos – jautrumui.
-# Kandidatuose eps = NA reiškia „imti geometrinį kelio įvertį tai minPts".
+# ---- 0.1 Savitikra: atvejis be klasterių ---------------------------------------
+# Kai eps per mažas, visi objektai tampa triukšmu (klasterių nėra). Čia patikrinama,
+# kad suvestinės, vidiniai matai, suskirstymų matai, profiliai ir grafikas tokiu atveju
+# nenulūžta ir grąžina aiškias reikšmes (0 klasterių, NA vidiniai matai).
+
+savitikra_be_klasteriu <- function() {
+  n <- nrow(x)
+  z <- rep(0L, n)
+  
+  s <- santrauka(z, TRUE)
+  stopifnot(s$klasteriu_sk == 0L, s$triuksmo_sk == n, s$triuksmas_proc == 100,
+            is.na(s$didziausio_klasterio_proc), is.na(s$maziausias_klasteris))
+  
+  v <- vidiniai_matai(x_pca, z)
+  stopifnot(v$klasteriu_sk == 0L, v$vertinta_n == 0L,
+            is.na(v$Silhouette), is.na(v$CH), is.na(v$DB))
+  v1 <- vidiniai_matai(x_pca, rep(1L, n))            # vienas klasteris: matai NA
+  stopifnot(v1$klasteriu_sk == 1L, is.na(v1$Silhouette))
+  
+  m <- suskirstymu_matai(z, z)                       # abu suskirstymai trivialūs
+  stopifnot(all(is.finite(m)))
+  
+  pr <- profiliai(z, data.frame(variantas = "savitikra", eps = 0, minPts = 1L))
+  stopifnot(nrow(pr$klases) == 1L, pr$klases$n == n)
+  
+  g <- kandidatu_grafikas(list(savitikra = z),
+                          data.frame(variantas = "savitikra", eps = 0, minPts = 1L),
+                          x_tsne, "savitikra", "savitikra")
+  invisible(ggplot2::ggplot_build(g))
+  TRUE
+}
+stopifnot(savitikra_be_klasteriu())
+cat("Savitikra (atvejis be klasterių): atlikta.\n")
+
+# ---- 1. Pasirinkti variantai ir erdvių konfigūracija -----------------------------
+
+ER <- c(originali = "Originali 19D", pca = "PCA 5D", tsne = "t-SNE 2D")  # kodas -> pavadinimas
+
+# Pasirinkti variantai: vienintelė vieta, kurioje jie nurodyti. Naudojami pagrindiniams
+# rezultatams (1.4) ir stabilumo bandymams (4). Tai pagal jautrumo tyrimą (aprėptį ir
+# triukšmą) parinkti kandidatai, o ne įrodytai optimalūs parametrai. Geometrinio kelio
+# eps skaičiuojamas tik parametrų paieškoje (1.1) ir atskaitai nenaudojamas.
+PASIRINKTA <- list(
+  originali = list(eps = 1.15, minPts = 10L),
+  pca       = list(eps = 1.00, minPts = 10L),
+  tsne      = list(eps = 2.30, minPts = 20L)
+)
+stopifnot(identical(names(PASIRINKTA), names(ER)))
+PASIRINKTA_TEKSTAS <- paste(vapply(names(PASIRINKTA), function(k) {
+  sprintf("%s: eps = %s, minPts = %d", ER[[k]],
+          format(PASIRINKTA[[k]]$eps, nsmall = 2), as.integer(PASIRINKTA[[k]]$minPts))
+}, character(1)), collapse = "; ")
+cat("Pasirinkti variantai ->", PASIRINKTA_TEKSTAS, "\n")
+
+# minPts: pasirinktas variantas imamas iš PASIRINKTA, kitos reikšmės – jautrumui
+# (orientyras: 2 × dimensija = 38 / 10 / 4). Kandidatuose eps = NA reiškia
+# „imti geometrinį kelio įvertį tam minPts“.
 
 erdves <- list(
   originali = list(
-    kodas = "originali", vardas = "Originali 19D", X = x,
-    minPts = c(10, 20, 38), bazinis_minPts = 38,
+    kodas = "originali", vardas = ER[["originali"]], X = x,
+    minPts = c(10, 20, 38), pasirinkta = PASIRINKTA$originali,
     eps_tinklelis = seq(0.8, 1.6, by = 0.05), ideti_kelio_eps = FALSE,
     eps_zingsniai = seq(0.8, 1.6, by = 0.1), rusiuoti = FALSE,
     knn_png = "dbscan_kelio_ivertis_originali.png",
@@ -352,8 +408,8 @@ erdves <- list(
                             minPts = c(20, 10, 10, 10))
   ),
   pca = list(
-    kodas = "pca", vardas = "PCA 5D", X = x_pca,
-    minPts = c(5, 10, 20, 38), bazinis_minPts = 10,
+    kodas = "pca", vardas = ER[["pca"]], X = x_pca,
+    minPts = c(5, 10, 20, 38), pasirinkta = PASIRINKTA$pca,
     eps_tinklelis = seq(0.6, 1.8, by = 0.05), ideti_kelio_eps = TRUE,
     eps_zingsniai = seq(0.6, 1.8, by = 0.2), rusiuoti = FALSE,
     knn_png = "dbscan_knn_pca.png", knn_stulpeliai = 2, knn_aukstis = 8,
@@ -363,20 +419,23 @@ erdves <- list(
                             minPts = c(5, 10, 20, 38, 10, 10))
   ),
   tsne = list(
-    kodas = "tsne", vardas = "t-SNE 2D", X = x_tsne,
-    minPts = c(4, 5, 10, 20), bazinis_minPts = 4,
+    kodas = "tsne", vardas = ER[["tsne"]], X = x_tsne,
+    minPts = c(4, 5, 10, 20), pasirinkta = PASIRINKTA$tsne,
     eps_tinklelis = seq(0.8, 4.4, by = 0.15), ideti_kelio_eps = TRUE,
     eps_zingsniai = seq(0.8, 4.4, by = 0.6), rusiuoti = TRUE,
     knn_png = "dbscan_knn_tsne.png", knn_stulpeliai = 2, knn_aukstis = 8,
-    kandidatu_png = NULL,   # 114 klasterių nevaizduojami; žr. 2.2 skyrių
+    kandidatu_png = NULL,   # daug klasterių nevaizduojami; žr. 2.2 skyrių
     kandidatai = data.frame(variantas = c("kelias_4", "kelias_10",
-                                          "trys_klasteriai", "du_klasteriai"),
-                            eps = c(NA, NA, 3.05, 3.20),
-                            minPts = c(4, 10, 4, 4))
+                                          "trys_klasteriai", "du_klasteriai", NA),
+                            eps = c(NA, NA, 3.05, 3.20, 2.30),
+                            minPts = c(4, 10, 4, 4, 20))
   )
 )
-
-ER <- vapply(erdves, function(e) e$vardas, character(1))   # kodas -> pavadinimas
+stopifnot(all(vapply(erdves, function(e) e$pasirinkta$minPts %in% e$minPts, logical(1))),
+          all(vapply(erdves, function(e) {
+            any(abs(e$kandidatai$eps - e$pasirinkta$eps) < 1e-9 &
+                  e$kandidatai$minPts == e$pasirinkta$minPts, na.rm = TRUE)
+          }, logical(1))))
 
 # 19D pradiniai 15 bandymų.
 pradiniai <- rbind(
@@ -408,11 +467,15 @@ for (cfg in erdves) {
   print(kelias, row.names = FALSE, digits = 5)
   
   # 1.2 Parametrų jautrumas + siluetas + klasterių balansas
-  tinklelis <- expand.grid(minPts = cfg$minPts, eps = cfg$eps_tinklelis)
+  tinklelis <- expand.grid(minPts = cfg$minPts, eps = round(cfg$eps_tinklelis, 4))
+  # Pasirinktas variantas visada įtraukiamas į jautrumo lentelę.
+  tinklelis <- rbind(tinklelis, data.frame(minPts = cfg$pasirinkta$minPts,
+                                           eps = round(cfg$pasirinkta$eps, 4)))
   if (cfg$ideti_kelio_eps) {
     tinklelis <- unique(rbind(tinklelis,
                               data.frame(minPts = kelias$minPts, eps = kelias$eps_kelio)))
   }
+  tinklelis <- unique(tinklelis)
   tinklelis <- tinklelis[order(tinklelis$minPts, tinklelis$eps), ]
   jaut <- jautrumo_tyrimas(X, tinklelis, D, cfg$rusiuoti)
   rasyti(jaut[, c("eps", "minPts", "klasteriu_sk", "triuksmo_sk",
@@ -430,6 +493,10 @@ for (cfg in erdves) {
   kand$variantas <- ifelse(is.na(kand$variantas),
                            sprintf("eps_%.2f_minPts_%d", kand$eps, as.integer(kand$minPts)),
                            kand$variantas)
+  
+  pasirinktas_kand <- abs(kand$eps - cfg$pasirinkta$eps) < 1e-9 &
+    kand$minPts == cfg$pasirinkta$minPts
+  stopifnot(any(pasirinktas_kand))
   
   kz <- setNames(lapply(seq_len(nrow(kand)),
                         function(i) paleisti(X, kand$eps[i], kand$minPts[i])),
@@ -450,6 +517,7 @@ for (cfg in erdves) {
     z <- kz[[i]]
     v <- vidiniai_matai(X, z, D)
     data.frame(kand[i, c("variantas", "eps", "minPts")],
+               pasirinktas = pasirinktas_kand[i],
                klasteriu_sk = v$klasteriu_sk, vertinta_n = v$vertinta_n,
                vertinta_proc = 100 * v$vertinta_n / nrow(X),
                triuksmas_proc = 100 * mean(z == 0),
@@ -466,15 +534,28 @@ for (cfg in erdves) {
     issaugoti(g, cfg$kandidatu_png, 12, 4.25 * ceiling(nrow(kand) / 2))
   }
   
-  # 1.4 Atskaita: bazinis minPts + geometrinis eps
-  eps0 <- kelias$eps_kelio[kelias$minPts == cfg$bazinis_minPts]
-  z0 <- paleisti(X, eps0, cfg$bazinis_minPts)
+  # 1.4 Pasirinktas variantas (pagrindiniai rezultatai ir stabilumo bandymai).
+  # Geometrinio kelio eps čia nenaudojamas; jis pateikiamas tik informaciniam palyginimui.
+  eps0 <- cfg$pasirinkta$eps
+  minPts0 <- cfg$pasirinkta$minPts
+  z0 <- paleisti(X, eps0, minPts0)
+  if (!any(z0 > 0)) {
+    warning(cfg$vardas, ": pasirinktas variantas (eps = ", eps0, ", minPts = ", minPts0,
+            ") klasterių nerado, visi objektai triukšmas.", call. = FALSE)
+  }
   v0 <- vidiniai_matai(X, z0, D)
-  suv0 <- data.frame(erdve = cfg$vardas, eps = eps0, minPts = cfg$bazinis_minPts,
+  sant0 <- santrauka(z0, TRUE)
+  suv0 <- data.frame(erdve = cfg$vardas, eps = eps0, minPts = minPts0,
+                     variantas = "Pasirinktas (ne įrodytai optimalus)",
+                     eps_kelio_informacijai = kelias$eps_kelio[match(minPts0, kelias$minPts)],
                      atstumas = "Euklidinis", borderPoints = TRUE,
                      klasteriu_sk = v0$klasteriu_sk, triuksmo_sk = sum(z0 == 0),
                      triuksmas_proc = 100 * mean(z0 == 0),
+                     didziausio_klasterio_nuo_visu_proc =
+                       sant0$didziausio_klasterio_nuo_visu_proc,
+                     klasteriu_dydziai = sant0$klasteriu_dydziai,
                      v0[, c("Silhouette", "CH", "DB")], data = as.character(Sys.Date()))
+  print(suv0, row.names = FALSE, digits = 5)
   rasyti(data.frame(id = aibe$id, class = aibe$class, klasteris = z0),
          paste0("dbscan_", k, "_klasteriai.csv"))
   rasyti(suv0, paste0("dbscan_kokybe_", k, ".csv"))
@@ -488,13 +569,66 @@ for (cfg in erdves) {
   invisible(gc())
 }
 
-# ---- 2.1 19D: mažųjų grupių jautrumas eps (minPts = 10) -----------------------
+# ---- 1.5 Pasirinktų DBSCAN rezultatų eilutė bendroje t-SNE projekcijoje --------
+# Klasterizuota atitinkamai originalioje 19D, PCA 5D ir t-SNE 2D erdvėje.
+# Visoms trims panelėms naudojamos tos pačios x_tsne koordinatės ir objektų tvarka.
+pasirinktu_vaizdas <- do.call(rbind, lapply(names(ER), function(k) {
+  z <- bazines_z[[k]]
+  dyd <- table(z[z > 0])
+  dydis <- rep(Inf, length(z))
+  dydis[z > 0] <- as.numeric(dyd[as.character(z[z > 0])])
+  d <- data.frame(TSNE1 = x_tsne[, 1], TSNE2 = x_tsne[, 2],
+                  erdve = k,
+                  grupe = ifelse(z == 0, "Triukšmas", paste0("K", z)))
+  d[order(dydis, decreasing = TRUE), ]
+}))
+pasirinktu_vaizdas$erdve <- factor(pasirinktu_vaizdas$erdve, levels = names(ER))
+max_k_pasirinktu <- max(unlist(bazines_z, use.names = FALSE))
+if (max_k_pasirinktu > MAKS_KLASTERIU_PALETEI) {
+  stop("Pasirinktų rezultatų grafikui reikia ", max_k_pasirinktu,
+       " klasterių spalvų, o paletėje yra ", MAKS_KLASTERIU_PALETEI, ".",
+       call. = FALSE)
+}
+lygiai_pasirinktu <- c("Triukšmas", if (max_k_pasirinktu > 0L) {
+  paste0("K", seq_len(max_k_pasirinktu))
+} else character(0))
+pasirinktu_vaizdas$grupe <- factor(pasirinktu_vaizdas$grupe,
+                                   levels = lygiai_pasirinktu)
+etiketes_pasirinktu <- setNames(vapply(names(ER), function(k) {
+  z <- bazines_z[[k]]
+  sprintf("%s\neps = %.2f; minPts = %d\nKlasterių: %d; triukšmas %.2f %%",
+          ER[[k]], PASIRINKTA[[k]]$eps, PASIRINKTA[[k]]$minPts,
+          length(unique(z[z > 0])), 100 * mean(z == 0))
+}, character(1)), names(ER))
+
+g <- ggplot(pasirinktu_vaizdas, aes(x = TSNE1, y = TSNE2, colour = grupe)) +
+  geom_point(size = 0.8, alpha = 0.7) +
+  facet_wrap(~ erdve, nrow = 1, scales = "fixed",
+             labeller = labeller(erdve = etiketes_pasirinktu)) +
+  scale_colour_manual(values = PAL_GRUPES, breaks = lygiai_pasirinktu,
+                      name = "Grupė") +
+  coord_fixed() +
+  labs(title = "DBSCAN pasirinktų variantų rezultatai",
+       subtitle = "Visi suskirstymai pavaizduoti toje pačioje t-SNE 2D projekcijoje",
+       x = "t-SNE 1", y = "t-SNE 2",
+       caption = "Klasterių numeriai galioja tik atskiroje panelėje. Triukšmas nėra klasteris.") +
+  tema_dbscan() +
+  theme(legend.position = "bottom", legend.text = element_text(size = 9),
+        strip.text = element_text(size = 10)) +
+  guides(colour = guide_legend(ncol = 8,
+                               override.aes = list(size = 2.5, alpha = 1)))
+issaugoti(g, "dbscan_pasirinkti_variantai_tsne.png", 15, 6)
+
+# ---- 2.1 19D: mažųjų grupių jautrumas eps (pasirinktas minPts) ----------------
 
 eps_m <- seq(0.90, 1.15, by = 0.05)
 BUSENOS <- c("didysis_klasteris", "mazieji_klasteriai", "triuksmas")
 
 busenos <- lapply(eps_m, function(e) {
-  z <- paleisti(x, e, 10L)
+  z <- paleisti(x, e, PASIRINKTA$originali$minPts)
+  if (!any(z > 0)) {   # atvejis be klasterių: visi objektai triukšmas
+    return(factor(rep("triuksmas", length(z)), levels = BUSENOS))
+  }
   didysis <- as.integer(names(which.max(table(z[z > 0]))))
   factor(ifelse(z == 0, "triuksmas",
                 ifelse(z == didysis, "didysis_klasteris", "mazieji_klasteriai")),
@@ -520,10 +654,18 @@ perejimai_eps <- do.call(rbind, lapply(seq_len(length(eps_m) - 1), function(i) {
 }))
 rasyti(perejimai_eps, "dbscan_objektu_perejimai_originali.csv")
 
-# ---- 2.2 t-SNE: du ir trys klasteriai ------------------------------------------
+# ---- 2.2 t-SNE: du ir trys klasteriai (papildomi, neišrinkti kandidatai) --------
 
 dt <- c("trys_klasteriai", "du_klasteriai")
 kz_t <- kand_z_visi$tsne
+# Pavadinimai „trys“ ir „du“ gauti ankstesnio paleidimo metu; patikriname, ar vis dar tiesa.
+for (v in list(c("trys_klasteriai", 3L), c("du_klasteriai", 2L))) {
+  k_sk <- length(unique(kz_t[[v[1]]][kz_t[[v[1]]] > 0]))
+  if (k_sk != as.integer(v[2])) {
+    warning("t-SNE variantas '", v[1], "' dabar turi ", k_sk, " klasterius, ne ", v[2],
+            ". Pavadinimas nebeatitinka rezultato.", call. = FALSE)
+  }
+}
 perej <- table(eps_3_05 = kz_t$trys_klasteriai, eps_3_20 = kz_t$du_klasteriai)
 print(perej)
 rasyti(as.data.frame(perej), "dbscan_tsne_du_ir_trys_perejimai.csv")
@@ -535,7 +677,7 @@ g <- kandidatu_grafikas(kz_t, kand_dt, x_tsne,
                         stulpeliai = 2)
 issaugoti(g, "dbscan_tsne_du_ir_trys_klasteriai.png", 12, 5)
 
-# ---- 3. Atskaitų palyginimas tarp erdvių --------------------------------------
+# ---- 3. Pasirinktų variantų palyginimas tarp erdvių ---------------------------
 
 vardai_f <- c(originali = "Originali_19D", pca = "PCA_5D", tsne = "tSNE_2D")
 poros_e <- combn(names(vardai_f), 2)
@@ -567,15 +709,124 @@ rasyti(do.call(rbind, lapply(tarp, `[[`, "palyginimas")), "dbscan_erdviu_palygin
 rasyti(do.call(rbind, lapply(tarp, `[[`, "triuksmas")), "dbscan_triuksmo_palyginimas.csv")
 print(do.call(rbind, lapply(tarp, `[[`, "palyginimas")), row.names = FALSE, digits = 5)
 
-# ---- 4. Stabilumas: 80 % imtys -------------------------------------------------
+# ---- 3.1 Palyginimas su tikrąja pjūvio kokybės žyme (class) -------------------
+# class klasterizavime nenaudojama, ji skirta tik vertinimui po klasterizavimo.
+# Triukšmo (žymė 0) traktavimas nurodytas aiškiai, abu variantai pateikiami:
+#  (a) „triukšmas = viena grupė“: visi objektai; triukšmas laikomas viena papildoma grupe;
+#  (b) „be triukšmo“: tik klasteriams priskirti objektai.
+# ARI/NMI/Jaccard čia vertina sutapimą su class, o ne klasterių „teisingumą“.
+
+cls <- as.integer(factor(aibe$class, levels = c("Ideal", "Premium")))
+stopifnot(!anyNA(cls))
+TR_VISI <- "triukšmas = viena grupė"
+TR_BE <- "be triukšmo"
+
+class_matai <- do.call(rbind, lapply(names(bazines_z), function(k) {
+  z <- bazines_z[[k]]
+  prisk <- z > 0
+  k_sk <- length(unique(z[prisk]))
+  eilute <- function(traktavimas, m, n) {
+    data.frame(erdve = ER[[k]], eps = PASIRINKTA[[k]]$eps,
+               minPts = as.integer(PASIRINKTA[[k]]$minPts),
+               triuksmo_traktavimas = traktavimas, objektu_sk = n,
+               klasteriu_sk = k_sk, triuksmas_proc = 100 * mean(!prisk), t(m))
+  }
+  a <- eilute(TR_VISI, suskirstymu_matai(cls, z), length(z))
+  b <- if (sum(prisk) >= 2L) {
+    eilute(TR_BE, suskirstymu_matai(cls[prisk], z[prisk]), sum(prisk))
+  }
+  rbind(a, b)
+}))
+rasyti(class_matai, "dbscan_palyginimas_su_class.csv")
+print(class_matai, row.names = FALSE, digits = 3)
+
+bendras_ideal <- 100 * mean(aibe$class == "Ideal")
+class_sudetis <- do.call(rbind, lapply(names(bazines_z), function(k) {
+  z <- bazines_z[[k]]
+  do.call(rbind, lapply(sort(unique(z)), function(gi) {
+    t_ <- table(factor(aibe$class[z == gi], levels = c("Ideal", "Premium")))
+    n <- as.integer(sum(t_))
+    data.frame(erdve = ER[[k]], grupe = if (gi == 0) "Triuksmas" else paste0("K", gi),
+               n = n, Ideal = as.integer(t_[["Ideal"]]), Premium = as.integer(t_[["Premium"]]),
+               Ideal_proc = 100 * t_[["Ideal"]] / n, Premium_proc = 100 * t_[["Premium"]] / n,
+               Ideal_proc_visoje_aibeje = bendras_ideal)
+  }))
+}))
+rasyti(class_sudetis, "dbscan_klasiu_sudetis_pasirinkti_variantai.csv")
+
+# Išvadoje pateikiami faktiniai rodikliai ir grupių sudėtis. Vien ARI reikšmė
+# nenustato klasterių grynumo: daug smulkių vienos klasės klasterių taip pat gali
+# turėti mažą ARI, kai pradinės klasės yra tik dvi.
+vis <- class_matai[class_matai$triuksmo_traktavimas == TR_VISI, ]
+isvados_eilutes <- vapply(seq_len(nrow(vis)), function(i) {
+  s <- class_sudetis[class_sudetis$erdve == vis$erdve[i], ]
+  kl <- s[s$grupe != "Triuksmas", , drop = FALSE]
+  tr <- s[s$grupe == "Triuksmas", , drop = FALSE]
+  did <- if (nrow(kl)) kl[which.max(kl$n), ] else NULL
+  dalis_did <- if (!is.null(did)) {
+    sprintf(" Didžiausiame klasteryje (n = %d) Ideal sudaro %.1f %% (visoje aibėje %.1f %%).",
+            did$n, did$Ideal_proc, bendras_ideal)
+  } else " Klasterių nėra."
+  dalis_tr <- if (nrow(tr)) {
+    sprintf(" Triukšme (n = %d) Ideal sudaro %.1f %%.", tr$n, tr$Ideal_proc)
+  } else ""
+  sprintf("%s (eps = %s, minPts = %d): klasterių %d, triukšmas %.1f %%; ARI = %.3f, NMI = %.3f.%s%s",
+          vis$erdve[i], format(vis$eps[i], nsmall = 2), vis$minPts[i], vis$klasteriu_sk[i],
+          vis$triuksmas_proc[i], vis$ARI[i], vis$NMI[i], dalis_did, dalis_tr)
+}, character(1))
+
+turi_kl <- vis$klasteriu_sk > 0L
+bendra_isvada <- if (!any(turi_kl)) {
+  "Nė vienoje erdvėje klasterių nerasta, todėl sutapimo su class vertinti negalima."
+} else {
+  paste("Aukščiau pateikti ARI ir NMI apskaičiuoti triukšmą laikant viena papildoma grupe.",
+        "Mažas ARI savaime neįrodo, kad Ideal ir Premium klasteriuose susimaišę:",
+        "rodiklį gali mažinti ir dviejų pradinių klasių suskaidymas į daug mažesnių grupių.",
+        "Klasterių sudėtį vertinkite pagal dbscan_klasiu_sudetis_pasirinkti_variantai.csv;",
+        "palyginimas be triukšmo pateiktas dbscan_palyginimas_su_class.csv.",
+        "Šie rezultatai nėra įrodymas, kad parametrai optimalūs.")
+}
+cat("\n", paste(isvados_eilutes, collapse = "\n"), "\n\n", bendra_isvada, "\n", sep = "")
+# Rašoma baitais kaip UTF-8, kad lietuviškos raidės nepriklausytų nuo sistemos lokalės.
+isvados_failas <- file(file.path("rezultatai", "dbscan_isvada_class.txt"), "wb")
+writeLines(enc2utf8(c(isvados_eilutes, "", bendra_isvada)), isvados_failas, useBytes = TRUE)
+close(isvados_failas)
+
+# ---- 4. Pasirinktų variantų stabilumas: 80 % imtys -----------------------------
+# Visose imtyse naudojami tie patys pasirinkti parametrai (PASIRINKTA): eps ir minPts
+# nekeičiami. Geometrinio kelio eps čia nenaudojamas, jis lieka parametrų paieškoje (1.1).
 # Imtis imama iš nenormuotų duomenų, normavimas (mediana, IQR) ir dimensijos
 # mažinimas kiekvienoje imtyje atliekami iš naujo – duomenų nutekėjimo nėra.
+# Fiksuotas eps ir 80 % imtis (t-SNE atveju – dar ir naujas projekcijos mastelis) keičia
+# tankį, todėl stabilumas atspindi ir jautrumą šiems pokyčiams.
+# ARI skaičiuojamas triukšmo žymę 0 laikant viena grupe, todėl vienam klasteriui su
+# triukšmu jis daugiausia rodo didžiojo klasterio ir triukšmo priskyrimų pastovumą,
+# o ne kelių klasterių struktūros atkuriamumą. Todėl greta pateikiamas triukšmo Jaccard.
 
 N_MAX <- 20L   # imčių originaliai ir PCA erdvėms
 N_PAG <- 10L   # imčių bendram trijų erdvių palyginimui (t-SNE – tik tiek)
 
 X_pradine <- as.matrix(interp[, pozymiai, drop = FALSE])
 stopifnot(all(is.finite(X_pradine)))
+
+# Savitikra: viso rinkinio normavimas (mediana, IQR) turi atkurti C aibę. Jei ne,
+# stabilumo bandymai tikrintų kitą procedūrą nei pagrindinis eksperimentas.
+iqr_pradine <- apply(X_pradine, 2, IQR)
+if (any(!is.finite(iqr_pradine)) || any(iqr_pradine <= 0)) {
+  stop("Stabilumo dalis sustabdyta: interp požymių IQR turi būti baigtiniai ir teigiami. ",
+       "Patikrinkite pradinės C aibės normavimo procedūrą.", call. = FALSE)
+}
+x_is_interp <- sweep(sweep(X_pradine, 2, apply(X_pradine, 2, median), "-"),
+                     2, iqr_pradine, "/")
+normavimo_skirtumas <- max(abs(x_is_interp - x))
+cat("Normavimo atitikimas (maks. |skirtumas| tarp C aibės ir mediana/IQR normavimo):",
+    signif(normavimo_skirtumas, 3), "\n")
+if (!is.finite(normavimo_skirtumas) || normavimo_skirtumas > 1e-6) {
+  stop("Stabilumo dalis sustabdyta: C aibė nesutampa su interp mediana/IQR normavimu ",
+       "(maks. skirtumas ", signif(normavimo_skirtumas, 3), "). ",
+       "Prieš tęsdami suderinkite pradines aibes ir normavimo procedūrą. ",
+       "Pasirinktų eps reikšmių automatiškai nekeiskite.", call. = FALSE)
+}
 
 sudaryti_imti <- function(sekla) {
   set.seed(sekla)
@@ -590,22 +841,57 @@ sudaryti_imti <- function(sekla) {
 }
 imtys <- lapply(0:(N_MAX - 1L), sudaryti_imti)
 
-# t-SNE projekcijos kešuojamos, kad nereikėtų perskaičiuoti.
+# t-SNE talpykla susieta su konkrečia normuota imties matrica, ID, sėkla,
+# t-SNE nustatymais ir R/Rtsne versijomis. DBSCAN eps ir minPts į raktą neįtraukti:
+# pakeitus vien juos, tinkama projekcija naudojama pakartotinai.
+# RDS faile įvestis ir projekcija saugomos kartu. Senas CSV be šio RDS netikrinamas
+# vien pagal ID: pirmą kartą projekcija perskaičiuojama, o CSV išvestis atnaujinama.
 tsne_imtis <- function(im) {
   failas <- file.path("rezultatai",
                       sprintf("dbscan_stabilumas_tsne_imtis_%d.csv", im$sekla))
-  if (file.exists(failas)) {
-    d <- read.csv(failas)
-    if (nrow(d) == length(im$id) && all(as.character(d$id) == as.character(im$id))) {
-      return(as.matrix(d[, c("TSNE1", "TSNE2")]))
-    }
+  talpyklos_failas <- sub("\\.csv$", ".rds", failas)
+  sekla_tsne <- 1000L + im$sekla
+  
+  # Aiškiai užfiksuotos ankstesnio kvietimo reikšmės ir tuomet naudoti numatytieji
+  # parametrai. Jie nekeičia pasirinkto t-SNE skaičiavimo protokolo.
+  nustatymai <- list(
+    dims = 2L, initial_dims = 50L, perplexity = 30, theta = 0.5,
+    check_duplicates = FALSE, pca = FALSE, partial_pca = FALSE,
+    max_iter = 1000L, verbose = FALSE, is_distance = FALSE, Y_init = NULL,
+    pca_center = TRUE, pca_scale = FALSE, normalize = FALSE,
+    stop_lying_iter = 250L, mom_switch_iter = 250L,
+    momentum = 0.5, final_momentum = 0.8, eta = 200,
+    exaggeration_factor = 12, num_threads = 1L
+  )
+  raktas <- list(
+    talpyklos_versija = 1L,
+    id = im$id, X = im$x, sekla = sekla_tsne,
+    nustatymai = nustatymai, RNG = RNGkind(),
+    R_versija = as.character(getRversion()),
+    Rtsne_versija = as.character(utils::packageVersion("Rtsne"))
+  )
+  talpykla <- if (file.exists(talpyklos_failas)) {
+    tryCatch(readRDS(talpyklos_failas), error = function(e) NULL)
+  } else NULL
+  tinka <- is.list(talpykla) && identical(talpykla$raktas, raktas) &&
+    is.matrix(talpykla$Y) && is.numeric(talpykla$Y) &&
+    nrow(talpykla$Y) == length(im$id) && ncol(talpykla$Y) == 2L &&
+    all(is.finite(talpykla$Y))
+  
+  if (tinka) {
+    cat("t-SNE imtis:", im$sekla, "| naudojama patikrinta talpykla\n")
+    Y <- talpykla$Y
+  } else {
+    cat("t-SNE imtis:", im$sekla, "| sėkla:", sekla_tsne,
+        "| projekcija skaičiuojama iš naujo\n")
+    set.seed(sekla_tsne)
+    Y <- do.call(Rtsne::Rtsne, c(list(X = im$x), nustatymai))$Y
+    stopifnot(is.matrix(Y), is.numeric(Y), nrow(Y) == length(im$id),
+              ncol(Y) == 2L, all(is.finite(Y)))
+    saveRDS(list(raktas = raktas, Y = Y), talpyklos_failas)
   }
-  cat("t-SNE imtis:", im$sekla, "| sėkla:", 1000L + im$sekla, "\n")
-  set.seed(1000L + im$sekla)
-  Y <- Rtsne::Rtsne(im$x, dims = 2, perplexity = 30, max_iter = 1000,
-                    pca = FALSE, normalize = FALSE, verbose = FALSE,
-                    check_duplicates = FALSE, num_threads = 1)$Y
-  stopifnot(all(is.finite(Y)))
+  # CSV visada atkuriamas iš patikrintos projekcijos, todėl jis negali tyliai
+  # išlaikyti kito paleidimo koordinačių, net jeigu buvo pakeistas atskirai.
   write.csv(data.frame(id = im$id, TSNE1 = Y[, 1], TSNE2 = Y[, 2]),
             failas, row.names = FALSE)
   Y
@@ -620,30 +906,44 @@ pertvarkos <- list(
   tsne = function(im) list(X = tsne_imtis(im), disp5 = NA_real_)
 )
 
-# Atskaitos procedūra: eps perskaičiuojamas kiekvienai imčiai.
-stabilumo_rez <- function(kodas, imtys, minPts) {
+# Pasirinkto varianto parametrai fiksuoti: eps ir minPts nepriklauso nuo imties.
+stabilumo_rez <- function(kodas, imtys) {
+  eps <- PASIRINKTA[[kodas]]$eps
+  minPts <- PASIRINKTA[[kodas]]$minPts
   lapply(imtys, function(im) {
     pert <- pertvarkos[[kodas]](im)
-    eps <- kelio_eps(pert$X, minPts)
     list(sekla = im$sekla, eps = eps, id = im$id, X = pert$X, disp5 = pert$disp5,
-         klasteriu_eps = eps, klasteris = paleisti(pert$X, eps, minPts))
+         klasteris = paleisti(pert$X, eps, minPts))
   })
 }
 
 rez_st <- list(
-  originali = stabilumo_rez("originali", imtys, 38L),
-  pca       = stabilumo_rez("pca", imtys, 10L),
-  tsne      = stabilumo_rez("tsne", imtys[seq_len(N_PAG)], 4L)
+  originali = stabilumo_rez("originali", imtys),
+  pca       = stabilumo_rez("pca", imtys),
+  tsne      = stabilumo_rez("tsne", imtys[seq_len(N_PAG)])
 )
-MINPTS_ST <- c(originali = 38L, pca = 10L, tsne = 4L)
+MINPTS_ST <- vapply(PASIRINKTA, function(p) as.integer(p$minPts), integer(1))
 pirmos10 <- list(originali = rez_st$originali[seq_len(N_PAG)],
                  pca = rez_st$pca[seq_len(N_PAG)],
                  tsne = rez_st$tsne)
+
+# Atvejo be klasterių patikra imtyse.
+be_klasteriu_imtyse <- vapply(rez_st, function(r) {
+  sum(vapply(r, function(s) !any(s$klasteris > 0), logical(1)))
+}, numeric(1))
+cat("Imčių be nė vieno klasterio:",
+    paste(names(be_klasteriu_imtyse), be_klasteriu_imtyse, sep = " = ", collapse = "; "), "\n")
+if (any(be_klasteriu_imtyse > 0)) {
+  warning("Kai kuriose imtyse klasterių nerasta (visi objektai triukšmas): ",
+          paste(names(be_klasteriu_imtyse)[be_klasteriu_imtyse > 0], collapse = ", "),
+          ". ARI tokiose imtyse vertinamas tik pagal triukšmo priskyrimą.", call. = FALSE)
+}
 
 bandymai_lentele <- function(rez, etikete, minPts) {
   do.call(rbind, lapply(rez, function(r) {
     data.frame(erdve = etikete, sekla = r$sekla, eps = r$eps, minPts = minPts,
                objektu_sk = length(r$id), santrauka(r$klasteris),
+               yra_klasteriu = any(r$klasteris > 0),
                paaiskinta_dispersija_proc = 100 * r$disp5)
   }))
 }
@@ -663,8 +963,8 @@ for (kodas in names(poros10)) {
 }
 rasyti(poros20$originali, "dbscan_stabilumo_poros_originali_20.csv")
 rasyti(poros20$pca, "dbscan_stabilumo_poros_pca_20.csv")
-rasyti(rbind(bandymai_lentele(rez_st$originali, ER[["originali"]], 38L),
-             bandymai_lentele(rez_st$pca, ER[["pca"]], 10L)),
+rasyti(rbind(bandymai_lentele(rez_st$originali, ER[["originali"]], MINPTS_ST[["originali"]]),
+             bandymai_lentele(rez_st$pca, ER[["pca"]], MINPTS_ST[["pca"]])),
        "dbscan_stabilumo_bandymai_20.csv")
 
 # 4.2 Aprašomoji statistika
@@ -699,11 +999,14 @@ g <- ggplot(poros_visos, aes(x = erdve, y = ARI, fill = erdve)) +
   geom_point(position = position_jitter(width = 0.09, height = 0, seed = 42),
              size = 1.6, alpha = 0.55) +
   scale_fill_manual(values = PAL_ERDVES) +
-  scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, by = 0.2)) +
-  labs(title = "DBSCAN stabilumas skirtingose erdvėse",
-       subtitle = "10 atsitiktinių 80 % imčių; 45 poriniai palyginimai kiekvienai erdvei",
+  scale_y_continuous(breaks = seq(-1, 1, by = 0.2)) +
+  labs(title = "DBSCAN pasirinktų variantų stabilumas skirtingose erdvėse",
+       subtitle = sprintf("%s\n%d atsitiktinių 80 %% imčių; %d poriniai palyginimai kiekvienai erdvei",
+                          PASIRINKTA_TEKSTAS, N_PAG, as.integer(choose(N_PAG, 2))),
        x = NULL, y = "Adjusted Rand Index (ARI)",
-       caption = "Lyginami tik bendri objektai. Triukšmo žymė 0 laikoma viena bendra grupe.") +
+       caption = paste("Lyginami tik bendri objektai. Triukšmo žymė 0 laikoma viena bendra grupe.",
+                       "Originalioje 19D ir PCA 5D erdvėse ARI daugiausia rodo",
+                       "didžiojo klasterio ir triukšmo priskyrimų pastovumą.")) +
   tema_dbscan() + theme(legend.position = "none")
 issaugoti(g, "dbscan_stabilumo_ari_visos_erdves.png", 10, 5.5)
 
@@ -713,25 +1016,34 @@ pagal_N <- do.call(rbind, lapply(names(poros20), function(kodas) {
     d <- poros20[[kodas]][poros20[[kodas]]$sekla_A < N & poros20[[kodas]]$sekla_B < N, ]
     stopifnot(nrow(d) == choose(N, 2))
     data.frame(erdve = ER[[kodas]], N = N, poru_sk = nrow(d),
-               ARI_vidurkis = mean(d$ARI), ARI_SD = sd(d$ARI))
+               ARI_vidurkis = mean(d$ARI), ARI_SD = sd(d$ARI),
+               triuksmo_Jaccard_vidurkis = mean(d$triuksmo_Jaccard, na.rm = TRUE))
   }))
 }))
 rasyti(pagal_N, "dbscan_stabilumas_pagal_N_20.csv")
 print(pagal_N, row.names = FALSE, digits = 6)
 
+# Vertikalioji ašis pritaikoma rodomam intervalui (ne ranka įrašytos ribos).
+ribos_N <- range(c(pagal_N$ARI_vidurkis - pagal_N$ARI_SD,
+                   pagal_N$ARI_vidurkis + pagal_N$ARI_SD), na.rm = TRUE)
+ribos_N <- c(floor(ribos_N[1] * 20) / 20, ceiling(ribos_N[2] * 20) / 20)
+if (diff(ribos_N) == 0) ribos_N <- ribos_N + c(-0.05, 0.05)
 g <- ggplot(pagal_N, aes(x = N, y = ARI_vidurkis, colour = erdve, group = erdve)) +
+  geom_errorbar(aes(ymin = ARI_vidurkis - ARI_SD, ymax = ARI_vidurkis + ARI_SD),
+                width = 0.4, alpha = 0.6) +
   geom_line(linewidth = 0.7) + geom_point(size = 2.5) +
   scale_colour_manual(values = PAL_ERDVES, name = "Erdvė") +
   scale_x_continuous(breaks = c(5, 10, 15, 20)) +
-  coord_cartesian(ylim = c(0.75, 0.90)) +
-  labs(title = "DBSCAN stabilumo įverčio kitimas",
-       subtitle = "Originalios ir PCA erdvių geometrinio kelio atskaitos",
-       x = "Imčių skaičius (N)", y = "Porinių ARI vidurkis",
-       caption = "Vertikalioji ašis padidinta pokyčiams parodyti. t-SNE stabilumas vertintas su 10 imčių.") +
+  coord_cartesian(ylim = ribos_N) +
+  labs(title = "DBSCAN pasirinktų variantų stabilumo įverčio kitimas",
+       subtitle = paste(strsplit(PASIRINKTA_TEKSTAS, "; ")[[1]][1:2], collapse = "; "),
+       x = "Imčių skaičius (N)", y = "Porinių ARI vidurkis ± SD",
+       caption = paste("Vertikalioji ašis pritaikyta duomenų ir ± SD intervalui.",
+                       "t-SNE stabilumas vertintas su 10 imčių.")) +
   tema_dbscan()
 issaugoti(g, "dbscan_stabilumas_pagal_N_20.png", 10, 5.5)
 
-# 4.4 Vidiniai matai imtyse (be triukšmo; vienam klasteriui – NA)
+# 4.4 Vidiniai matai imtyse (be triukšmo; vienam klasteriui ar jų nesant – NA)
 vidiniai_st <- do.call(rbind, lapply(names(pirmos10), function(kodas) {
   do.call(rbind, lapply(pirmos10[[kodas]], function(r) {
     data.frame(erdve = ER[[kodas]], sekla = r$sekla, vidiniai_matai(r$X, r$klasteris))
@@ -743,9 +1055,28 @@ vid_suv <- suvesti(vidiniai_st, c("Silhouette", "CH", "DB"))
 rasyti(vid_suv, "dbscan_stabilumo_vidiniu_suvestine.csv")
 print(vid_suv, row.names = FALSE, digits = 5)
 
-# ---- 5. Fiksuotų parametrų kandidatų stabilumas -------------------------------
-# Čia eps ir minPts fiksuoti (neperskaičiuojami), todėl 80 % imtis ir (t-SNE
-# atveju) kitas projekcijos mastelis keičia ne tik klasterius, bet ir tankį.
+# ---- 5. Pasirinktų variantų palyginamasis vertinimas 19D erdvėje -----------------
+# Vidiniai matai kiekvienai erdvei atskirai jau yra 1.4 dalyje (bazines_suv). Čia visi
+# trys suskirstymai vertinami originalioje 19D erdvėje tiems patiems objektams
+# (priskirtiems klasteriams visose trijose erdvėse), kad matai būtų palyginami.
+
+bendri <- Reduce("&", lapply(bazines_z, function(z) z > 0))
+bendra_19D <- do.call(rbind, lapply(names(bazines_z), function(k) {
+  data.frame(suskirstymo_erdve = ER[[k]], vertinimo_erdve = "Originali 19D",
+             bendru_objektu = sum(bendri),
+             vidiniai_matai(x[bendri, , drop = FALSE],
+                            as.integer(factor(bazines_z[[k]][bendri]))))
+}))
+rasyti(do.call(rbind, bazines_suv), "dbscan_pasirinktu_variantu_kokybe.csv")
+rasyti(bendra_19D, "dbscan_pasirinktu_variantu_kokybe_bendra_19D.csv")
+rasyti(data.frame(id = aibe$id, originali = bazines_z$originali, pca = bazines_z$pca,
+                  tsne = bazines_z$tsne, bendras_vertinimo_poaibis = bendri),
+       "dbscan_pasirinktu_variantu_priskyrimai.csv")
+print(bendra_19D, row.names = FALSE, digits = 5)
+
+# ---- 5.1 Papildomi t-SNE kandidatai (neišrinkti): stabilumas -----------------------
+# 3 ir 2 klasterių variantai tiriami kaip jautrumo pavyzdžiai, ne kaip pasirinkti
+# variantai. Fiksuotas eps ir naujas t-SNE mastelis keičia tankį kiekvienoje imtyje.
 
 fiksuotas <- function(rez, eps, minPts) {
   lapply(rez, function(r) {
@@ -754,87 +1085,48 @@ fiksuotas <- function(rez, eps, minPts) {
     r
   })
 }
+fix_t3 <- fiksuotas(pirmos10$tsne, 3.05, 4L)
+fix_t2 <- fiksuotas(pirmos10$tsne, 3.20, 4L)
 
-fix_orig <- fiksuotas(pirmos10$originali, 1.15, 10L)
-fix_pca  <- fiksuotas(pirmos10$pca, 1.00, 10L)
-fix_t3   <- fiksuotas(pirmos10$tsne, 3.05, 4L)
-fix_t2   <- fiksuotas(pirmos10$tsne, 3.20, 4L)
-fix_tapr <- fiksuotas(pirmos10$tsne, 2.30, 20L)   # panašios aprėpties t-SNE variantas
-
-rasyti(bandymai_lentele(fix_orig, "Originali 19D", 10L),
-       "dbscan_kandidato_stabilumo_bandymai_originali.csv")
-rasyti(poru_palyginimas(fix_orig), "dbscan_kandidato_stabilumo_poros_originali.csv")
-rasyti(bandymai_lentele(fix_pca, "PCA 5D", 10L),
-       "dbscan_kandidato_stabilumo_bandymai_pca.csv")
-rasyti(poru_palyginimas(fix_pca), "dbscan_kandidato_stabilumo_poros_pca.csv")
-
-rasyti(rbind(data.frame(variantas = "trys_klasteriai", bandymai_lentele(fix_t3, "t-SNE 2D", 4L)),
-             data.frame(variantas = "du_klasteriai", bandymai_lentele(fix_t2, "t-SNE 2D", 4L))),
+rasyti(rbind(data.frame(variantas = "trys_klasteriai", statusas = "papildomas, neišrinktas",
+                        bandymai_lentele(fix_t3, "t-SNE 2D", 4L)),
+             data.frame(variantas = "du_klasteriai", statusas = "papildomas, neišrinktas",
+                        bandymai_lentele(fix_t2, "t-SNE 2D", 4L))),
        "dbscan_kandidatu_stabilumo_bandymai_tsne.csv")
-rasyti(rbind(data.frame(variantas = "trys_klasteriai", poru_palyginimas(fix_t3)),
-             data.frame(variantas = "du_klasteriai", poru_palyginimas(fix_t2))),
+rasyti(rbind(data.frame(variantas = "trys_klasteriai", statusas = "papildomas, neišrinktas",
+                        poru_palyginimas(fix_t3)),
+             data.frame(variantas = "du_klasteriai", statusas = "papildomas, neišrinktas",
+                        poru_palyginimas(fix_t2))),
        "dbscan_kandidatu_stabilumo_poros_tsne.csv")
 
-poros_tapr <- poru_palyginimas(fix_tapr)
-rasyti(bandymai_lentele(fix_tapr, "t-SNE 2D", 20L), "dbscan_aprepties_tsne_stabilumo_bandymai.csv")
-rasyti(poros_tapr, "dbscan_aprepties_tsne_stabilumo_poros.csv")
-
-# ---- 5.1 Panašios aprėpties variantai (pilna aibė) ----------------------------
-
-apr <- data.frame(kodas = c("originali", "pca", "tsne"),
-                  erdve = unname(ER),
-                  eps = c(1.15, 1.00, 2.30),
-                  minPts = c(10L, 10L, 20L))
-matr <- list(originali = x, pca = x_pca, tsne = x_tsne)
-apr_z <- lapply(seq_len(nrow(apr)),
-                function(i) paleisti(matr[[apr$kodas[i]]], apr$eps[i], apr$minPts[i]))
-
-apr_kok <- do.call(rbind, lapply(seq_len(nrow(apr)), function(i) {
-  data.frame(apr[i, c("erdve", "eps", "minPts")],
-             triuksmas_proc = 100 * mean(apr_z[[i]] == 0),
-             vidiniai_matai(matr[[apr$kodas[i]]], apr_z[[i]]))
-}))
-
-# Visi trys suskirstymai vertinami originalioje 19D erdvėje tiems patiems objektams.
-bendri <- Reduce("&", lapply(apr_z, function(z) z > 0))
-bendra_19D <- do.call(rbind, lapply(seq_len(nrow(apr)), function(i) {
-  data.frame(suskirstymo_erdve = apr$erdve[i], vertinimo_erdve = "Originali 19D",
-             vidiniai_matai(x[bendri, , drop = FALSE],
-                            as.integer(factor(apr_z[[i]][bendri]))))
-}))
-
-rasyti(apr_kok, "dbscan_panasios_aprepties_kokybe.csv")
-rasyti(bendra_19D, "dbscan_panasios_aprepties_kokybe_bendra_19D.csv")
-rasyti(data.frame(id = aibe$id, originali = apr_z[[1]], pca = apr_z[[2]],
-                  tsne = apr_z[[3]], bendras_vertinimo_poaibis = bendri),
-       "dbscan_panasios_aprepties_priskyrimai.csv")
-print(apr_kok, row.names = FALSE, digits = 5)
-print(bendra_19D, row.names = FALSE, digits = 5)
-
 # ---- 6. Bendra eksperimentų suvestinė -----------------------------------------
-# ARI*/NMI*/Jaccard* lyginami su tos pačios grupės originalios 19D suskirstymu.
+# ARI*/NMI*/Jaccard* lyginami su originalios 19D suskirstymu (pasirinktu variantu).
+# ARI_class/NMI_class – su class (triukšmas = viena grupė), žr. 3.1.
 
 suv_eilutes <- function(grupe, kokybe, zymes, poros) {
   ref <- zymes[[1]]
   do.call(rbind, lapply(seq_len(nrow(kokybe)), function(i) {
     m <- suskirstymu_matai(ref, zymes[[i]])
+    mc <- suskirstymu_matai(cls, zymes[[i]])
     data.frame(variantu_grupe = grupe, erdve = kokybe$erdve[i], algoritmas = "DBSCAN",
                eps = kokybe$eps[i], minPts = kokybe$minPts[i], k = kokybe$klasteriu_sk[i],
                triuksmas_proc = kokybe$triuksmas_proc[i],
                Silhouette = kokybe$Silhouette[i], CH = kokybe$CH[i], DB = kokybe$DB[i],
                ARI_originali = m[["ARI"]], NMI_originali = m[["NMI"]],
-               Jaccard_originali = m[["Jaccard"]], stabilumo_N = N_PAG,
+               Jaccard_originali = m[["Jaccard"]],
+               ARI_class = mc[["ARI"]], NMI_class = mc[["NMI"]],
+               stabilumo_N = N_PAG,
                stabilumo_ARI_vidurkis = mean(poros[[i]]$ARI),
-               stabilumo_ARI_SD = sd(poros[[i]]$ARI))
+               stabilumo_ARI_SD = sd(poros[[i]]$ARI),
+               stabilumo_triuksmo_Jaccard_vidurkis =
+                 mean(poros[[i]]$triuksmo_Jaccard, na.rm = TRUE))
   }))
 }
 
-eksperimentu_suvestine <- rbind(
-  suv_eilutes("Kelio atskaita", do.call(rbind, bazines_suv), bazines_z,
-              list(poros10$originali, poros10$pca, poros10$tsne)),
-  suv_eilutes("Panaši aprėptis", apr_kok, apr_z,
-              list(poru_palyginimas(fix_orig), poru_palyginimas(fix_pca), poros_tapr))
-)
+eksperimentu_suvestine <- suv_eilutes(
+  "Pasirinktas variantas (ne įrodytai optimalus)",
+  do.call(rbind, bazines_suv), bazines_z,
+  list(poros10$originali, poros10$pca, poros10$tsne))
 
 rasyti(eksperimentu_suvestine, "dbscan_eksperimentu_suvestine.csv")
 print(eksperimentu_suvestine, row.names = FALSE, digits = 5)
